@@ -1,0 +1,113 @@
+{
+  "market_stats": {
+    "London": {
+      "avg_price": 443238,
+      "avg_price_source": "https://www.zolo.ca/london-real-estate/trends",
+      "rent_stats": {
+        "apartment_avg": 1770,
+        "one_bed": 1585,
+        "two_bed": 1960,
+        "three_bed": 2285,
+        "four_bed": 2449,
+        "house_avg": 2245
+      },
+      "rent_source": "https://www.zumper.com/rent-research/london-on"
+    },
+    "Kitchener": {
+      "avg_price": 518269,
+      "avg_price_source": "https://www.zolo.ca/kitchener-real-estate/trends",
+      "rent_stats": {
+        "apartment_avg": 1866,
+        "one_bed": 1750,
+        "two_bed": 1995,
+        "three_bed": 2350,
+        "four_bed": 850,
+        "house_avg": 2400
+      },
+      "rent_source": "https://www.zumper.com/rent-research/kitchener-on"
+    },
+    "Kingston": {
+      "avg_price": 350000,
+      "avg_price_source": "https://www.zolo.ca/kingston-real-estate/trends",
+      "rent_stats": {
+        "apartment_avg": 2285,
+        "one_bed": 2024,
+        "two_bed": 2645,
+        "three_bed": 2400,
+        "four_bed": 4400,
+        "house_avg": 2895
+      },
+      "rent_source": "https://www.zumper.com/rent-research/kingston-on"
+    },
+    "Toronto": {
+      "avg_price": 1037811,
+      "avg_price_source": "https://www.zolo.ca/toronto-real-estate/trends",
+      "rent_stats": {
+        "apartment_avg": 2350,
+        "one_bed": 2150,
+        "two_bed": 2732,
+        "three_bed": 3349,
+        "four_bed": 4350,
+        "house_avg": 3300
+      },
+      "rent_source": "https://www.zumper.com/rent-research/toronto-on"
+    }
+  },
+  "portfolio": [
+    {
+      "city": "London",
+      "property_type": "Duplex (CF+)",
+      "count": 6,
+      "units_per_property": 2,
+      "price_multiplier": 1.47,
+      "rent_unit_type": "two_bed",
+      "role": "Cash-flow buffer"
+    },
+    {
+      "city": "Kitchener",
+      "property_type": "Townhome/Semi",
+      "count": 2,
+      "units_per_property": 1,
+      "price_multiplier": 1.16,
+      "rent_unit_type": "three_bed",
+      "role": "Stable neutral"
+    },
+    {
+      "city": "Toronto",
+      "property_type": "2-bed Condo",
+      "count": 1,
+      "units_per_property": 1,
+      "price_multiplier": 0.68,
+      "rent_unit_type": "two_bed",
+      "role": "Long-term upside"
+    },
+    {
+      "city": "Kingston",
+      "property_type": "Student Duplex",
+      "count": 1,
+      "units_per_property": 2,
+      "price_multiplier": 1.1,
+      "rent_unit_type": "two_bed",
+      "role": "Regional diversification"
+    }
+  ],
+  "assumptions": {
+    "ltv": 0.75,
+    "amortization_years": 25,
+    "interest_rate_mid": 0.046,
+    "interest_rate_low": 0.043,
+    "interest_rate_high": 0.055,
+    "vacancy_rate": 0.05,
+    "maintenance_rate": 0.08,
+    "management_rate": 0.08,
+    "insurance_rate": 0.002,
+    "rent_growth": 0.02,
+    "expense_growth": 0.02,
+    "price_appreciation": 0.025,
+    "disposition_cost_rate": 0.01,
+    "hold_years": 5,
+    "gp_management_fee_rate": 0.01,
+    "preferred_return": 0.08,
+    "promote": 0.2
+  }
+}

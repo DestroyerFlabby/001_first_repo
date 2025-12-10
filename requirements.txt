@@ -72,6 +72,7 @@ nest-asyncio==1.6.0
 nodeenv==1.9.1
 notebook_shim==0.2.4
 numpy==2.3.5
+numpy-financial==1.0.0
 packaging==25.0
 pandas==2.3.3
 pandocfilters==1.5.1
@@ -132,3 +133,4 @@ webencodings==0.5.1
 websocket-client==1.9.0
 websockets==15.0.1
 wheel==0.45.1
+xlsxwriter==3.2.9

@@ -2,18 +2,21 @@
 Deterministic 48-month cashflow model matching the ChatGPT plan.
 
 Usage:
-    python PERSONAL_WEALTH_PLANNING/cashflow_model.py
-This prints the monthly table and writes a CSV next to the script.
+    python PERSONAL_WEALTH_PLANNING/cashflow_model.py --config cashflow_config.json
+This prints the monthly table and writes a CSV next to the script unless an
+explicit --output path is provided.
 """
 from __future__ import annotations
 
+import argparse
+import csv
+import json
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Iterable, List, Sequence
+from typing import Iterable, List, Mapping, Sequence
 
 from dateutil.relativedelta import relativedelta
-import csv
 
 
 @dataclass(frozen=True)
@@ -65,7 +68,7 @@ class ModelConfig:
     start_date: datetime
     months: int
     income: IncomeConfig
-    expenses_monthly: dict
+    expenses_monthly: Mapping[str, float]
     lease: LeaseConfig
     mortgage: MortgageConfig
 
@@ -74,49 +77,25 @@ class ModelConfig:
         return float(sum(self.expenses_monthly.values()))
 
 
-DEFAULT_CONFIG = ModelConfig(
-    start_date=datetime(2025, 11, 1),
-    months=48,
-    income=IncomeConfig(
-        nisarg_net_monthly_start=7200.0,
-        sweta_net_monthly_start=5900.0,
-        nisarg_bonus_net_dec=19100.0,
-        sweta_bonus_net_dec=6500.0,
-        annual_income_growth=0.01,
-        combined_net_cap_annual=260000.0,
-    ),
-    expenses_monthly={
-        "rent_or_mortgage_placeholder": 2950.0,
-        "utilities": 80.0,
-        "internet_phone": 50.0,
-        "groceries": 1000.0,
-        "dining_takeout": 1500.0,
-        "entertainment_social": 700.0,
-        "insurance_other": 100.0,
-        "car_insurance": 390.0,
-        "subscriptions": 18.0,
-        "health_fitness": 150.0,
-        "discretionary_misc": 650.0,
-        "planned_savings": 2250.0,
-    },
-    lease=LeaseConfig(
-        monthly_payment=776.0,
-        security_deposit_month1=7500.0,
-        start_month_index=1,
-        term_months=48,
-    ),
-    mortgage=MortgageConfig(
-        enable=True,
-        start_month_index=15,
-        p_and_i_monthly=4514.0,
-        property_tax_monthly=708.0,
-        home_insurance_monthly=100.0,
-        rent_placeholder_monthly=2950.0,
-    ),
-)
+def load_config(config_path: Path) -> ModelConfig:
+    """Load configuration values from a JSON file."""
+    data = json.loads(config_path.read_text(encoding="utf-8"))
+    start_date = datetime.strptime(data["start_date"], "%Y-%m-%d")
+    income = IncomeConfig(**data["income"])
+    lease = LeaseConfig(**data["lease"])
+    mortgage = MortgageConfig(**data["mortgage"])
+    expenses = {k: float(v) for k, v in data["expenses_monthly"].items()}
+    return ModelConfig(
+        start_date=start_date,
+        months=int(data["months"]),
+        income=income,
+        expenses_monthly=expenses,
+        lease=lease,
+        mortgage=mortgage,
+    )
 
 
-def build_cashflow(config: ModelConfig = DEFAULT_CONFIG) -> List[dict]:
+def build_cashflow(config: ModelConfig) -> List[dict]:
     """Implement the month-by-month algorithm from the plan."""
     income_cfg = config.income
     lease_cfg = config.lease
@@ -191,16 +170,40 @@ def _write_csv(rows: Sequence[dict], path: Path) -> None:
         writer.writerows(rows)
 
 
-def _print_preview(rows: Iterable[dict], limit: int = 5) -> None:
+def _print_preview(rows: Sequence[dict], limit: int = 5) -> None:
     print(f"Generated {len(rows)} months.")
     print(f"First {limit} rows:")
-    for row in list(rows)[:limit]:
+    for row in rows[:limit]:
         print(row)
 
 
-if __name__ == "__main__":
-    table = build_cashflow()
-    csv_path = Path(__file__).with_suffix(".csv")
-    _write_csv(table, csv_path)
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Build the 48-month cashflow model.")
+    default_config = Path(__file__).with_name("cashflow_config.json")
+    default_output = Path(__file__).with_suffix(".csv")
+    parser.add_argument(
+        "--config",
+        type=Path,
+        default=default_config,
+        help=f"Path to config JSON (default: {default_config.name})",
+    )
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=default_output,
+        help=f"CSV path to write (default: {default_output.name})",
+    )
+    return parser.parse_args()
+
+
+def main() -> None:
+    args = parse_args()
+    config = load_config(args.config)
+    table = build_cashflow(config)
+    _write_csv(table, args.output)
     _print_preview(table)
-    print(f"\nFull table saved to {csv_path}")
+    print(f"\nFull table saved to {args.output.resolve()}")
+
+
+if __name__ == "__main__":
+    main()

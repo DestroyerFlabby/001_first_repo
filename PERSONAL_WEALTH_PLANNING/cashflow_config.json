@@ -1,0 +1,40 @@
+{
+  "start_date": "2025-11-01",
+  "months": 48,
+  "income": {
+    "nisarg_net_monthly_start": 7200.0,
+    "sweta_net_monthly_start": 5900.0,
+    "nisarg_bonus_net_dec": 19100.0,
+    "sweta_bonus_net_dec": 6500.0,
+    "annual_income_growth": 0.01,
+    "combined_net_cap_annual": 260000.0
+  },
+  "expenses_monthly": {
+    "rent_or_mortgage_placeholder": 2950.0,
+    "utilities": 80.0,
+    "internet_phone": 50.0,
+    "groceries": 1000.0,
+    "dining_takeout": 1500.0,
+    "entertainment_social": 700.0,
+    "insurance_other": 100.0,
+    "car_insurance": 390.0,
+    "subscriptions": 18.0,
+    "health_fitness": 150.0,
+    "discretionary_misc": 650.0,
+    "planned_savings": 2250.0
+  },
+  "lease": {
+    "monthly_payment": 776.0,
+    "security_deposit_month1": 7500.0,
+    "start_month_index": 1,
+    "term_months": 48
+  },
+  "mortgage": {
+    "enable": true,
+    "start_month_index": 15,
+    "p_and_i_monthly": 4514.0,
+    "property_tax_monthly": 708.0,
+    "home_insurance_monthly": 100.0,
+    "rent_placeholder_monthly": 2950.0
+  }
+}

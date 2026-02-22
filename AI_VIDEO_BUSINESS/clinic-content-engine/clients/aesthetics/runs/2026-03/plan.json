@@ -1,0 +1,149 @@
+{
+  "month": "2026-03",
+  "items": [
+    {
+      "id": "202603-001",
+      "pillar": "What to Expect",
+      "service": "Botox / neuromodulators",
+      "platform": "instagram",
+      "angle": "myth vs fact",
+      "target_length": "short"
+    },
+    {
+      "id": "202603-002",
+      "pillar": "Safety & Trust",
+      "service": "Dermal fillers",
+      "platform": "instagram",
+      "angle": "what to expect",
+      "target_length": "short"
+    },
+    {
+      "id": "202603-003",
+      "pillar": "Myths vs Facts",
+      "service": "Consultations",
+      "platform": "instagram",
+      "angle": "safety & trust",
+      "target_length": "short"
+    },
+    {
+      "id": "202603-004",
+      "pillar": "Aftercare Education",
+      "service": "Botox / neuromodulators",
+      "platform": "instagram",
+      "angle": "process clarity",
+      "target_length": "short"
+    },
+    {
+      "id": "202603-005",
+      "pillar": "Confidence & Comfort",
+      "service": "Dermal fillers",
+      "platform": "instagram",
+      "angle": "common mistakes",
+      "target_length": "short"
+    },
+    {
+      "id": "202603-006",
+      "pillar": "What to Expect",
+      "service": "Consultations",
+      "platform": "instagram",
+      "angle": "reassurance",
+      "target_length": "short"
+    },
+    {
+      "id": "202603-007",
+      "pillar": "Safety & Trust",
+      "service": "Botox / neuromodulators",
+      "platform": "instagram",
+      "angle": "myth vs fact",
+      "target_length": "short"
+    },
+    {
+      "id": "202603-008",
+      "pillar": "Myths vs Facts",
+      "service": "Dermal fillers",
+      "platform": "instagram",
+      "angle": "what to expect",
+      "target_length": "short"
+    },
+    {
+      "id": "202603-009",
+      "pillar": "Aftercare Education",
+      "service": "Consultations",
+      "platform": "instagram",
+      "angle": "safety & trust",
+      "target_length": "short"
+    },
+    {
+      "id": "202603-010",
+      "pillar": "Confidence & Comfort",
+      "service": "Botox / neuromodulators",
+      "platform": "instagram",
+      "angle": "process clarity",
+      "target_length": "short"
+    },
+    {
+      "id": "202603-011",
+      "pillar": "What to Expect",
+      "service": "Dermal fillers",
+      "platform": "instagram",
+      "angle": "common mistakes",
+      "target_length": "short"
+    },
+    {
+      "id": "202603-012",
+      "pillar": "Safety & Trust",
+      "service": "Consultations",
+      "platform": "instagram",
+      "angle": "reassurance",
+      "target_length": "short"
+    },
+    {
+      "id": "202603-013",
+      "pillar": "Myths vs Facts",
+      "service": "Botox / neuromodulators",
+      "platform": "instagram",
+      "angle": "myth vs fact",
+      "target_length": "short"
+    },
+    {
+      "id": "202603-014",
+      "pillar": "Aftercare Education",
+      "service": "Dermal fillers",
+      "platform": "instagram",
+      "angle": "what to expect",
+      "target_length": "short"
+    },
+    {
+      "id": "202603-015",
+      "pillar": "Confidence & Comfort",
+      "service": "Consultations",
+      "platform": "instagram",
+      "angle": "safety & trust",
+      "target_length": "short"
+    },
+    {
+      "id": "202603-016",
+      "pillar": "What to Expect",
+      "service": "Botox / neuromodulators",
+      "platform": "tiktok",
+      "angle": "process clarity",
+      "target_length": "short"
+    },
+    {
+      "id": "202603-017",
+      "pillar": "Safety & Trust",
+      "service": "Dermal fillers",
+      "platform": "tiktok",
+      "angle": "common mistakes",
+      "target_length": "short"
+    },
+    {
+      "id": "202603-018",
+      "pillar": "Myths vs Facts",
+      "service": "Consultations",
+      "platform": "tiktok",
+      "angle": "reassurance",
+      "target_length": "short"
+    }
+  ]
+}

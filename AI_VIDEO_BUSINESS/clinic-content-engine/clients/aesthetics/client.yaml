@@ -1,0 +1,46 @@
+client_name: "Aesthetics Clinic (Injectables / Plastic Surgery)"
+location: "Toronto, Ontario"
+primary_platforms: ["instagram"]
+secondary_platforms: ["tiktok"]
+tone:
+  style: "modern, confident, reassuring, medically grounded"
+  reading_level: "grade_7_9"
+  do:
+    - "normalize questions and concerns"
+    - "set realistic expectations"
+    - "focus on safety and education"
+  dont:
+    - "overpromise"
+    - "use dramatic transformation language"
+    - "compare to competitors"
+content_strategy:
+  pillars:
+    - name: "What to Expect"
+      description: "Explain consultation, treatment day, recovery, follow-ups."
+    - name: "Safety & Trust"
+      description: "Provider qualifications, safety standards, contraindications (high level)."
+    - name: "Myths vs Facts"
+      description: "Correct misconceptions about injectables/surgery."
+    - name: "Aftercare Education"
+      description: "General aftercare guidance without personalized medical advice."
+    - name: "Confidence & Comfort"
+      description: "Reassuring messaging for first-timers; calm tone."
+  cadence:
+    posts_per_week: 4
+    mix:
+      instagram: 0.8
+      tiktok: 0.2
+services:
+  - "Botox / neuromodulators"
+  - "Dermal fillers"
+  - "Consultations"
+ctas:
+  soft:
+    - "Explore treatments on our website"
+    - "Book a consultation"
+    - "DM us your question"
+disclaimers:
+  default: "Educational information only — not medical advice. Results vary."
+links:
+  homepage: "https://example.com"
+  booking: "https://example.com/book"

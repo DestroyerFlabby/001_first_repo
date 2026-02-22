@@ -1,0 +1,30 @@
+region: "Ontario, Canada"
+profile: "medical_consultancy"
+banned_phrases:
+  - "guaranteed"
+  - "no risk"
+  - "risk-free"
+  - "100%"
+  - "cure"
+  - "miracle"
+  - "best in toronto"
+  - "best in the gta"
+  - "permanent results"
+banned_claim_patterns:
+  - "(?i)guarantee(d)?\\b"
+  - "(?i)no\\s+risk\\b"
+  - "(?i)results\\s+in\\s+\\d+\\s+(days|hours)\\b"
+  - "(?i)best\\s+(doctor|clinic)\\b"
+  - "(?i)always\\s+works\\b"
+medical_safety_rules:
+  require_balanced_language: true
+  avoid_diagnosis_language: true
+  avoid_outcome_promises: true
+  avoid_specific_treatment_advice: true
+disclaimer_rules:
+  always_include_default_disclaimer: true
+  must_include_disclaimer_if_keywords:
+    - "results"
+    - "recovery"
+    - "side effects"
+    - "complications"

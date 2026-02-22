@@ -1,0 +1,34 @@
+region: "Ontario, Canada"
+profile: "aesthetics_injectables_plastic"
+banned_phrases:
+  - "guaranteed"
+  - "risk-free"
+  - "no downtime"
+  - "permanent"
+  - "instantly perfect"
+  - "look 10 years younger"
+  - "best in toronto"
+  - "best in the gta"
+banned_claim_patterns:
+  - "(?i)guarantee(d)?\\b"
+  - "(?i)risk\\s*-?free\\b"
+  - "(?i)no\\s+downtime\\b"
+  - "(?i)permanent\\b"
+  - "(?i)look\\s+\\d+\\s+years\\s+younger\\b"
+  - "(?i)best\\s+(injector|surgeon|clinic)\\b"
+medical_safety_rules:
+  require_balanced_language: true
+  avoid_diagnosis_language: true
+  avoid_outcome_promises: true
+  avoid_before_after_encouragement: true
+before_after_policy:
+  allowed_in_organic: "requires_explicit_clinic_approval"
+  allowed_in_promoted_ads: false
+disclaimer_rules:
+  always_include_default_disclaimer: true
+  must_include_disclaimer_if_keywords:
+    - "results"
+    - "downtime"
+    - "recovery"
+    - "side effects"
+    - "complications"

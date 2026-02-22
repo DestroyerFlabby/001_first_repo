@@ -1,0 +1,44 @@
+client_name: "Anjou Mehta Medical Consultancy"
+location: "GTA, Ontario"
+primary_platforms: ["linkedin", "instagram"]
+secondary_platforms: []
+tone:
+  style: "professional, calm, clear, trust-building"
+  reading_level: "grade_8_10"
+  do:
+    - "educate and clarify"
+    - "be factual and balanced"
+    - "use warm reassurance"
+  dont:
+    - "sound salesy or hype"
+    - "make promises about outcomes"
+content_strategy:
+  pillars:
+    - name: "Process Clarity"
+      description: "Explain how the process works step-by-step and what to expect."
+    - name: "Myths vs Facts"
+      description: "Correct misconceptions and set expectations."
+    - name: "Common Mistakes"
+      description: "Prevent avoidable delays or issues."
+    - name: "Authority & Trust"
+      description: "Professional credibility, standards, how decisions are made."
+    - name: "Reassurance"
+      description: "Reduce anxiety, normalize questions, encourage consultation."
+  cadence:
+    posts_per_week: 3
+    mix:
+      linkedin: 0.7
+      instagram: 0.3
+services:
+  - "Medical consultancy"
+  - "Patient guidance"
+ctas:
+  soft:
+    - "Learn more on our website"
+    - "Book a consultation to discuss your situation"
+    - "Send us a message with your question"
+disclaimers:
+  default: "Educational information only — not medical advice."
+links:
+  homepage: "https://example.com"
+  booking: "https://example.com/book"

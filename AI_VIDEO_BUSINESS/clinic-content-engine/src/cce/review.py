@@ -67,7 +67,10 @@ def run_review(client_dir: Path, month: str, console: Console) -> None:
                 final_hashtags = draft.hashtags
                 final_cta = draft.cta
                 final_reel_script = draft.reel_script
-                status = "FIXED"
+                status = "FAIL"
+                result["reasons"] = result["reasons"] + [
+                    "Suggested fix provided in final_caption/final_disclaimer."
+                ]
         else:
             final_caption = draft.caption
             final_hashtags = draft.hashtags

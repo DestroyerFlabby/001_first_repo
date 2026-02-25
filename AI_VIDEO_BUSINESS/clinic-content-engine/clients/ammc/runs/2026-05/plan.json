@@ -1,0 +1,109 @@
+{
+  "month": "2026-05",
+  "items": [
+    {
+      "id": "202605-001",
+      "pillar": "Process Clarity",
+      "service": "Medical consultancy",
+      "platform": "linkedin",
+      "angle": "myth vs fact",
+      "target_length": "medium"
+    },
+    {
+      "id": "202605-002",
+      "pillar": "Myths vs Facts",
+      "service": "Patient guidance",
+      "platform": "linkedin",
+      "angle": "what to expect",
+      "target_length": "medium"
+    },
+    {
+      "id": "202605-003",
+      "pillar": "Common Mistakes",
+      "service": "Medical consultancy",
+      "platform": "linkedin",
+      "angle": "safety & trust",
+      "target_length": "medium"
+    },
+    {
+      "id": "202605-004",
+      "pillar": "Authority & Trust",
+      "service": "Patient guidance",
+      "platform": "linkedin",
+      "angle": "process clarity",
+      "target_length": "medium"
+    },
+    {
+      "id": "202605-005",
+      "pillar": "Reassurance",
+      "service": "Medical consultancy",
+      "platform": "linkedin",
+      "angle": "common mistakes",
+      "target_length": "medium"
+    },
+    {
+      "id": "202605-006",
+      "pillar": "Process Clarity",
+      "service": "Patient guidance",
+      "platform": "linkedin",
+      "angle": "reassurance",
+      "target_length": "medium"
+    },
+    {
+      "id": "202605-007",
+      "pillar": "Myths vs Facts",
+      "service": "Medical consultancy",
+      "platform": "linkedin",
+      "angle": "myth vs fact",
+      "target_length": "medium"
+    },
+    {
+      "id": "202605-008",
+      "pillar": "Common Mistakes",
+      "service": "Patient guidance",
+      "platform": "linkedin",
+      "angle": "what to expect",
+      "target_length": "medium"
+    },
+    {
+      "id": "202605-009",
+      "pillar": "Authority & Trust",
+      "service": "Medical consultancy",
+      "platform": "linkedin",
+      "angle": "safety & trust",
+      "target_length": "medium"
+    },
+    {
+      "id": "202605-010",
+      "pillar": "Reassurance",
+      "service": "Patient guidance",
+      "platform": "linkedin",
+      "angle": "process clarity",
+      "target_length": "medium"
+    },
+    {
+      "id": "202605-011",
+      "pillar": "Process Clarity",
+      "service": "Medical consultancy",
+      "platform": "instagram",
+      "angle": "common mistakes",
+      "target_length": "short"
+    },
+    {
+      "id": "202605-012",
+      "pillar": "Myths vs Facts",
+      "service": "Patient guidance",
+      "platform": "instagram",
+      "angle": "reassurance",
+      "target_length": "short"
+    },
+    {
+      "id": "202605-013",
+      "pillar": "Common Mistakes",
+      "service": "Medical consultancy",
+      "platform": "instagram",
+      "angle": "myth vs fact",
+      "target_length": "short"
+    }
+  ]
+}

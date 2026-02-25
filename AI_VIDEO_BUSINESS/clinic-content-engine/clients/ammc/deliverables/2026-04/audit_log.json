@@ -1,10 +1,10 @@
 {
   "client": "ammc",
-  "month": "2026-03",
+  "month": "2026-04",
   "number_of_sources": 1,
   "number_of_chunks": 1,
   "number_of_posts": 13,
   "pass_rate": 1.0,
-  "timestamp_utc": "2026-02-22T22:01:20.971613+00:00",
+  "timestamp_utc": "2026-02-22T21:50:21.731641+00:00",
   "stub_mode": true
 }

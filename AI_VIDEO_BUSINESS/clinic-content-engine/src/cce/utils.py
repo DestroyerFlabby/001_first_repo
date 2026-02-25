@@ -63,7 +63,7 @@ def read_jsonl(path: Path) -> list[dict[str, Any]]:
         for line in f:
             line = line.strip()
             if line:
-                rows.append(json.loads(line))
+                rows.append(json.loads(line.lstrip("\ufeff")))
     return rows
 
 

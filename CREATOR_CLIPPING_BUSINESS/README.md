@@ -37,6 +37,7 @@ The media page builds skill, proof, and a public portfolio. The client services 
 - Define 3-5 content pillars.
 - Create 10 starter clips using the post templates.
 - Track every post in `TRACKING/media_page_content_calendar.csv`.
+- Use `AUTOMATION/youtube_clipping_workflow.md` when downloading source videos for clipping.
 - Start outreach to 20 creators using `02_CLIENT_SERVICES/outreach_templates.md`.
 - Offer a small paid test package or 1 free sample clip.
 - Track all leads in `TRACKING/client_pipeline.csv`.

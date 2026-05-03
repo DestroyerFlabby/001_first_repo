@@ -5,7 +5,7 @@ from pathlib import Path
 links_file = "links.txt"
 
 # Output directory
-output_path = r"C:\Users\Nisarg\Desktop\Python Code Projects\Youtube Clipping\Clips Raw Video"
+output_path = r"C:\Users\Nisarg\Documents\GitHub\001_first_repo\YOUTUBE_CLIPPING\CLIPS_RAW_VIDEO"
 
 # Ensure the output path exists
 Path(output_path).mkdir(parents=True, exist_ok=True)

@@ -101,14 +101,42 @@ python CREATOR_CLIPPING_BUSINESS\AUTOMATION\run_pipeline.py --stage all
 Stage behavior:
 
 - `download`: reads the latest `POST_LINKS/YYYY-MM-DD/source_links.txt` and writes to RAW.
-- `transform`: reads RAW metadata and writes stub clip plans to INTERMEDIATE.
-- `edit`: reads INTERMEDIATE clip plans and writes draft packages to STAGING.
+- `transform`: reads RAW metadata, writes stub clip plans to INTERMEDIATE, and writes starter `script.txt` files to `PIPELINE_ZONES/02_INTERMEDIATE/SCRIPTS/{topic}/`.
+- `edit`: reads INTERMEDIATE clip plans, generates or prepares voiceover assets, and writes draft packages to STAGING.
 - `curate`: reads STAGING draft packages and writes human-review-ready packages to CURATED.
 - `all`: runs every stage and stops at human review.
 
 There is no auto-posting. TikTok, Instagram, and YouTube posting remain manual until explicitly approved.
 
-Stub mode works without API keys. The transform, edit, and curate stages create structured placeholder packages with TODOs for future AI, TTS, and video editing integrations.
+Stub mode works without API keys. The transform, edit, and curate stages create structured placeholder packages with TODOs for future AI and video editing integrations.
+
+## Voiceover Workflow
+
+Voiceover generation sits between transform and edit.
+
+1. Run `transform` to create scripts in `PIPELINE_ZONES/02_INTERMEDIATE/SCRIPTS/{topic}/script.txt`.
+2. Run `edit`.
+3. The edit stage calls `AUTOMATION/tts_generate.py`.
+4. Voiceover outputs land in `PIPELINE_ZONES/02_INTERMEDIATE/VOICEOVER/{topic}/`.
+5. Draft packages in STAGING reference the available voiceover file or placeholder.
+
+Set these in `.env`:
+
+```text
+TTS_PROVIDER=stub
+TTS_VOICE=Adam
+ELEVENLABS_API_KEY=
+ELEVENLABS_VOICE_ID=pNInz6obpgDQGcFmaJgB
+ELEVENLABS_MODEL=eleven_multilingual_v2
+```
+
+Use `TTS_PROVIDER=stub` for manual testing. Use `TTS_PROVIDER=elevenlabs` only after adding an ElevenLabs API key. If the key is missing or the request fails, the pipeline creates `voiceover_placeholder.txt` with manual TTS steps instead of stopping the workflow.
+
+Standalone command:
+
+```powershell
+python CREATOR_CLIPPING_BUSINESS\AUTOMATION\tts_generate.py
+```
 
 ## Transformation Rules
 

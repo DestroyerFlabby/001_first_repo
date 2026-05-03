@@ -6,11 +6,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from batch_download import POST_LINKS_DIR, RAW_ORGANIZED_DIR, download_batch, latest_batch_folder
+from tts_generate import VOICEOVER_DIR, generate_voiceovers
 
 
 BUSINESS_ROOT = Path(__file__).resolve().parents[1]
 PIPELINE_ROOT = BUSINESS_ROOT / "PIPELINE_ZONES"
 INTERMEDIATE_DIR = PIPELINE_ROOT / "02_INTERMEDIATE"
+SCRIPTS_DIR = INTERMEDIATE_DIR / "SCRIPTS"
 STAGING_DIR = PIPELINE_ROOT / "03_STAGING"
 CURATED_DIR = PIPELINE_ROOT / "04_CURATED"
 
@@ -38,6 +40,38 @@ def write_json(path: Path, payload: dict) -> None:
 def write_text(path: Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text, encoding="utf-8")
+
+
+def load_json_if_exists(path: Path) -> dict | None:
+    if not path.exists():
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return None
+
+
+def voiceover_assets(topic: str) -> dict:
+    topic_dir = VOICEOVER_DIR / topic
+    voiceover_path = topic_dir / "voiceover.mp3"
+    placeholder_path = topic_dir / "voiceover_placeholder.txt"
+    metadata_path = topic_dir / "metadata.json"
+
+    if voiceover_path.exists():
+        status = "available"
+        selected_path = voiceover_path
+    elif placeholder_path.exists():
+        status = "placeholder"
+        selected_path = placeholder_path
+    else:
+        status = "missing"
+        selected_path = None
+
+    return {
+        "status": status,
+        "file": str(selected_path.relative_to(BUSINESS_ROOT)) if selected_path else None,
+        "metadata": load_json_if_exists(metadata_path),
+    }
 
 
 def run_download(batch_folder: Path | None, download_mode: str) -> Path:
@@ -88,11 +122,26 @@ def run_transform() -> None:
         }
         write_json(output_dir / topic / f"{Path(filename).stem}.clip_plan.json", package)
 
+        script_text = f"""Opening hook:
+TODO: Write a stronger hook for this clip.
+
+Voiceover script:
+This clip is about {topic.replace("_", " ")}. The goal is to add context, explain why the moment matters, and turn the raw source into a clear takeaway for the viewer.
+
+Takeaway:
+TODO: Add one useful lesson or point of view before editing.
+
+Source:
+{item.get("source_url")}
+"""
+        write_text(SCRIPTS_DIR / topic / "script.txt", script_text)
+
     print(f"Created transform packages: {len(metadata_items)}")
 
 
 def run_edit() -> None:
     print("Running edit stage")
+    generate_voiceovers()
     clip_plans = list((INTERMEDIATE_DIR / "CLIP_CANDIDATES").rglob("*.clip_plan.json"))
     output_dir = STAGING_DIR / "DRAFT_CLIPS"
 
@@ -115,6 +164,7 @@ def run_edit() -> None:
             "topic": topic,
             "draft_assets": {
                 "draft_video": "TODO: Create edited draft video later.",
+                "voiceover": voiceover_assets(topic),
                 "subtitle_file": "TODO: Generate subtitles later.",
                 "b_roll_plan": "TODO: Add B-roll plan later.",
             },
@@ -122,7 +172,7 @@ def run_edit() -> None:
                 "Check rights_status before public use.",
                 "Confirm hook and caption fit the clip.",
                 "TODO: Add video editing integration.",
-                "TODO: Add TTS or voiceover integration only if needed.",
+                "Confirm voiceover.mp3 exists or complete manual TTS from placeholder instructions.",
             ],
         }
         write_json(output_dir / topic / f"{source_stem}.draft_package.json", draft_package)

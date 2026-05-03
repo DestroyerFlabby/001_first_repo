@@ -71,6 +71,22 @@ python CREATOR_CLIPPING_BUSINESS\AUTOMATION\run_pipeline.py --stage all
 
 `--stage all` stops at human review in `PIPELINE_ZONES/04_CURATED/READY_TO_POST`. It does not auto-post to TikTok, Instagram, or YouTube. Posting remains manual.
 
+Voiceover generation is part of the transform -> edit flow:
+
+- `transform` writes a starter `script.txt` into `PIPELINE_ZONES/02_INTERMEDIATE/SCRIPTS/{topic}/`.
+- `edit` reads that script and creates voiceover assets in `PIPELINE_ZONES/02_INTERMEDIATE/VOICEOVER/{topic}/`.
+- If `TTS_PROVIDER=elevenlabs` and `ELEVENLABS_API_KEY` is set, the pipeline writes `voiceover.mp3`.
+- If no API key is available or `TTS_PROVIDER=stub`, it writes `voiceover_placeholder.txt` with manual TTS instructions.
+
+Configure TTS in `.env`:
+
+```text
+TTS_PROVIDER=stub
+TTS_VOICE=Adam
+ELEVENLABS_API_KEY=
+ELEVENLABS_VOICE_ID=pNInz6obpgDQGcFmaJgB
+```
+
 ## Two Tracks
 
 ### 01 Media Page

@@ -5,10 +5,15 @@ import json
 import os
 import shutil
 import subprocess
+import sys
+import time
 from pathlib import Path
 from urllib.parse import urlparse
 
 from dotenv import load_dotenv
+
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -16,6 +21,7 @@ BUSINESS_ROOT = REPO_ROOT / "CREATOR_CLIPPING_BUSINESS"
 POST_LINKS_DIR = BUSINESS_ROOT / "POST_LINKS"
 RAW_ORGANIZED_DIR = BUSINESS_ROOT / "PIPELINE_ZONES" / "01_RAW" / "DOWNLOADED_MEDIA"
 SAFE_RIGHTS_STATUSES = {"approved", "public_domain", "creative_commons"}
+DOWNLOAD_FORMAT = "18"
 
 
 def slugify(value: str) -> str:
@@ -70,7 +76,7 @@ def read_source_links(path: Path) -> list[dict]:
 def get_duration(url: str) -> float | None:
     try:
         result = subprocess.run(
-            ["yt-dlp", "--dump-json", "--skip-download", url],
+            [sys.executable, "-m", "yt_dlp", "--no-playlist", "--dump-json", "--skip-download", url],
             check=True,
             capture_output=True,
             text=True,
@@ -87,15 +93,17 @@ def get_duration(url: str) -> float | None:
     return float(duration) if isinstance(duration, int | float) else None
 
 
-def newest_file(folder: Path, before: set[Path]) -> Path | None:
+def newest_file(folder: Path, started_at: float) -> Path | None:
     candidates = [
         path
         for path in folder.iterdir()
-        if path.is_file() and path not in before and path.suffix.lower() not in {".json", ".part", ".ytdl"}
+        if path.is_file() and path.suffix.lower() not in {".json", ".part", ".ytdl"}
     ]
     if not candidates:
         return None
-    return max(candidates, key=lambda path: path.stat().st_mtime)
+
+    new_or_updated = [path for path in candidates if path.stat().st_mtime >= started_at - 1]
+    return max(new_or_updated or candidates, key=lambda path: path.stat().st_mtime)
 
 
 def write_metadata(path: Path, metadata: dict) -> None:
@@ -112,6 +120,8 @@ def download_batch(batch_folder: Path, download_mode: str) -> None:
     batch_download_dir = batch_folder / "downloaded_videos"
     error_log = batch_folder / "download_errors.log"
     batch_download_dir.mkdir(parents=True, exist_ok=True)
+    if error_log.exists():
+        error_log.unlink()
 
     source_items = read_source_links(links_file)
     total_links = len(source_items)
@@ -135,19 +145,22 @@ def download_batch(batch_folder: Path, download_mode: str) -> None:
             continue
 
         print(f"\n[{index}/{total_links}] Downloading: {url}")
-        before = set(batch_download_dir.iterdir()) if batch_download_dir.exists() else set()
         output_template = str(batch_download_dir / "%(title)s [%(id)s].%(ext)s")
         duration = get_duration(url)
+        started_at = time.time()
 
         try:
-            subprocess.run(["yt-dlp", url, "-o", output_template], check=True)
+            subprocess.run(
+                [sys.executable, "-m", "yt_dlp", "--no-playlist", "-f", DOWNLOAD_FORMAT, url, "-o", output_template],
+                check=True,
+            )
         except subprocess.CalledProcessError as exc:
             failed += 1
             log_failure(error_log, f"DOWNLOAD FAILED | {url} | {exc}")
             print(f"[{index}/{total_links}] Failed: {url}")
             continue
 
-        downloaded_file = newest_file(batch_download_dir, before)
+        downloaded_file = newest_file(batch_download_dir, started_at)
         if downloaded_file is None:
             failed += 1
             log_failure(error_log, f"NO OUTPUT FILE DETECTED | {url}")

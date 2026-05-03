@@ -35,6 +35,7 @@ ENV/
 env.bak/
 venv.bak/
 nd-digital-dev/.venv/
+.tmp/
 
 # Unit test / coverage reports
 htmlcov/
@@ -49,6 +50,7 @@ coverage.xml
 *.py,cover
 .hypothesis/
 .pytest_cache/
+pytest-cache-files*/
 
 # Jupyter notebooks
 .ipynb_checkpoints/

@@ -9,8 +9,21 @@ from dotenv import load_dotenv
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_LINKS_FILE = REPO_ROOT / "CREATOR_CLIPPING_BUSINESS" / "RAW_MEDIA" / "source_links.txt"
-DEFAULT_OUTPUT_DIR = REPO_ROOT / "CREATOR_CLIPPING_BUSINESS" / "RAW_MEDIA" / "CLIPS_RAW_VIDEO"
+DEFAULT_LINKS_FILE = (
+    REPO_ROOT
+    / "CREATOR_CLIPPING_BUSINESS"
+    / "PIPELINE_ZONES"
+    / "01_RAW"
+    / "SOURCE_LINKS"
+    / "source_links.txt"
+)
+DEFAULT_OUTPUT_DIR = (
+    REPO_ROOT
+    / "CREATOR_CLIPPING_BUSINESS"
+    / "PIPELINE_ZONES"
+    / "01_RAW"
+    / "DOWNLOADED_MEDIA"
+)
 
 
 def read_links(path: Path) -> list[str]:

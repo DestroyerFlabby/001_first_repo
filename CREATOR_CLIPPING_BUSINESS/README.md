@@ -11,6 +11,13 @@ Find content -> select strong moments -> transform the idea -> edit the clip -> 
 
 Downloaded footage should only be used for public posting when we have permission or appropriate rights. Before posting sourced footage, check `LEGAL_AND_SOURCING/source_rights_checklist.md` and record `source_url` plus `rights_status` in the media page content calendar.
 
+Pipeline work is organized into four zones:
+
+1. `PIPELINE_ZONES/01_RAW`: acquire data.
+2. `PIPELINE_ZONES/02_INTERMEDIATE`: transform clips into angles, hooks, and candidates.
+3. `PIPELINE_ZONES/03_STAGING`: edit and review drafts.
+4. `PIPELINE_ZONES/04_CURATED`: prepare approved assets for posting and tracking.
+
 ## Two Tracks
 
 ### 01 Media Page
@@ -40,7 +47,7 @@ The media page builds skill, proof, and a public portfolio. The client services 
 - Create 10 starter clips using the post templates.
 - Confirm source rights before public posting.
 - Track every post in `TRACKING/media_page_content_calendar.csv`.
-- Use `OPERATING_MANUAL.md` as the central workflow for source downloading, clipping, posting, tracking, and outreach.
+- Use `OPERATING_MANUAL.md` and `PIPELINE_ZONES/README.md` as the central workflow for source downloading, clipping, posting, tracking, and outreach.
 - Start outreach to 20 creators using `02_CLIENT_SERVICES/outreach_templates.md`.
 - Offer a small paid test package or 1 free sample clip.
 - Track all leads in `TRACKING/client_pipeline.csv`.

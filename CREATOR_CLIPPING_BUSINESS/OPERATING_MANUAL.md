@@ -15,6 +15,19 @@ The media page builds skill, proof, and attention. Client services turn that ski
 
 Find source content -> download or collect raw material -> identify strong moments -> transform the idea -> edit the short clip -> write caption and CTA -> post -> track performance -> use proof for outreach.
 
+## Pipeline Zones
+
+The workspace now uses four pipeline zones. Each asset should move through these zones instead of living in one messy folder.
+
+| Zone | Pipeline Step | What Happens |
+| --- | --- | --- |
+| `PIPELINE_ZONES/01_RAW` | 1. Acquire data | Save source links, downloads, creator-provided footage, and initial rights notes. |
+| `PIPELINE_ZONES/02_INTERMEDIATE` | 2. Clip transformation | Create transcripts, clip candidates, hooks, angles, and transformation notes. |
+| `PIPELINE_ZONES/03_STAGING` | 3. Editing | Build draft clips, subtitles, captions, B-roll plans, and review notes. |
+| `PIPELINE_ZONES/04_CURATED` | 4. Posting | Store approved metadata, ready-to-post notes, posted records, and performance summaries. |
+
+See `PIPELINE_ZONES/README.md` for the zone map.
+
 ## What We Learned From The Old YouTube Clipping Setup
 
 The older workflow was simple and useful:
@@ -29,17 +42,17 @@ That becomes the new internal workflow for this folder.
 
 ## Current Folder Roles
 
-`RAW_MEDIA/CLIPS_RAW_VIDEO`
+`PIPELINE_ZONES/01_RAW/DOWNLOADED_MEDIA`
 
 Local storage for downloaded source videos. Raw media files are ignored by Git. The folder is tracked with `.gitkeep` so the structure exists.
 
-`RAW_MEDIA/source_links.txt`
+`PIPELINE_ZONES/01_RAW/SOURCE_LINKS/source_links.txt`
 
 Current source-link queue for the business. One YouTube URL per line.
 
 `AUTOMATION/batch_download.py`
 
-Current downloader. It reads `RAW_MEDIA/source_links.txt` and downloads videos with `yt-dlp` into this business workspace's raw-media folder. It can also read `YOUTUBE_LINKS_FILE` and `YOUTUBE_DOWNLOAD_DIR` from `.env`.
+Current downloader. It reads `PIPELINE_ZONES/01_RAW/SOURCE_LINKS/source_links.txt` and downloads videos with `yt-dlp` into this business workspace's raw-media folder. It can also read `YOUTUBE_LINKS_FILE` and `YOUTUBE_DOWNLOAD_DIR` from `.env`.
 
 `SHARED_ASSETS/PROMPTS`
 
@@ -51,14 +64,15 @@ CSV trackers for content calendars, media-page performance, client leads, and cl
 
 ## Download Workflow
 
-1. Add source URLs to `RAW_MEDIA/source_links.txt`.
+1. Add source URLs to `PIPELINE_ZONES/01_RAW/SOURCE_LINKS/source_links.txt`.
 2. Activate the repo environment.
 3. Run the downloader.
-4. Confirm raw files land in `CREATOR_CLIPPING_BUSINESS/RAW_MEDIA/CLIPS_RAW_VIDEO`.
-5. Review the raw source and find strong moments.
+4. Confirm raw files land in `CREATOR_CLIPPING_BUSINESS/PIPELINE_ZONES/01_RAW/DOWNLOADED_MEDIA`.
+5. Move transcript notes and clip candidates into `PIPELINE_ZONES/02_INTERMEDIATE`.
 6. Use prompt files to generate hooks, captions, and transformation angles.
-7. Edit into short-form clips.
-8. Track posts and performance.
+7. Move draft edits, captions, and review notes into `PIPELINE_ZONES/03_STAGING`.
+8. Move approved posting notes and performance summaries into `PIPELINE_ZONES/04_CURATED`.
+9. Track posts and performance in `TRACKING`.
 
 Command:
 
@@ -140,4 +154,4 @@ Weekend:
 - Add transcript extraction.
 - Add a source-video tracker CSV.
 - Add scoring for clip candidates.
-- Add separate raw folders for media page and client work.
+- Add separate zone lanes for media page and client work once volume grows.

@@ -33,13 +33,13 @@ That becomes the new internal workflow for this folder.
 
 Local storage for downloaded source videos. Raw media files are ignored by Git. The folder is tracked with `.gitkeep` so the structure exists.
 
-`ARCHIVE/PYTHON_CODE_PROJECTS/links.txt`
+`RAW_MEDIA/source_links.txt`
 
-Current source-link queue inherited from the old setup. One YouTube URL per line.
+Current source-link queue for the business. One YouTube URL per line.
 
-`ARCHIVE/PYTHON_CODE_PROJECTS/batch_download.py`
+`AUTOMATION/batch_download.py`
 
-Archived starter downloader. It reads `links.txt` and downloads videos with `yt-dlp` into this business workspace's raw-media folder.
+Current downloader. It reads `RAW_MEDIA/source_links.txt` and downloads videos with `yt-dlp` into this business workspace's raw-media folder. It can also read `YOUTUBE_LINKS_FILE` and `YOUTUBE_DOWNLOAD_DIR` from `.env`.
 
 `SHARED_ASSETS/PROMPTS`
 
@@ -51,9 +51,9 @@ CSV trackers for content calendars, media-page performance, client leads, and cl
 
 ## Download Workflow
 
-1. Add source URLs to `ARCHIVE/PYTHON_CODE_PROJECTS/links.txt`.
+1. Add source URLs to `RAW_MEDIA/source_links.txt`.
 2. Activate the repo environment.
-3. Run the archived downloader.
+3. Run the downloader.
 4. Confirm raw files land in `CREATOR_CLIPPING_BUSINESS/RAW_MEDIA/CLIPS_RAW_VIDEO`.
 5. Review the raw source and find strong moments.
 6. Use prompt files to generate hooks, captions, and transformation angles.
@@ -64,8 +64,7 @@ Command:
 
 ```powershell
 .\.venv\Scripts\Activate.ps1
-cd ARCHIVE\PYTHON_CODE_PROJECTS
-python batch_download.py
+python CREATOR_CLIPPING_BUSINESS\AUTOMATION\batch_download.py
 ```
 
 ## Transformation Rules
@@ -138,8 +137,6 @@ Weekend:
 
 ## Next Improvements
 
-- Move the downloader script out of archive and into `CREATOR_CLIPPING_BUSINESS/AUTOMATION`.
-- Replace hardcoded paths with `.env` variables.
 - Add transcript extraction.
 - Add a source-video tracker CSV.
 - Add scoring for clip candidates.

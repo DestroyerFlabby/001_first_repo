@@ -86,6 +86,30 @@ python CREATOR_CLIPPING_BUSINESS\AUTOMATION\batch_download.py
 
 Safety mode defaults to `safe`, which only downloads links marked `approved`, `public_domain`, or `creative_commons`. Use `--download-mode all` only when you intentionally want to collect every valid link for review.
 
+## Pipeline Runner Commands
+
+The pipeline can run individual stages or the full workflow up to human review.
+
+```powershell
+python CREATOR_CLIPPING_BUSINESS\AUTOMATION\run_pipeline.py --stage download
+python CREATOR_CLIPPING_BUSINESS\AUTOMATION\run_pipeline.py --stage transform
+python CREATOR_CLIPPING_BUSINESS\AUTOMATION\run_pipeline.py --stage edit
+python CREATOR_CLIPPING_BUSINESS\AUTOMATION\run_pipeline.py --stage curate
+python CREATOR_CLIPPING_BUSINESS\AUTOMATION\run_pipeline.py --stage all
+```
+
+Stage behavior:
+
+- `download`: reads the latest `POST_LINKS/YYYY-MM-DD/source_links.txt` and writes to RAW.
+- `transform`: reads RAW metadata and writes stub clip plans to INTERMEDIATE.
+- `edit`: reads INTERMEDIATE clip plans and writes draft packages to STAGING.
+- `curate`: reads STAGING draft packages and writes human-review-ready packages to CURATED.
+- `all`: runs every stage and stops at human review.
+
+There is no auto-posting. TikTok, Instagram, and YouTube posting remain manual until explicitly approved.
+
+Stub mode works without API keys. The transform, edit, and curate stages create structured placeholder packages with TODOs for future AI, TTS, and video editing integrations.
+
 ## Transformation Rules
 
 Do not post simple reposts. Before posting, add at least one transformation layer:

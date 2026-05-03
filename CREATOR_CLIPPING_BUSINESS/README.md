@@ -57,6 +57,20 @@ python CREATOR_CLIPPING_BUSINESS\AUTOMATION\batch_download.py
 
 The downloader does not trigger editing or posting.
 
+## Pipeline Runner
+
+Use the central runner when you want to run one stage at a time or run the full workflow up to human review.
+
+```powershell
+python CREATOR_CLIPPING_BUSINESS\AUTOMATION\run_pipeline.py --stage download
+python CREATOR_CLIPPING_BUSINESS\AUTOMATION\run_pipeline.py --stage transform
+python CREATOR_CLIPPING_BUSINESS\AUTOMATION\run_pipeline.py --stage edit
+python CREATOR_CLIPPING_BUSINESS\AUTOMATION\run_pipeline.py --stage curate
+python CREATOR_CLIPPING_BUSINESS\AUTOMATION\run_pipeline.py --stage all
+```
+
+`--stage all` stops at human review in `PIPELINE_ZONES/04_CURATED/READY_TO_POST`. It does not auto-post to TikTok, Instagram, or YouTube. Posting remains manual.
+
 ## Two Tracks
 
 ### 01 Media Page

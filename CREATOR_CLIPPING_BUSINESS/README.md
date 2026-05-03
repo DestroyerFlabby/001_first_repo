@@ -9,6 +9,8 @@ The full workflow is:
 
 Find content -> select strong moments -> transform the idea -> edit the clip -> post consistently -> track performance -> use proof to outreach -> monetize.
 
+Downloaded footage should only be used for public posting when we have permission or appropriate rights. Before posting sourced footage, check `LEGAL_AND_SOURCING/source_rights_checklist.md` and record `source_url` plus `rights_status` in the media page content calendar.
+
 ## Two Tracks
 
 ### 01 Media Page
@@ -36,6 +38,7 @@ The media page builds skill, proof, and a public portfolio. The client services 
 - Pick one niche for the media page.
 - Define 3-5 content pillars.
 - Create 10 starter clips using the post templates.
+- Confirm source rights before public posting.
 - Track every post in `TRACKING/media_page_content_calendar.csv`.
 - Use `OPERATING_MANUAL.md` as the central workflow for source downloading, clipping, posting, tracking, and outreach.
 - Start outreach to 20 creators using `02_CLIENT_SERVICES/outreach_templates.md`.

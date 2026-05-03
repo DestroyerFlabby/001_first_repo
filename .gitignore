@@ -82,6 +82,12 @@ Thumbs.db
 ehthumbs.db
 Desktop.ini
 
+# Generated/downloaded media
+*.mp4
+*.mov
+*.mkv
+*.avi
+
 # Node (often present via JupyterLab extensions)
 node_modules/
 

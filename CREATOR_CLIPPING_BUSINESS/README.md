@@ -18,6 +18,45 @@ Pipeline work is organized into four zones:
 3. `PIPELINE_ZONES/03_STAGING`: edit and review drafts.
 4. `PIPELINE_ZONES/04_CURATED`: prepare approved assets for posting and tracking.
 
+## Bulk Ingestion
+
+`POST_LINKS` is the intake queue for source links. Each dated folder is one batch job.
+
+Example:
+
+```text
+POST_LINKS/
+  2026-05-03/
+    source_links.txt
+    downloaded_videos/
+```
+
+Each line in `source_links.txt` uses:
+
+```text
+url | topic | rights_status
+```
+
+`downloaded_videos` is the raw batch storage for that date. After download, the script also copies each video into the structured RAW zone:
+
+```text
+PIPELINE_ZONES/01_RAW/DOWNLOADED_MEDIA/{topic}/
+```
+
+Each successful video gets a metadata sidecar named like:
+
+```text
+video_name.video_metadata.json
+```
+
+Run ingestion only:
+
+```powershell
+python CREATOR_CLIPPING_BUSINESS\AUTOMATION\batch_download.py
+```
+
+The downloader does not trigger editing or posting.
+
 ## Two Tracks
 
 ### 01 Media Page

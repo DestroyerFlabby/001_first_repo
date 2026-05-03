@@ -91,6 +91,14 @@ Desktop.ini
 *.mkv
 *.avi
 
+# Creator clipping generated ingestion outputs
+CREATOR_CLIPPING_BUSINESS/POST_LINKS/*/downloaded_videos/*
+!CREATOR_CLIPPING_BUSINESS/POST_LINKS/*/downloaded_videos/.gitkeep
+CREATOR_CLIPPING_BUSINESS/POST_LINKS/*/download_errors.log
+CREATOR_CLIPPING_BUSINESS/PIPELINE_ZONES/01_RAW/DOWNLOADED_MEDIA/*/*
+!CREATOR_CLIPPING_BUSINESS/PIPELINE_ZONES/01_RAW/DOWNLOADED_MEDIA/.gitkeep
+!CREATOR_CLIPPING_BUSINESS/PIPELINE_ZONES/01_RAW/DOWNLOADED_MEDIA/*/.gitkeep
+
 # Node (often present via JupyterLab extensions)
 node_modules/
 

@@ -6,7 +6,6 @@ This zone stores source material before transformation or editing.
 
 Use it for:
 
-- Source URLs.
 - Downloaded videos.
 - Creator-provided footage.
 - Initial rights notes.
@@ -15,9 +14,7 @@ Do not post directly from this zone.
 
 ## Subfolders
 
-`SOURCE_LINKS`
-
-Source URL queues and notes.
+Source URL intake lives in `../../POST_LINKS/YYYY-MM-DD/source_links.txt`.
 
 `DOWNLOADED_MEDIA`
 

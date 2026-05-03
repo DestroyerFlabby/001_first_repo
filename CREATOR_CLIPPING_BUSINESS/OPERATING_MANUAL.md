@@ -46,13 +46,13 @@ That becomes the new internal workflow for this folder.
 
 Local storage for downloaded source videos. Raw media files are ignored by Git. The folder is tracked with `.gitkeep` so the structure exists.
 
-`PIPELINE_ZONES/01_RAW/SOURCE_LINKS/source_links.txt`
+`POST_LINKS/YYYY-MM-DD/source_links.txt`
 
-Current source-link queue for the business. One YouTube URL per line.
+Current source-link queue for each batch. One source per line using `url | topic | rights_status`.
 
 `AUTOMATION/batch_download.py`
 
-Current downloader. It reads `PIPELINE_ZONES/01_RAW/SOURCE_LINKS/source_links.txt` and downloads videos with `yt-dlp` into this business workspace's raw-media folder. It can also read `YOUTUBE_LINKS_FILE` and `YOUTUBE_DOWNLOAD_DIR` from `.env`.
+Current downloader. It detects the latest dated folder in `POST_LINKS`, reads that batch's `source_links.txt`, downloads videos with `yt-dlp` into the batch's `downloaded_videos` folder, then copies organized files into `PIPELINE_ZONES/01_RAW/DOWNLOADED_MEDIA/{topic}`. It reads `DOWNLOAD_MODE` from `.env`.
 
 `SHARED_ASSETS/PROMPTS`
 
@@ -64,15 +64,18 @@ CSV trackers for content calendars, media-page performance, client leads, and cl
 
 ## Download Workflow
 
-1. Add source URLs to `PIPELINE_ZONES/01_RAW/SOURCE_LINKS/source_links.txt`.
-2. Activate the repo environment.
-3. Run the downloader.
-4. Confirm raw files land in `CREATOR_CLIPPING_BUSINESS/PIPELINE_ZONES/01_RAW/DOWNLOADED_MEDIA`.
-5. Move transcript notes and clip candidates into `PIPELINE_ZONES/02_INTERMEDIATE`.
-6. Use prompt files to generate hooks, captions, and transformation angles.
-7. Move draft edits, captions, and review notes into `PIPELINE_ZONES/03_STAGING`.
-8. Move approved posting notes and performance summaries into `PIPELINE_ZONES/04_CURATED`.
-9. Track posts and performance in `TRACKING`.
+1. Create or use the latest folder in `POST_LINKS/YYYY-MM-DD`.
+2. Add source URLs to `POST_LINKS/YYYY-MM-DD/source_links.txt`.
+3. Use the line format `url | topic | rights_status`.
+4. Keep raw batch downloads in `POST_LINKS/YYYY-MM-DD/downloaded_videos`.
+5. Activate the repo environment.
+6. Run the downloader.
+7. Confirm organized copies land in `CREATOR_CLIPPING_BUSINESS/PIPELINE_ZONES/01_RAW/DOWNLOADED_MEDIA/{topic}`.
+8. Move transcript notes and clip candidates into `PIPELINE_ZONES/02_INTERMEDIATE`.
+9. Use prompt files to generate hooks, captions, and transformation angles.
+10. Move draft edits, captions, and review notes into `PIPELINE_ZONES/03_STAGING`.
+11. Move approved posting notes and performance summaries into `PIPELINE_ZONES/04_CURATED`.
+12. Track posts and performance in `TRACKING`.
 
 Command:
 
@@ -80,6 +83,8 @@ Command:
 .\.venv\Scripts\Activate.ps1
 python CREATOR_CLIPPING_BUSINESS\AUTOMATION\batch_download.py
 ```
+
+Safety mode defaults to `safe`, which only downloads links marked `approved`, `public_domain`, or `creative_commons`. Use `--download-mode all` only when you intentionally want to collect every valid link for review.
 
 ## Transformation Rules
 

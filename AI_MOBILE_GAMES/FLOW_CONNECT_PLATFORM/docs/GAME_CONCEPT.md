@@ -2,15 +2,16 @@
 
 ## Working Title
 
-Flow Connect
+Number Hex
 
 ## Core Loop
 
 1. Player opens a level.
-2. Player connects matching colored dots by dragging paths across a grid.
-3. Paths cannot overlap or cross.
-4. Player wins when every pair is connected and every grid cell is filled.
-5. Player advances to the next level or replays for a better solve time.
+2. Player sees a hexagon-shaped board made of equal hex tiles.
+3. Player starts at `1` and draws one continuous path through numbers `2` to `10`.
+4. The path can move only to adjacent hex tiles.
+5. The path cannot overlap itself.
+6. Player wins when the path reaches `10` in order.
 
 ## Target Platform
 
@@ -25,8 +26,9 @@ Casual puzzle players who like clean, relaxing, progressively harder logic games
 
 ## MVP Scope
 
+- Home screen.
 - Level select.
-- 25-50 handcrafted levels.
+- First 10 solvable numbered hex levels.
 - Reset and undo.
 - Completion state.
 - Local progress save.
@@ -41,4 +43,3 @@ Casual puzzle players who like clean, relaxing, progressively harder logic games
 - Monetization experiments.
 - AI-assisted level generation and validation.
 - Remote config for level packs.
-

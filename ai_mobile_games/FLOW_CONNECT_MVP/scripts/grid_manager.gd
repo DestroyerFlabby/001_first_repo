@@ -2,17 +2,27 @@ extends Node
 class_name GridManager
 
 const CellData = preload("res://scripts/cell.gd")
+const HEX_DIRECTIONS: Array[Vector2i] = [
+	Vector2i(1, 0),
+	Vector2i(-1, 0),
+	Vector2i(0, 1),
+	Vector2i(0, -1),
+	Vector2i(1, -1),
+	Vector2i(-1, 1)
+]
 
-var grid_size: int = 5
+var radius: int = 2
 var cells: Dictionary = {}
 
-func setup(size: int, dot_pairs: Array[Dictionary]) -> void:
-	grid_size = size
+func setup(hex_radius: int, dot_pairs: Array[Dictionary]) -> void:
+	radius = hex_radius
 	cells.clear()
 
-	for y in range(grid_size):
-		for x in range(grid_size):
-			cells[Vector2i(x, y)] = CellData.new(Vector2i(x, y))
+	for q in range(-radius, radius + 1):
+		for r in range(-radius, radius + 1):
+			var coord := Vector2i(q, r)
+			if _is_inside_hex(coord):
+				cells[coord] = CellData.new(coord)
 
 	for path_id in range(dot_pairs.size()):
 		var pair := dot_pairs[path_id]
@@ -32,9 +42,11 @@ func has_cell(coord: Vector2i) -> bool:
 func get_cell(coord: Vector2i) -> Cell:
 	return cells.get(coord)
 
+func get_coords() -> Array:
+	return cells.keys()
+
 func is_adjacent(a: Vector2i, b: Vector2i) -> bool:
-	# Manhattan distance of 1 means only up/down/left/right.
-	return abs(a.x - b.x) + abs(a.y - b.y) == 1
+	return HEX_DIRECTIONS.has(b - a)
 
 func is_cell_available_for_path(coord: Vector2i, path_id: int) -> bool:
 	var cell := get_cell(coord)
@@ -61,3 +73,6 @@ func are_all_cells_filled() -> bool:
 		if cell.occupying_path_id == -1:
 			return false
 	return true
+
+func _is_inside_hex(coord: Vector2i) -> bool:
+	return max(abs(coord.x), abs(coord.y), abs(-coord.x - coord.y)) <= radius

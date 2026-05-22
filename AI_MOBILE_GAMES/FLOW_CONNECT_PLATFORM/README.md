@@ -12,13 +12,13 @@ Production workspace for turning the existing `FLOW_CONNECT_MVP` Godot prototype
 
 ## Current Game Assumption
 
-The current game appears to be a Flow Connect style puzzle game:
+The current game is a numbered hex path puzzle:
 
-- Grid-based board.
-- Colored dot pairs.
-- Player drags paths to connect matching dots.
-- Paths cannot cross.
-- A level is complete when all pairs are connected and the board is filled.
+- Hexagon-shaped board made of equal hex tiles.
+- Numbered checkpoints from `1` to `10`.
+- Player draws one continuous path through the numbers in order.
+- The path cannot overlap itself.
+- A level is complete when the player reaches `10`.
 
 If this is not the intended game, update `docs/GAME_CONCEPT.md` first.
 

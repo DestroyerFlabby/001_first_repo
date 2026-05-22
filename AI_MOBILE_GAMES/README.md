@@ -7,7 +7,7 @@ Workspace for building mobile video games with AI-assisted design, coding, asset
 - `projects/` - Individual game prototypes and production projects.
 - `prompts/` - Reusable prompts for game concepts, mechanics, art direction, monetization, and store listings.
 - `assets/` - Shared generated or sourced assets that can be reused across projects.
-- `skills/` - Repo-local Codex skill drafts. These can be copied into your Codex skills directory when you want them to auto-trigger.
+- `../skills/` - Shared repo-level Codex skill drafts for mobile games and other workflows.
 
 ## Starting Workflow
 
@@ -19,5 +19,4 @@ Workspace for building mobile video games with AI-assisted design, coding, asset
 
 ## Codex Skills Note
 
-Codex skills are normally discovered from your Codex skills directory, such as `~/.codex/skills`. Keeping draft skills in this repo is useful for version control, but another Codex environment may need the skill copied or installed into its own skills directory before it auto-triggers.
-
+Codex skills are normally discovered from your Codex skills directory, such as `~/.codex/skills`. Shared drafts for this repo live at `../skills/` for version control, but another Codex environment may need a skill copied or installed into its own skills directory before it auto-triggers.

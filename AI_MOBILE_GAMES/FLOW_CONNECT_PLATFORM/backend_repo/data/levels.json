@@ -1,0 +1,41 @@
+[
+  {
+    "id": "starter-001",
+    "pack_id": "starter",
+    "title": "First Flow",
+    "grid_size": 5,
+    "difficulty": "easy",
+    "dot_pairs": [
+      {
+        "color": "#ff4d4d",
+        "start": { "x": 0, "y": 0 },
+        "end": { "x": 4, "y": 1 }
+      },
+      {
+        "color": "#4d99ff",
+        "start": { "x": 1, "y": 4 },
+        "end": { "x": 4, "y": 4 }
+      }
+    ]
+  },
+  {
+    "id": "starter-002",
+    "pack_id": "starter",
+    "title": "Corners",
+    "grid_size": 5,
+    "difficulty": "easy",
+    "dot_pairs": [
+      {
+        "color": "#ff4d4d",
+        "start": { "x": 0, "y": 0 },
+        "end": { "x": 4, "y": 4 }
+      },
+      {
+        "color": "#4d99ff",
+        "start": { "x": 4, "y": 0 },
+        "end": { "x": 0, "y": 4 }
+      }
+    ]
+  }
+]
+

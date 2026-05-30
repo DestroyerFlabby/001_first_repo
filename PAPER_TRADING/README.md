@@ -74,6 +74,10 @@ python .\compare_investors.py --from-date 2026-05-20
 python .\compare_investors.py --from-date 2026-05-20 --to-date 2026-05-29
 ```
 
+This is the standard manual progress report. Run it whenever an updated
+comparison is requested. Keep `2026-05-20` as the shared reference date so
+every trader is measured over the same window.
+
 Create a non-extended `$10-50` portfolio snapshot for the next weekday
 session:
 
@@ -120,10 +124,30 @@ Related research notes:
   `$10-50` broad-market additions with technical tiers and catalyst context
 - `research/short_term_watchlist_ranked_fluctuation_2026-05-30.md`: weighted
   ranking of short-term names by continued activity and fluctuation potential
+- `research/raw_materials_specialty_gases_2026-05-30.md`: sector tracker for
+  strategic materials, quartz exposure, and semiconductor specialty gases
+- `research/silicon_wafers_2026-05-30.md`: sector tracker for silicon and
+  compound-semiconductor wafer suppliers
+- `research/lithography_2026-05-30.md`: sector tracker for lithography tools,
+  EUV dependencies, and mature-node alternatives
+- `research/photomasks_eda_2026-05-30.md`: sector tracker for EDA software,
+  photomask materials, mask writers, and inspection tools
+- `research/deposition_etch_2026-05-30.md`: sector tracker for deposition,
+  etch, and related wafer-fabrication equipment
+- `research/cmp_cleaning_metrology_2026-05-30.md`: sector tracker for CMP
+  materials, cleaning inputs, inspection, and metrology
+- `research/advanced_packaging_2026-05-30.md`: sector tracker for CoWoS,
+  HBM, OSAT capacity, hybrid bonding, and temporary bonding materials
+- `research/leading_edge_logic_foundry_2026-05-30.md`: sector tracker for
+  leading-edge logic fabrication and geographic concentration
+- `research/memory_2026-05-30.md`: sector tracker for DRAM, NAND, HBM,
+  and flash-memory joint ventures
+- `research/chip_design_2026-05-30.md`: sector tracker for chip design,
+  accelerator vendors, custom silicon, and processor IP
 
 The initial simulated portfolios were requested for January 1, 2026, a market
 holiday, so unpriced stocks and ETFs use the next available market close. The
-forward `WATCHLIST` stores May 20, 2026 closing prices as its fills. Shared
+forward `long-term-watchlist` stores May 20, 2026 closing prices as its fills. Shared
 window comparisons use `--from-date` to rebase every portfolio at the same
 date without modifying either recorded baseline. Canadian listings are
 converted between CAD and USD using the corresponding daily CAD/USD rates.

@@ -7,8 +7,8 @@ Research snapshot generated: 2026-05-30
 The rolling event study in
 `research/tracked_stock_forward_volume_signals_since_2026-01-01.md` found that
 the strict three-factor setup was associated with next-five-session average
-volume of at least `1.5x` normal in `47.9%` of historical observations,
-compared with `15.7%` across all observations.
+volume of at least `1.5x` normal in `53.6%` of historical observations,
+compared with `15.8%` across all observations.
 
 Strict setup:
 
@@ -20,12 +20,68 @@ The latest available close was May 29, 2026. Current strict matches:
 
 | Ticker | Prior 5d Return | Prior 5d Volume Ratio | Distance to Prior 20d High |
 |---|---:|---:|---:|
+| `CRSR` | `+75.18%` | `2.64x` | `+1.59%` |
+| `UMAC` | `+114.73%` | `2.22x` | `+7.36%` |
 | `QBTS` | `+17.09%` | `1.99x` | `+2.20%` |
+| `MOV` | `+39.20%` | `1.96x` | `+7.56%` |
 | `IBM` | `+17.72%` | `1.87x` | `+12.71%` |
+| `RCAT` | `+60.58%` | `1.70x` | `+2.47%` |
+| `HPQ` | `+23.47%` | `1.68x` | `+6.08%` |
 | `SNOW` | `+54.37%` | `1.62x` | `+6.84%` |
+| `BBAR` | `+12.85%` | `1.55x` | `+4.14%` |
 
 Positive distance means the latest close has already broken above the prior
 20-session high.
+
+## Fresh Priority Queue
+
+To avoid chasing names that have already moved sharply, apply an additional
+working filter: prioritize strict matches with a five-session return no higher
+than `+25%`.
+
+| Ticker | Prior 5d Return | Prior 5d Volume Ratio | Tracked In |
+|---|---:|---:|---|
+| `QBTS` | `+17.09%` | `1.99x` | `long-term-watchlist`, `short-term-watchlist` |
+| `IBM` | `+17.72%` | `1.87x` | `long-term-watchlist`, `short-term-watchlist` |
+| `HPQ` | `+23.47%` | `1.68x` | `daily-watchlist-2026-06-01`, `short-term-watchlist` |
+| `BBAR` | `+12.85%` | `1.55x` | `daily-watchlist-2026-06-01`, `short-term-watchlist` |
+
+These strict matches pass the measured technical screen, but they still
+require catalyst, valuation, liquidity, dilution, float, and short-interest
+review before any trading decision.
+
+## Extended Strict Matches
+
+The following names technically qualify but have already risen more than
+`25%` over five sessions. Treat them as review-only rather than fresh-entry
+candidates.
+
+| Ticker | Prior 5d Return | Prior 5d Volume Ratio |
+|---|---:|---:|
+| `UMAC` | `+114.73%` | `2.22x` |
+| `CRSR` | `+75.18%` | `2.64x` |
+| `RCAT` | `+60.58%` | `1.70x` |
+| `SNOW` | `+54.37%` | `1.62x` |
+| `MOV` | `+39.20%` | `1.96x` |
+
+## Near-Match Queue
+
+These names are near the prior 20-session high with at least `1.25x` volume,
+but do not yet pass every strict threshold.
+
+| Ticker | Prior 5d Return | Prior 5d Volume Ratio | Distance to Prior 20d High |
+|---|---:|---:|---:|
+| `AXTA` | `+5.63%` | `1.62x` | `+1.45%` |
+| `TEO` | `+23.93%` | `1.50x` | `+5.22%` |
+| `GRRR` | `+43.62%` | `1.48x` | `+15.45%` |
+| `BRZE` | `+9.48%` | `1.48x` | `+0.71%` |
+| `BOX` | `+6.14%` | `1.42x` | `+4.09%` |
+| `CLF` | `+27.10%` | `1.42x` | `+2.33%` |
+| `MRVL` | `+7.50%` | `1.41x` | `-1.57%` |
+| `ONDS` | `+44.01%` | `1.39x` | `-0.23%` |
+| `BIRK` | `+13.61%` | `1.37x` | `+2.27%` |
+| `CRNC` | `+32.71%` | `1.36x` | `+8.34%` |
+| `PATH` | `+10.88%` | `1.35x` | `+1.21%` |
 
 ## Catalyst Review
 
@@ -85,4 +141,3 @@ company disclosures:
 Monitor tracked names daily and escalate research when all three technical
 conditions are met. Then confirm whether an official catalyst exists and
 review valuation, liquidity, dilution, float, and short interest separately.
-

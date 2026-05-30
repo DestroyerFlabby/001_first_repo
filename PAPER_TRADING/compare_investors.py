@@ -250,7 +250,7 @@ def main() -> int:
         from nisarg_window_return import calculate_window
 
         nisarg = calculate_window(args.from_date, args.to_date)
-        totals["Nisarg"] = (
+        totals["nisarg"] = (
             nisarg.deployed_capital_usd,
             nisarg.ending_proceeds_and_value_usd,
         )

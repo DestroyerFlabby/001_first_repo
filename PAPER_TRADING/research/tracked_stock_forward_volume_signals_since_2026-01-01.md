@@ -9,7 +9,7 @@ volume during the next five sessions?
 
 ## Method
 
-- Screened `87` unique tracked stock tickers from `data/trades.csv`.
+- Screened `140` unique tracked stock tickers from `data/trades.csv`.
 - Used rolling daily observations from January 2, 2026 onward.
 - Used only information available by each observation date.
 - Defined normal volume as the prior 20-session average.
@@ -24,13 +24,13 @@ volume during the next five sessions?
 
 | Pre-Existing Condition | Observations | Next 5d Avg Volume >=1.5x | Next 5d Peak Volume >=2x | Median Next Avg Volume | Median Next Peak Volume | Median Next 5d Max Return |
 |---|---:|---:|---:|---:|---:|---:|
-| All observations | `8457` | `15.7%` | `21.4%` | `0.97x` | `1.32x` | `+2.57%` |
-| 5d volume >= 1.5x normal | `696` | `29.5%` | `34.6%` | `1.14x` | `1.58x` | `+3.09%` |
-| 5d price return >= +10% | `1107` | `25.7%` | `30.8%` | `1.12x` | `1.51x` | `+6.67%` |
-| 5d volume >= 1.5x and price >= +10% | `202` | `38.1%` | `41.1%` | `1.25x` | `1.67x` | `+3.99%` |
-| Near 20d high and 5d volume >= 1.25x | `506` | `37.7%` | `43.3%` | `1.32x` | `1.84x` | `+2.69%` |
-| 5d volume >= 1.5x, price >= +10%, near 20d high | `121` | `47.9%` | `52.1%` | `1.47x` | `2.05x` | `+4.41%` |
-| 4+ rising-volume sessions and price >= +5% | `264` | `30.7%` | `31.4%` | `1.22x` | `1.69x` | `+4.59%` |
+| All observations | `13598` | `15.8%` | `22.4%` | `0.97x` | `1.32x` | `+2.89%` |
+| 5d volume >= 1.5x normal | `1122` | `30.8%` | `37.4%` | `1.14x` | `1.60x` | `+3.42%` |
+| 5d price return >= +10% | `1831` | `27.3%` | `32.2%` | `1.13x` | `1.54x` | `+6.23%` |
+| 5d volume >= 1.5x and price >= +10% | `318` | `45.3%` | `47.2%` | `1.38x` | `1.87x` | `+4.44%` |
+| Near 20d high and 5d volume >= 1.25x | `878` | `38.3%` | `43.6%` | `1.29x` | `1.82x` | `+3.12%` |
+| 5d volume >= 1.5x, price >= +10%, near 20d high | `207` | `53.6%` | `56.5%` | `1.55x` | `2.22x` | `+5.41%` |
+| 4+ rising-volume sessions and price >= +5% | `448` | `31.9%` | `36.2%` | `1.23x` | `1.74x` | `+4.37%` |
 
 ## Interpretation
 
@@ -56,9 +56,26 @@ known next-five-session outcomes yet.
 
 | Ticker | As Of | Prior 5d Return | Prior 5d Volume Ratio | Distance to Prior 20d High | Strict Match |
 |---|---|---:|---:|---:|---|
+| `CRSR` | 2026-05-29 | `+75.18%` | `2.64x` | `+1.59%` | yes |
+| `UMAC` | 2026-05-29 | `+114.73%` | `2.22x` | `+7.36%` | yes |
 | `QBTS` | 2026-05-29 | `+17.09%` | `1.99x` | `+2.20%` | yes |
+| `MOV` | 2026-05-29 | `+39.20%` | `1.96x` | `+7.56%` | yes |
 | `IBM` | 2026-05-29 | `+17.72%` | `1.87x` | `+12.71%` | yes |
+| `RCAT` | 2026-05-29 | `+60.58%` | `1.70x` | `+2.47%` | yes |
+| `HPQ` | 2026-05-29 | `+23.47%` | `1.68x` | `+6.08%` | yes |
 | `SNOW` | 2026-05-29 | `+54.37%` | `1.62x` | `+6.84%` | yes |
+| `BBAR` | 2026-05-29 | `+12.85%` | `1.55x` | `+4.14%` | yes |
+| `AXTA` | 2026-05-29 | `+5.63%` | `1.62x` | `+1.45%` | near |
+| `TEO` | 2026-05-29 | `+23.93%` | `1.50x` | `+5.22%` | near |
+| `GRRR` | 2026-05-29 | `+43.62%` | `1.48x` | `+15.45%` | near |
+| `BRZE` | 2026-05-29 | `+9.48%` | `1.48x` | `+0.71%` | near |
+| `BOX` | 2026-05-29 | `+6.14%` | `1.42x` | `+4.09%` | near |
+| `CLF` | 2026-05-29 | `+27.10%` | `1.42x` | `+2.33%` | near |
+| `MRVL` | 2026-05-29 | `+7.50%` | `1.41x` | `-1.57%` | near |
+| `ONDS` | 2026-05-29 | `+44.01%` | `1.39x` | `-0.23%` | near |
+| `BIRK` | 2026-05-29 | `+13.61%` | `1.37x` | `+2.27%` | near |
+| `CRNC` | 2026-05-29 | `+32.71%` | `1.36x` | `+8.34%` | near |
+| `PATH` | 2026-05-29 | `+10.88%` | `1.35x` | `+1.21%` | near |
 
 ## Data
 

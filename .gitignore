@@ -107,3 +107,8 @@ CREATOR_CLIPPING_BUSINESS/PIPELINE_ZONES/03_STAGING/DRAFT_CLIPS/*/*
 # Node (often present via JupyterLab extensions)
 node_modules/
 
+# Personal Wealthsimple exports and generated account history
+PAPER_TRADING/activities-export-*.csv
+PAPER_TRADING/data/wealthsimple_activities.csv
+PAPER_TRADING/data/wealthsimple_imports.csv
+

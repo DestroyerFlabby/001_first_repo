@@ -74,6 +74,20 @@ python .\compare_investors.py --from-date 2026-05-20
 python .\compare_investors.py --from-date 2026-05-20 --to-date 2026-05-29
 ```
 
+Create a non-extended `$10-50` portfolio snapshot for the next weekday
+session:
+
+```powershell
+python .\scan_daily_fresh_setups.py --top 10 --record-portfolio
+```
+
+The scanner defaults to a trader name such as `daily-watchlist-2026-06-01`.
+Each dated trader is kept separately so the next-session snapshots can be
+compared later without overwriting earlier selections. Omit
+`--record-portfolio` to generate the research files without adding ledger
+positions. Repeated same-day runs reuse the saved snapshot to avoid unnecessary
+requests to the public chart feed. Use `--refresh` after a new market close.
+
 Shared-window comparisons automatically add a `Nisarg` row calculated from
 the imported Wealthsimple activity history. Inspect that security-only
 calculation directly with:
@@ -92,6 +106,20 @@ Related research notes:
   the `$10-20` candidate screen for spreadsheet analysis
 - `research/trader_comparison_2026-05-20_to_2026-05-30.md`: dated same-window
   trader comparison snapshot
+- `research/tracked_stock_volume_spikes_since_2026-01-01.md`: pre-spike volume
+  analysis for tracked stocks crossing `+25%` since the January 2 close
+- `research/tracked_stock_volume_spikes_since_2026-01-01.csv`: sortable
+  per-stock measurements for the volume-spike analysis
+- `research/tracked_stock_forward_volume_signals_since_2026-01-01.md`: rolling
+  event study for technical conditions associated with future volume
+- `research/tracked_stock_forward_volume_signals_since_2026-01-01.csv`: sortable
+  rolling observations for the forward-volume event study
+- `research/current_forward_volume_catalyst_review_2026-05-30.md`: current
+  strict technical matches with official-news catalyst review
+- `research/short_term_watchlist_broad_market_additions_2026-05-30.md`: ten
+  `$10-50` broad-market additions with technical tiers and catalyst context
+- `research/short_term_watchlist_ranked_fluctuation_2026-05-30.md`: weighted
+  ranking of short-term names by continued activity and fluctuation potential
 
 The initial simulated portfolios were requested for January 1, 2026, a market
 holiday, so unpriced stocks and ETFs use the next available market close. The
@@ -140,6 +168,9 @@ The helper uses Alpaca's free IEX feed. It does not submit orders.
 - `lookup_alpaca_price.py`: optional free API lookup for estimated prices
 - `compare_investors.py`: compare initial allocations against latest available prices
 - `nisarg_window_return.py`: calculate Nisarg's security-only Wealthsimple return for one window
+- `analyze_volume_spikes.py`: analyze pre-spike volume for tracked stocks up at least 25% since January 2
+- `analyze_forward_volume_signals.py`: test which technical conditions preceded elevated volume over the next five sessions
+- `scan_daily_fresh_setups.py`: rank non-extended `$10-50` stocks for the next session and optionally record a daily portfolio
 - `wealthsimple_tracker.py`: import and summarize real Wealthsimple account history
 - `data/wealthsimple_activities.csv`: normalized granular Wealthsimple history
 - `data/wealthsimple_imports.csv`: Wealthsimple import audit log

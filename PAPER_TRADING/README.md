@@ -78,6 +78,29 @@ This is the standard manual progress report. Run it whenever an updated
 comparison is requested. Keep `2026-05-20` as the shared reference date so
 every trader is measured over the same window.
 
+## Dashboard
+
+Start the local read-only dashboard from the repository root:
+
+```powershell
+.\.venv\Scripts\python.exe .\PAPER_TRADING\run_dashboard.py
+```
+
+Then open [http://127.0.0.1:8000](http://127.0.0.1:8000).
+
+The dashboard reads `data/trades.csv` and the imported Wealthsimple history.
+It does not submit trades or modify the ledger. It provides:
+
+- trader rankings and holding-level drilldowns
+- daily paper-portfolio value charts
+- stock, ETF, and crypto price-history drilldowns
+- January 1 and May 20 reference-window presets
+- beginning-of-month, mid-month, and end-of-month checkpoint cutoffs from
+  January 2026 onward
+- current strict, near-match, and fresh-priority volume signals
+- Nisarg's security-only Wealthsimple summary with deposits and withdrawals
+  excluded
+
 Create a non-extended `$10-50` portfolio snapshot for the next weekday
 session:
 
@@ -195,6 +218,9 @@ The helper uses Alpaca's free IEX feed. It does not submit orders.
 - `analyze_volume_spikes.py`: analyze pre-spike volume for tracked stocks up at least 25% since January 2
 - `analyze_forward_volume_signals.py`: test which technical conditions preceded elevated volume over the next five sessions
 - `scan_daily_fresh_setups.py`: rank non-extended `$10-50` stocks for the next session and optionally record a daily portfolio
+- `backend/`: read-only FastAPI analytics API for the local dashboard
+- `frontend/`: dependency-free local browser dashboard
+- `run_dashboard.py`: start the local dashboard server
 - `wealthsimple_tracker.py`: import and summarize real Wealthsimple account history
 - `data/wealthsimple_activities.csv`: normalized granular Wealthsimple history
 - `data/wealthsimple_imports.csv`: Wealthsimple import audit log

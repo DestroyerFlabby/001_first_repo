@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Paper Trading Dashboard</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Local research workspace</p>
+        <h1>Paper Trading Dashboard</h1>
+      </div>
+      <div class="status"><span class="status-dot"></span> Yahoo close data</div>
+    </header>
+
+    <main>
+      <section class="controls card">
+        <div>
+          <p class="label">Reference window</p>
+          <div id="presets" class="preset-row"></div>
+        </div>
+        <label>
+          <span>From</span>
+          <input id="from-date" type="date" value="2026-05-20" />
+        </label>
+        <label>
+          <span>To date</span>
+          <input id="to-date" type="date" />
+        </label>
+        <label>
+          <span>As of checkpoint</span>
+          <select id="checkpoint">
+            <option value="">Latest available close</option>
+          </select>
+        </label>
+        <button id="apply-window" class="primary">Refresh dashboard</button>
+      </section>
+
+      <p id="loading" class="loading">Loading tracked-market data...</p>
+      <p id="error" class="error hidden"></p>
+
+      <section id="content" class="hidden">
+        <div id="summary-cards" class="summary-grid"></div>
+
+        <section class="card">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Portfolio performance</p>
+              <h2>Traders</h2>
+            </div>
+            <p id="window-label" class="muted"></p>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Rank</th>
+                  <th>Trader</th>
+                  <th>Positions</th>
+                  <th>Starting value</th>
+                  <th>Current value</th>
+                  <th>Gain / loss</th>
+                  <th>Return</th>
+                </tr>
+              </thead>
+              <tbody id="trader-rows"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="section-heading stock-heading">
+            <div>
+              <p class="eyebrow">Instrument-level drilldown</p>
+              <h2>Tracked Stocks</h2>
+            </div>
+            <div class="stock-tools">
+              <input id="stock-search" type="search" placeholder="Search ticker or trader" />
+              <select id="signal-filter">
+                <option value="all">All signals</option>
+                <option value="fresh">Fresh priority</option>
+                <option value="strict">Strict matches</option>
+                <option value="near">Near matches</option>
+              </select>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Ticker</th>
+                  <th>Type</th>
+                  <th>Owners</th>
+                  <th>Start</th>
+                  <th>Latest</th>
+                  <th>Return</th>
+                  <th>5d volume</th>
+                  <th>Signal</th>
+                </tr>
+              </thead>
+              <tbody id="stock-rows"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <aside id="drawer" class="drawer" aria-hidden="true">
+      <button id="close-drawer" class="drawer-close" aria-label="Close">×</button>
+      <div id="drawer-content"></div>
+    </aside>
+    <div id="backdrop" class="backdrop hidden"></div>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>

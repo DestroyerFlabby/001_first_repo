@@ -66,12 +66,41 @@ Compare the initial investor portfolios against the latest available prices:
 python .\compare_investors.py
 ```
 
-Because the simulated start date is January 1, 2026, a market holiday, the
-comparison uses the January 2, 2026 close for stocks and ETFs. Crypto uses its
-January 1, 2026 close. Canadian listings are converted between CAD and USD
-using the corresponding daily CAD/USD rates. The comparison script uses
-Yahoo Finance's public chart feed so it can cover both US and Canadian
-listings.
+Compare every portfolio over the same market window without changing its
+recorded trade baseline:
+
+```powershell
+python .\compare_investors.py --from-date 2026-05-20
+python .\compare_investors.py --from-date 2026-05-20 --to-date 2026-05-29
+```
+
+Shared-window comparisons automatically add a `Nisarg` row calculated from
+the imported Wealthsimple activity history. Inspect that security-only
+calculation directly with:
+
+```powershell
+python .\nisarg_window_return.py --from-date 2026-05-20
+```
+
+Related research notes:
+
+- `research/top_10_news_themes_2026-05-30.md`: sourced catalysts and inferred
+  themes for the combined `bdinvesting` and `russellckai` top 10 holdings
+- `research/ai_infrastructure_10_20_screen_2026-05-30.md`: broad-market
+  `$10-20` candidate screen with pre-spike and current valuation context
+- `research/ai_infrastructure_10_20_screen_2026-05-30.csv`: sortable version of
+  the `$10-20` candidate screen for spreadsheet analysis
+- `research/trader_comparison_2026-05-20_to_2026-05-30.md`: dated same-window
+  trader comparison snapshot
+
+The initial simulated portfolios were requested for January 1, 2026, a market
+holiday, so unpriced stocks and ETFs use the next available market close. The
+forward `WATCHLIST` stores May 20, 2026 closing prices as its fills. Shared
+window comparisons use `--from-date` to rebase every portfolio at the same
+date without modifying either recorded baseline. Canadian listings are
+converted between CAD and USD using the corresponding daily CAD/USD rates.
+The comparison script uses Yahoo Finance's public chart feed so it can cover
+both US and Canadian listings.
 
 ## Free Market Data
 
@@ -110,6 +139,7 @@ The helper uses Alpaca's free IEX feed. It does not submit orders.
 - `paper_trading.py`: add trades and report open positions
 - `lookup_alpaca_price.py`: optional free API lookup for estimated prices
 - `compare_investors.py`: compare initial allocations against latest available prices
+- `nisarg_window_return.py`: calculate Nisarg's security-only Wealthsimple return for one window
 - `wealthsimple_tracker.py`: import and summarize real Wealthsimple account history
 - `data/wealthsimple_activities.csv`: normalized granular Wealthsimple history
 - `data/wealthsimple_imports.csv`: Wealthsimple import audit log

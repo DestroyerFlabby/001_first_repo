@@ -1,0 +1,11 @@
+rank,ticker,company,sector,industry,latest_date,latest_close,market_cap_usd,latest_volume,prior_5d_return_pct,prior_20d_return_pct,prior_5d_volume_ratio,prior_5d_volume_up_sessions,distance_to_20d_high_pct,score
+1,PHR,Phreesia Inc. Common Stock,Consumer Discretionary,Business Services,2026-06-01,10.6600,658914737,2199015,19.51,10.24,1.64,2,4.82,77.22
+2,PENN,PENN Entertainment Inc. Common Stock,Consumer Discretionary,Hotels/Resorts,2026-06-01,20.2400,2708989829,5616072,19.91,17.20,1.41,3,4.12,70.99
+3,TBBB,BBB Foods Inc. Class A Common Shares,Consumer Staples,Food Chains,2026-06-01,39.5600,4662428814,2102067,7.68,8.15,2.53,3,2.94,70.36
+4,BBAR,Banco BBVA Argentina S.A. ADS,Finance,Commercial Banks,2026-06-01,18.8100,3841692195,1021884,23.10,38.72,1.48,3,2.51,69.67
+5,TEO,Telecom Argentina SA,Telecommunications,Telecommunications Equipment,2026-06-01,14.5200,6254309981,872112,22.43,22.53,1.66,3,-1.29,66.47
+6,HRL,Hormel Foods Corporation Common Stock,Consumer Staples,Meat/Poultry/Fish,2026-06-01,23.3500,12849854293,6337464,9.93,9.47,1.98,4,-1.02,66.25
+7,BHVN,Biohaven Ltd. Common Shares ,Health Care,Biotechnology: Pharmaceutical Preparations,2026-06-01,11.4300,1720289181,2700859,20.95,18.69,1.46,3,1.24,65.78
+8,BOX,Box Inc. Class A Common Stock,Technology,Computer Software: Prepackaged Software,2026-06-01,28.7900,3985970462,4210034,11.16,15.11,1.59,2,6.79,63.44
+9,SSYS,Stratasys Ltd. Ordinary Shares (Israel),Technology,Computer peripheral equipment,2026-06-01,10.6900,921184442,1910783,18.51,19.98,1.38,3,1.42,61.24
+10,CLF,Cleveland-Cliffs Inc. Common Stock,Basic Materials,Metal Mining,2026-06-01,13.5800,7746231042,16169170,20.93,29.21,1.48,2,-0.15,60.04

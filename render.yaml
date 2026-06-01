@@ -1,0 +1,13 @@
+services:
+  - type: web
+    runtime: python
+    name: stock-tracking-advanced
+    plan: free
+    buildCommand: pip install -r PAPER_TRADING/requirements-dashboard.txt
+    startCommand: uvicorn backend.app:app --app-dir PAPER_TRADING --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: PUBLIC_DASHBOARD
+        value: "true"
+      - key: PYTHON_VERSION
+        value: "3.13.5"

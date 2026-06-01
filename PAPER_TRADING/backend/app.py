@@ -16,8 +16,11 @@ sys.path.insert(0, str(ROOT))
 from backend.dashboard_service import (  # noqa: E402
     DEFAULT_START,
     HISTORY_START,
+    PUBLIC_DASHBOARD,
     asset_detail,
+    build_eod_snapshot,
     build_overview,
+    latest_market_date,
     parse_date,
     trader_detail,
 )
@@ -70,10 +73,13 @@ def health() -> dict[str, str]:
 def meta() -> dict[str, object]:
     return {
         "default_from_date": DEFAULT_START.isoformat(),
+        "default_to_date": latest_market_date().isoformat(),
         "history_from_date": HISTORY_START.isoformat(),
-        "presets": [
-            {"label": "Since Jan 1", "from_date": "2026-01-01"},
-            {"label": "Since May 20", "from_date": "2026-05-20"},
+        "public_dashboard": PUBLIC_DASHBOARD,
+        "key_dates": [
+            {"label": "Jan 1 reference", "date": "2026-01-01"},
+            {"label": "May 20 reference", "date": "2026-05-20"},
+            {"label": "May 29 reference", "date": "2026-05-29"},
         ],
         "checkpoints": month_checkpoints(HISTORY_START, date.today()),
     }
@@ -86,6 +92,11 @@ def overview(
 ) -> dict[str, object]:
     start, end = window(from_date, to_date)
     return build_overview(start, end)
+
+
+@app.get("/api/eod")
+def eod() -> dict[str, object]:
+    return build_eod_snapshot()
 
 
 @app.get("/api/traders/{investor}")

@@ -1,4 +1,4 @@
-const state = { overview: null };
+const state = { overview: null, eod: null, meta: null };
 const $ = (selector) => document.querySelector(selector);
 
 const money = (value) =>
@@ -21,11 +21,52 @@ async function fetchJson(url) {
   return response.json();
 }
 
+function sortableValue(cell) {
+  const raw = cell.textContent.trim();
+  const numeric = Number(raw.replace(/[$,%+x,]/g, ""));
+  return Number.isNaN(numeric) ? raw.toLowerCase() : numeric;
+}
+
+function sortTable(table, column, direction) {
+  const body = table.tBodies[0];
+  if (!body) return;
+  const rows = [...body.rows];
+  rows.sort((left, right) => {
+    const a = sortableValue(left.cells[column]);
+    const b = sortableValue(right.cells[column]);
+    const comparison = typeof a === "number" && typeof b === "number"
+      ? a - b
+      : String(a).localeCompare(String(b));
+    return direction === "asc" ? comparison : -comparison;
+  });
+  rows.forEach((row) => body.appendChild(row));
+  table.querySelectorAll("th").forEach((header) => header.classList.remove("sort-asc", "sort-desc"));
+  table.tHead.rows[0].cells[column].classList.add(`sort-${direction}`);
+}
+
+function enableSorting(root = document) {
+  root.querySelectorAll("table[data-sortable]").forEach((table) => {
+    if (table.dataset.sortReady) return;
+    table.dataset.sortReady = "true";
+    table.querySelectorAll("thead th").forEach((header, column) => {
+      header.addEventListener("click", () => {
+        const direction = header.classList.contains("sort-asc") ? "desc" : "asc";
+        sortTable(table, column, direction);
+      });
+    });
+  });
+}
+
 function signalPill(signal) {
   if (!signal || signal.classification === "none") return '<span class="pill">none</span>';
   const kind = signal.fresh_priority ? "fresh" : signal.classification;
   const label = signal.fresh_priority ? "fresh" : signal.classification;
   return `<span class="pill ${kind}">${label}</span>`;
+}
+
+function classificationPill(classification, label = classification) {
+  if (!classification || classification === "none") return '<span class="pill">none</span>';
+  return `<span class="pill ${classification}">${label}</span>`;
 }
 
 function renderCards() {
@@ -35,7 +76,7 @@ function renderCards() {
   const fresh = stocks.filter((row) => row.signal?.fresh_priority).length;
   const leader = traders[0];
   $("#summary-cards").innerHTML = [
-    ["Portfolios", traders.length, "Paper ledgers plus imported account"],
+    ["Portfolios", traders.length, state.meta?.public_dashboard ? "Public paper ledgers" : "Paper ledgers plus imported account"],
     ["Tracked instruments", stocks.length, "Stocks, ETFs, and crypto"],
     ["Fresh signal matches", fresh, `${strict} strict technical matches`],
     ["Leading portfolio", leader.investor, pct(leader.return_pct)],
@@ -49,6 +90,23 @@ function renderCards() {
         </article>`
     )
     .join("");
+}
+
+function dateOptions(meta, includeLatest = false) {
+  const keyDates = meta.key_dates.map((item) => ({ ...item, group: "Key dates" }));
+  const checkpoints = meta.checkpoints.map((item) => ({ ...item, group: "Monthly checkpoints" }));
+  const rows = includeLatest
+    ? [{ label: `Latest available close (${meta.default_to_date})`, date: meta.default_to_date, group: "Current" }, ...keyDates, ...checkpoints]
+    : [...keyDates, ...checkpoints];
+  let group = "";
+  return rows
+    .map((row) => {
+      const heading = row.group !== group ? `<optgroup label="${row.group}">` : "";
+      const closing = row.group !== group && group ? "</optgroup>" : "";
+      group = row.group;
+      return `${closing}${heading}<option value="${row.date}">${row.label}</option>`;
+    })
+    .join("") + (group ? "</optgroup>" : "");
 }
 
 function renderTraders() {
@@ -69,6 +127,40 @@ function renderTraders() {
   document.querySelectorAll("[data-trader]").forEach((row) =>
     row.addEventListener("click", () => openTrader(row.dataset.trader))
   );
+  enableSorting();
+}
+
+function renderEod() {
+  $("#eod-window-label").textContent = `${state.eod.from_date} to ${state.eod.to_date}`;
+  $("#eod-trader-rows").innerHTML = state.eod.traders
+    .map(
+      (row) => `
+      <tr class="clickable" data-eod-trader="${row.investor}">
+        <td><strong>${row.investor}</strong></td>
+        <td class="${tone(row.return_pct)}">${pct(row.return_pct)}</td>
+        <td class="${tone(row.gain_loss)}">${money(row.gain_loss)}</td>
+      </tr>`
+    )
+    .join("");
+  const top = state.eod.stocks.slice(0, 5);
+  const bottom = state.eod.stocks.slice(-5).reverse();
+  $("#eod-stock-rows").innerHTML = [...top, ...bottom]
+    .map(
+      (row) => `
+      <tr class="clickable" data-eod-stock="${row.ticker}">
+        <td><strong>${row.ticker}</strong></td>
+        <td class="${tone(row.return_pct)}">${pct(row.return_pct)}</td>
+        <td>${row.owners.join(", ")}</td>
+      </tr>`
+    )
+    .join("");
+  document.querySelectorAll("[data-eod-trader]").forEach((row) =>
+    row.addEventListener("click", () => openTrader(row.dataset.eodTrader))
+  );
+  document.querySelectorAll("[data-eod-stock]").forEach((row) =>
+    row.addEventListener("click", () => openStock(row.dataset.eodStock))
+  );
+  enableSorting();
 }
 
 function filteredStocks() {
@@ -99,14 +191,21 @@ function renderStocks() {
         <td>${number(row.start_price)} ${row.currency}</td>
         <td>${number(row.end_price)} ${row.currency}</td>
         <td class="${tone(row.return_pct)}">${pct(row.return_pct)}</td>
-        <td>${row.signal ? `${number(row.signal.five_day_volume_ratio)}x` : "-"}</td>
-        <td>${signalPill(row.signal)}</td>
+        <td>${row.signal ? `${number(row.signal.overall_score)} / 100` : "-"}</td>
+        <td><button class="signal-button" data-stock-signal="${row.ticker}" title="Open multi-horizon signal drilldown">${signalPill(row.signal)}</button></td>
       </tr>`
     )
     .join("");
   document.querySelectorAll("[data-stock]").forEach((row) =>
     row.addEventListener("click", () => openStock(row.dataset.stock))
   );
+  document.querySelectorAll("[data-stock-signal]").forEach((button) =>
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      openStock(button.dataset.stockSignal);
+    })
+  );
+  enableSorting();
 }
 
 function polyline(series, key) {
@@ -178,11 +277,12 @@ async function openTrader(investor) {
       <div class="chart">${polyline(detail.series, "value")}</div>
       <h3>Holdings</h3>
       <div class="table-wrap">
-        <table><thead><tr><th>Ticker</th><th>Start</th><th>Current</th><th>Gain / loss</th><th>Return</th></tr></thead>
+        <table data-sortable><thead><tr><th>Ticker</th><th>Start</th><th>Current</th><th>Gain / loss</th><th>Return</th></tr></thead>
         <tbody>${rows}</tbody></table>
       </div>
       ${detail.note ? `<p class="muted">${detail.note}</p>` : ""}
     `);
+    enableSorting($("#drawer-content"));
   } catch (error) {
     openDrawer(`<p class="error">${error.message}</p>`);
   }
@@ -192,8 +292,26 @@ async function openStock(ticker) {
   openDrawer(`<p class="loading">Loading ${ticker}...</p>`);
   try {
     const detail = await fetchJson(`/api/stocks/${encodeURIComponent(ticker)}?${query()}`);
+    const signalRows = detail.signal
+      ? ["3d", "5d", "1w", "1m", "3m"]
+          .map((key) => detail.signal.horizons[key])
+          .filter(Boolean)
+          .map(
+            (row) => `
+            <tr>
+              <td>${row.label}</td>
+              <td>${row.start_date}</td>
+              <td class="${tone(row.return_pct)}">${pct(row.return_pct)}</td>
+              <td>${number(row.volume_ratio)}x</td>
+              <td>${pct(row.distance_to_20d_high_pct)}</td>
+              <td>${number(row.score)}</td>
+              <td>${classificationPill(row.classification, row.fresh_priority ? "fresh" : row.classification)}</td>
+            </tr>`
+          )
+          .join("")
+      : "";
     openDrawer(`
-      <p class="eyebrow">${detail.security_type} · ${detail.currency}</p>
+      <p class="eyebrow">${detail.security_type} | ${detail.currency}</p>
       <h2>${detail.ticker}</h2>
       <p class="muted">${detail.owners.join(", ")}</p>
       <div class="detail-grid">
@@ -204,11 +322,21 @@ async function openStock(ticker) {
       <h3>Daily close</h3>
       <div class="chart">${polyline(detail.series, "price")}</div>
       <div class="detail-grid">
-        ${stat("Signal", signalPill(detail.signal))}
+        ${stat("Overall signal", detail.signal ? classificationPill(detail.signal.overall_classification) : "-")}
+        ${stat("Weighted score", detail.signal ? `${number(detail.signal.overall_score)} / 100` : "-")}
         ${stat("5d volume", detail.signal ? `${number(detail.signal.five_day_volume_ratio)}x` : "-")}
         ${stat("Distance to 20d high", detail.signal ? pct(detail.signal.distance_to_20d_high_pct) : "-")}
       </div>
+      <h3>Multi-horizon signal indicators</h3>
+      <p class="muted">The weighted score combines 3-day, 5-day, 1-week, and 1-month indicators. The 3-month signal is shown as context.</p>
+      <div class="table-wrap signal-matrix">
+        <table data-sortable>
+          <thead><tr><th>Horizon</th><th>From</th><th>Return</th><th>Volume ratio</th><th>Distance to high</th><th>Score</th><th>Signal</th></tr></thead>
+          <tbody>${signalRows}</tbody>
+        </table>
+      </div>
     `);
+    enableSorting($("#drawer-content"));
   } catch (error) {
     openDrawer(`<p class="error">${error.message}</p>`);
   }
@@ -220,7 +348,9 @@ async function loadOverview() {
   $("#loading").classList.remove("hidden");
   try {
     state.overview = await fetchJson(`/api/overview?${query()}`);
+    state.eod = await fetchJson("/api/eod");
     renderCards();
+    renderEod();
     renderTraders();
     renderStocks();
     $("#window-label").textContent =
@@ -236,33 +366,30 @@ async function loadOverview() {
 
 async function init() {
   const meta = await fetchJson("/api/meta");
-  $("#presets").innerHTML = meta.presets
-    .map((preset) => `<button class="preset" data-date="${preset.from_date}">${preset.label}</button>`)
-    .join("");
-  $("#checkpoint").innerHTML += meta.checkpoints
-    .map((checkpoint) => `<option value="${checkpoint.date}">${checkpoint.label}</option>`)
-    .join("");
-  document.querySelectorAll("[data-date]").forEach((button) =>
-    button.addEventListener("click", () => {
-      $("#from-date").value = button.dataset.date;
-      document.querySelectorAll(".preset").forEach((item) => item.classList.remove("active"));
-      button.classList.add("active");
-      loadOverview();
-    })
-  );
-  $("#checkpoint").addEventListener("change", () => {
-    $("#to-date").value = $("#checkpoint").value;
-    if ($("#checkpoint").value) loadOverview();
+  state.meta = meta;
+  $("#from-quick-date").innerHTML = dateOptions(meta);
+  $("#to-quick-date").innerHTML = dateOptions(meta, true);
+  $("#from-date").value = meta.default_from_date;
+  $("#to-date").value = meta.default_to_date;
+  $("#from-quick-date").value = meta.default_from_date;
+  $("#to-quick-date").value = meta.default_to_date;
+  $("#from-quick-date").addEventListener("change", () => {
+    $("#from-date").value = $("#from-quick-date").value;
+  });
+  $("#to-quick-date").addEventListener("change", () => {
+    $("#to-date").value = $("#to-quick-date").value;
+  });
+  $("#from-date").addEventListener("change", () => {
+    $("#from-quick-date").value = $("#from-date").value;
   });
   $("#to-date").addEventListener("change", () => {
-    $("#checkpoint").value = $("#to-date").value;
+    $("#to-quick-date").value = $("#to-date").value;
   });
   $("#apply-window").addEventListener("click", loadOverview);
   $("#stock-search").addEventListener("input", renderStocks);
   $("#signal-filter").addEventListener("change", renderStocks);
   $("#close-drawer").addEventListener("click", closeDrawer);
   $("#backdrop").addEventListener("click", closeDrawer);
-  document.querySelector('[data-date="2026-05-20"]').classList.add("active");
   loadOverview();
 }
 

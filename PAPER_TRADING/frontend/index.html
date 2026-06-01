@@ -18,22 +18,24 @@
     <main>
       <section class="controls card">
         <div>
-          <p class="label">Reference window</p>
-          <div id="presets" class="preset-row"></div>
+          <p class="label">Selected comparison window</p>
+          <p class="muted">All rankings and drilldowns use the From and To dates.</p>
         </div>
         <label>
           <span>From</span>
           <input id="from-date" type="date" value="2026-05-20" />
         </label>
         <label>
-          <span>To date</span>
+          <span>From quick date</span>
+          <select id="from-quick-date"></select>
+        </label>
+        <label>
+          <span>To</span>
           <input id="to-date" type="date" />
         </label>
         <label>
-          <span>As of checkpoint</span>
-          <select id="checkpoint">
-            <option value="">Latest available close</option>
-          </select>
+          <span>To quick date</span>
+          <select id="to-quick-date"></select>
         </label>
         <button id="apply-window" class="primary">Refresh dashboard</button>
       </section>
@@ -47,13 +49,47 @@
         <section class="card">
           <div class="section-heading">
             <div>
+              <p class="eyebrow">Prior close comparison</p>
+              <h2>Daily EOD Movers</h2>
+            </div>
+            <p id="eod-window-label" class="muted"></p>
+          </div>
+          <div class="eod-grid">
+            <div>
+              <h3>Portfolio Movers</h3>
+              <div class="table-wrap">
+                <table data-sortable>
+                  <thead>
+                    <tr><th>Trader</th><th>Daily return</th><th>Gain / loss</th></tr>
+                  </thead>
+                  <tbody id="eod-trader-rows"></tbody>
+                </table>
+              </div>
+            </div>
+            <div>
+              <h3>Top Stock Movers</h3>
+              <div class="table-wrap">
+                <table data-sortable>
+                  <thead>
+                    <tr><th>Ticker</th><th>Daily return</th><th>Owners</th></tr>
+                  </thead>
+                  <tbody id="eod-stock-rows"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="section-heading">
+            <div>
               <p class="eyebrow">Portfolio performance</p>
               <h2>Traders</h2>
             </div>
             <p id="window-label" class="muted"></p>
           </div>
           <div class="table-wrap">
-            <table>
+            <table data-sortable>
               <thead>
                 <tr>
                   <th>Rank</th>
@@ -87,7 +123,7 @@
             </div>
           </div>
           <div class="table-wrap">
-            <table>
+            <table data-sortable>
               <thead>
                 <tr>
                   <th>Ticker</th>
@@ -96,8 +132,8 @@
                   <th>Start</th>
                   <th>Latest</th>
                   <th>Return</th>
-                  <th>5d volume</th>
-                  <th>Signal</th>
+                  <th>Overall score</th>
+                  <th>5d signal</th>
                 </tr>
               </thead>
               <tbody id="stock-rows"></tbody>
@@ -108,7 +144,7 @@
     </main>
 
     <aside id="drawer" class="drawer" aria-hidden="true">
-      <button id="close-drawer" class="drawer-close" aria-label="Close">×</button>
+      <button id="close-drawer" class="drawer-close" aria-label="Close">x</button>
       <div id="drawer-content"></div>
     </aside>
     <div id="backdrop" class="backdrop hidden"></div>

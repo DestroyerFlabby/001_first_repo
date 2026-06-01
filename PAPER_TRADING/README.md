@@ -94,12 +94,49 @@ It does not submit trades or modify the ledger. It provides:
 - trader rankings and holding-level drilldowns
 - daily paper-portfolio value charts
 - stock, ETF, and crypto price-history drilldowns
-- January 1 and May 20 reference-window presets
-- beginning-of-month, mid-month, and end-of-month checkpoint cutoffs from
-  January 2026 onward
-- current strict, near-match, and fresh-priority volume signals
+- explicit From and To date controls for every selected-window calculation
+- January 1, May 20, and May 29 key-date shortcuts for both From and To
+- beginning-of-month, mid-month, and end-of-month shortcuts for both From and
+  To from January 2026 onward
+- daily EOD portfolio movers and top stock movers versus the prior market close
+- click-to-sort columns in the dashboard tables and trader holding drilldowns
+- 3-day, 5-day, 1-week, 1-month, and 3-month signal indicators calculated as
+  of the selected To date
+- weighted composite signal score using the 3-day, 5-day, 1-week, and 1-month
+  indicators, with the 3-month indicator retained as longer-term context
+- strict, near-match, and fresh-priority volume-signal classifications
 - Nisarg's security-only Wealthsimple summary with deposits and withdrawals
   excluded
+
+### Free Public Deployment
+
+The repository includes a Render Blueprint at `../render.yaml`. It creates a
+free public web service named `stock-tracking-advanced`, with a URL similar to:
+
+```text
+https://stock-tracking-advanced.onrender.com
+```
+
+Render service names must be unique. If that name is already taken, Render
+will ask for a variation such as `stock-tracking-advanced-nisarg`.
+
+The hosted service runs with `PUBLIC_DASHBOARD=true`. Public mode includes the
+paper-trading portfolios and market-data drilldowns, but intentionally omits
+Nisarg's imported Wealthsimple account and blocks that private drilldown. The
+Wealthsimple CSV files, raw account export, `.env`, and API keys are gitignored
+and must not be committed.
+
+Deploy it:
+
+1. Push this repository to GitHub.
+2. Sign in to [Render](https://render.com/) and connect the GitHub repository.
+3. Open the [Render Blueprint setup page for this repository](https://dashboard.render.com/blueprint/new?repo=https%3A%2F%2Fgithub.com%2FDestroyerFlabby%2F001_first_repo).
+   Alternatively, choose **New > Blueprint** and select the repository.
+4. Confirm the `stock-tracking-advanced` free web service and deploy it.
+5. Open the generated `onrender.com` URL after the build completes.
+
+Render's free web services sleep after periods without traffic, so the first
+request after inactivity can take longer. No custom domain is required.
 
 Create a non-extended `$10-50` portfolio snapshot for the next weekday
 session:

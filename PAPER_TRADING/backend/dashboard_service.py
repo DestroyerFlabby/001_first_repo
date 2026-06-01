@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import csv
 import json
+import os
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from functools import lru_cache
 from pathlib import Path
@@ -57,6 +58,11 @@ CRYPTO_SYMBOLS = {
     "BTCUSD": "BTC-USD",
     "ETHUSD": "ETH-USD",
     "USDCUSD": "USDC-USD",
+}
+PUBLIC_DASHBOARD = os.environ.get("PUBLIC_DASHBOARD", "").casefold() in {
+    "1",
+    "true",
+    "yes",
 }
 
 
@@ -148,27 +154,111 @@ def owners_by_asset() -> dict[tuple[str, str], list[str]]:
     return {asset: sorted(names) for asset, names in owners.items()}
 
 
-def live_signal(bars: tuple[Bar, ...]) -> dict[str, object] | None:
-    if len(bars) < 21:
+SIGNAL_HORIZONS = (
+    ("3d", "3 days", 3, None, Decimal("5")),
+    ("5d", "5 days", 5, None, Decimal("10")),
+    ("1w", "1 week", None, 7, Decimal("10")),
+    ("1m", "1 month", 21, None, Decimal("20")),
+    ("3m", "3 months", 63, None, Decimal("30")),
+)
+COMPOSITE_WEIGHTS = {
+    "3d": Decimal("0.20"),
+    "5d": Decimal("0.30"),
+    "1w": Decimal("0.25"),
+    "1m": Decimal("0.25"),
+}
+
+
+def clamp(value: Decimal, minimum: Decimal = Decimal("0"), maximum: Decimal = Decimal("100")) -> Decimal:
+    return max(minimum, min(maximum, value))
+
+
+def horizon_signal(
+    bars: tuple[Bar, ...],
+    key: str,
+    label: str,
+    sessions: int | None,
+    calendar_days: int | None,
+    momentum_threshold: Decimal,
+) -> dict[str, object] | None:
+    if len(bars) < 22:
         return None
     current = bars[-1]
-    prior_5 = bars[-6:-1]
-    prior_20 = bars[-21:-1]
-    normal_volume = sum((bar.volume for bar in prior_20), Decimal("0")) / len(prior_20)
+    if calendar_days:
+        cutoff = current.day - timedelta(days=calendar_days)
+        start_index = next(
+            (index for index, bar in enumerate(bars) if bar.day >= cutoff),
+            len(bars) - 1,
+        )
+        start_index = min(start_index, len(bars) - 2)
+    else:
+        if sessions is None or len(bars) <= sessions:
+            return None
+        start_index = len(bars) - sessions - 1
+    horizon_bars = bars[start_index + 1 :]
+    baseline = bars[start_index]
+    normal_start = max(0, start_index - 20)
+    normal_bars = bars[normal_start:start_index]
+    if not normal_bars or not horizon_bars:
+        return None
+    normal_volume = sum((bar.volume for bar in normal_bars), Decimal("0")) / len(normal_bars)
     if not normal_volume:
         return None
-    volume_ratio = sum((bar.volume for bar in prior_5), Decimal("0")) / len(prior_5) / normal_volume
-    return_pct = pct_change(current.close, prior_5[0].close)
-    distance = pct_change(current.close, max(bar.close for bar in prior_20))
-    strict = return_pct >= 10 and volume_ratio >= Decimal("1.5") and distance >= -2
+    volume_ratio = sum((bar.volume for bar in horizon_bars), Decimal("0")) / len(horizon_bars) / normal_volume
+    return_pct = pct_change(current.close, baseline.close)
+    recent_high_bars = bars[max(0, len(bars) - max(21, len(horizon_bars) + 1)) : -1]
+    distance = pct_change(current.close, max(bar.close for bar in recent_high_bars))
+    momentum_score = clamp(return_pct / momentum_threshold * 100)
+    volume_score = clamp((volume_ratio - 1) / Decimal("0.5") * 100)
+    high_score = clamp((distance + 10) / 10 * 100)
+    score = momentum_score * Decimal("0.40") + volume_score * Decimal("0.40") + high_score * Decimal("0.20")
+    strict = return_pct >= momentum_threshold and volume_ratio >= Decimal("1.5") and distance >= -2
     near = volume_ratio >= Decimal("1.25") and distance >= -2
     return {
+        "key": key,
+        "label": label,
+        "start_date": baseline.day.isoformat(),
         "as_of": current.day.isoformat(),
-        "five_day_return_pct": as_float(return_pct),
-        "five_day_volume_ratio": as_float(volume_ratio),
+        "return_pct": as_float(return_pct),
+        "volume_ratio": as_float(volume_ratio),
         "distance_to_20d_high_pct": as_float(distance),
+        "score": as_float(score),
         "classification": "strict" if strict else ("near" if near else "none"),
-        "fresh_priority": bool(strict and return_pct <= 25),
+        "fresh_priority": bool(strict and return_pct <= momentum_threshold * Decimal("2.5")),
+    }
+
+
+def live_signal(bars: tuple[Bar, ...]) -> dict[str, object] | None:
+    horizons = {
+        key: signal
+        for key, label, sessions, calendar_days, threshold in SIGNAL_HORIZONS
+        if (
+            signal := horizon_signal(
+                bars, key, label, sessions, calendar_days, threshold
+            )
+        )
+    }
+    if "5d" not in horizons:
+        return None
+    weighted_score = sum(
+        (Decimal(str(horizons[key]["score"])) * weight for key, weight in COMPOSITE_WEIGHTS.items() if key in horizons),
+        Decimal("0"),
+    )
+    applied_weight = sum((weight for key, weight in COMPOSITE_WEIGHTS.items() if key in horizons), Decimal("0"))
+    weighted_score = weighted_score / applied_weight if applied_weight else Decimal("0")
+    overall_classification = "strict" if weighted_score >= 70 else ("near" if weighted_score >= 45 else "none")
+    five_day = horizons["5d"]
+    return {
+        "as_of": five_day["as_of"],
+        "five_day_return_pct": five_day["return_pct"],
+        "five_day_volume_ratio": five_day["volume_ratio"],
+        "distance_to_20d_high_pct": five_day["distance_to_20d_high_pct"],
+        "classification": five_day["classification"],
+        "fresh_priority": five_day["fresh_priority"],
+        "overall_score": as_float(weighted_score),
+        "overall_classification": overall_classification,
+        "horizons": horizons,
+        "composite_weights": {key: as_float(weight) for key, weight in COMPOSITE_WEIGHTS.items()},
     }
 
 
@@ -186,6 +276,7 @@ def asset_summary(
         latest = on_or_before(bars, end)
         if not baseline or not latest or baseline.day > latest.day:
             raise ValueError("missing prices for selected window")
+        signal_bars = tuple(bar for bar in bars if bar.day <= latest.day)
         return {
             "ticker": ticker,
             "security_type": security_type,
@@ -197,7 +288,7 @@ def asset_summary(
             "start_price": as_float(baseline.close),
             "end_price": as_float(latest.close),
             "return_pct": as_float(pct_change(latest.close, baseline.close)),
-            "signal": live_signal(bars),
+            "signal": live_signal(signal_bars),
             "warning": None,
         }
     except Exception as exc:
@@ -225,6 +316,8 @@ def all_asset_summaries(start: date, end: date | None) -> list[dict[str, object]
 
 
 def nisarg_summary(start: date, end: date | None) -> dict[str, object] | None:
+    if PUBLIC_DASHBOARD:
+        return None
     try:
         from nisarg_window_return import calculate_window
 
@@ -256,6 +349,9 @@ def build_overview(start: date, end: date | None) -> dict[str, object]:
     grouped = allocations()
     stocks = all_asset_summaries(start, end)
     indexed = {(row["ticker"], row["security_type"]): row for row in stocks}
+    fx_currency, fx_bars = fetch_chart("CAD=X")
+    if fx_currency != "CAD":
+        raise ValueError("unexpected CAD=X currency")
     traders: list[dict[str, object]] = []
     for investor, assets in grouped.items():
         initial = Decimal("0")
@@ -270,7 +366,14 @@ def build_overview(start: date, end: date | None) -> dict[str, object]:
                 current += amount
                 warnings.append(f"{asset[0]}: {row['warning']}")
             else:
-                current += amount * Decimal(str(row["end_price"])) / Decimal(str(row["start_price"]))
+                growth = Decimal(str(row["end_price"])) / Decimal(str(row["start_price"]))
+                if row["currency"] == "CAD":
+                    start_fx = on_or_after(fx_bars, date.fromisoformat(row["start_date"]))
+                    end_fx = on_or_before(fx_bars, date.fromisoformat(row["end_date"]))
+                    if not start_fx or not end_fx:
+                        raise ValueError("missing CAD/USD exchange rate")
+                    growth *= start_fx.close / end_fx.close
+                current += amount * growth
         gain = current - initial
         traders.append(
             {
@@ -300,6 +403,32 @@ def build_overview(start: date, end: date | None) -> dict[str, object]:
         "traders": traders,
         "stocks": stocks,
     }
+
+
+def build_eod_snapshot() -> dict[str, object]:
+    _, market_bars = fetch_chart("SPY")
+    if len(market_bars) < 2:
+        raise ValueError("missing market sessions for EOD snapshot")
+    previous, latest = market_bars[-2:]
+    overview = build_overview(previous.day, latest.day)
+    stocks = sorted(
+        (row for row in overview["stocks"] if not row.get("warning")),
+        key=lambda row: row["return_pct"],
+        reverse=True,
+    )
+    return {
+        "from_date": previous.day.isoformat(),
+        "to_date": latest.day.isoformat(),
+        "traders": overview["traders"],
+        "stocks": stocks,
+    }
+
+
+def latest_market_date() -> date:
+    _, market_bars = fetch_chart("SPY")
+    if not market_bars:
+        raise ValueError("missing market sessions")
+    return market_bars[-1].day
 
 
 def asset_detail(ticker: str, start: date, end: date | None) -> dict[str, object]:
@@ -449,5 +578,7 @@ def nisarg_detail(start: date, end: date | None) -> dict[str, object]:
 
 def trader_detail(investor: str, start: date, end: date | None) -> dict[str, object]:
     if investor.casefold() == "nisarg":
+        if PUBLIC_DASHBOARD:
+            raise KeyError(investor)
         return nisarg_detail(start, end)
     return paper_trader_detail(investor, start, end)

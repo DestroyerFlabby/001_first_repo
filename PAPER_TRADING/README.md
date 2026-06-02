@@ -226,6 +226,8 @@ Related research notes:
   buy-only comparison snapshot and interpretation
 - `research/watchlist_variable_more_signals_strategy_2026-01-31_to_2026-06-01.md`:
   transition analysis and the sustained-loss exit-rule comparison
+- `research/news_assisted_strategy_backtest_2026-01-31_to_2026-06-01.md`:
+  exploratory Alpaca-news entry and exit variants compared with the technical baseline
 
 The initial simulated portfolios were requested for January 1, 2026, a market
 holiday, so unpriced stocks and ETFs use the next available market close. The
@@ -303,6 +305,12 @@ Refresh every tracked stock with a one-second pause between tickers:
 .\.venv\Scripts\python.exe .\PAPER_TRADING\refresh_news_signals.py
 ```
 
+Run the exploratory historical Alpaca-news strategy comparison:
+
+```powershell
+.\.venv\Scripts\python.exe .\PAPER_TRADING\analyze_news_assisted_strategy.py --max-articles 5000
+```
+
 This first version intentionally keeps news and video metrics separate from the trading
 rules. Collect forward snapshots before assigning news velocity a buy or sell
 weight. Official X public-post reads are paid usage, and Instagram's official
@@ -318,6 +326,7 @@ API is not a broad public stock-mention feed.
 - `analyze_volume_spikes.py`: analyze pre-spike volume for tracked stocks up at least 25% since January 2
 - `analyze_forward_volume_signals.py`: test which technical conditions preceded elevated volume over the next five sessions
 - `refresh_news_signals.py`: cache free Alpaca and GDELT news-activity snapshots for tracked stocks
+- `analyze_news_assisted_strategy.py`: compare exploratory Alpaca-news-assisted entry and exit rules against the technical baseline
 - `scan_daily_fresh_setups.py`: rank non-extended `$10-50` stocks for the next session and optionally record a daily portfolio
 - `backend/`: read-only FastAPI analytics API for the local dashboard
 - `frontend/`: dependency-free local browser dashboard

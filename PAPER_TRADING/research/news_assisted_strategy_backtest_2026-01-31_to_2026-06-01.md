@@ -11,7 +11,7 @@
 
 - Tracked stock tickers: `140`.
 - Tickers with at least one Alpaca news article: `130`.
-- Retrieved Alpaca articles: `20502`.
+- Retrieved Alpaca articles: `23899`.
 - Article cap reached by tickers: `0`.
 
 ## Results
@@ -28,7 +28,7 @@
 | `hold-while-news-active` | 156 | 49 | 107 | $156,000.00 | $196,410.60 | $40,410.60 | 25.90% |
 | `confirm-news-cooling` | 171 | 75 | 96 | $171,000.00 | $201,298.99 | $30,298.99 | 17.72% |
 | `early-exit-on-news-cooling` | 179 | 86 | 93 | $179,000.00 | $204,716.22 | $25,716.22 | 14.37% |
-| `technical-baseline + require-news-entry` | 145 | 64 | 81 | $145,000.00 | $169,190.01 | $24,190.01 | 16.68% |
+| `technical-baseline + require-news-entry` | 145 | 64 | 81 | $145,000.00 | $169,209.45 | $24,209.45 | 16.70% |
 
 ## Interpretation
 

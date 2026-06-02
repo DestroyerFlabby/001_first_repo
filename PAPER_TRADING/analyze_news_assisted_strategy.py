@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
-import time
-from collections import defaultdict
+import time as time_module
 from datetime import date, datetime, time, timedelta, timezone
 from decimal import Decimal
 from pathlib import Path
@@ -22,11 +21,13 @@ from backend.dashboard_service import (
     yahoo_symbol,
 )
 from backend.news_service import fetch_json, load_dotenv, parse_timestamp
+from backend.news_strategy import news_metrics, should_exit
 
 
 ROOT = Path(__file__).resolve().parent
 CACHE_FILE = ROOT / "data" / "historical_alpaca_news.json"
 REPORT_FILE = ROOT / "research" / "news_assisted_strategy_backtest_2026-01-31_to_2026-06-01.md"
+DAILY_COUNTS_FILE = ROOT / "data" / "historical_news_daily_counts.json"
 LOCK = Lock()
 
 
@@ -95,7 +96,7 @@ def fetch_historical_news(
             except HTTPError as exc:
                 if exc.code != 429 or attempt == 4:
                     raise
-                time.sleep(5 * (attempt + 1))
+                time_module.sleep(5 * (attempt + 1))
         batch = payload.get("news", [])
         if not isinstance(batch, list):
             break
@@ -120,10 +121,14 @@ def historical_news(
     end: date,
     max_articles: int,
     refresh: bool,
+    refresh_from_ticker: str | None,
 ) -> dict[str, list[dict[str, str]]]:
     cache = read_cache()
+    refresh_active = refresh and not refresh_from_ticker
     for index, ticker in enumerate(tickers, start=1):
-        if not refresh and ticker in cache and len(cache[ticker]) != 500:
+        if refresh_from_ticker and ticker == refresh_from_ticker:
+            refresh_active = True
+        if not refresh_active and ticker in cache and len(cache[ticker]) != 500:
             print(f"[{index}/{len(tickers)}] {ticker}: cached {len(cache[ticker])}")
             continue
         cache[ticker] = fetch_historical_news(ticker, start, end, max_articles)
@@ -136,48 +141,38 @@ def article_dates(rows: list[dict[str, str]]) -> list[date]:
     return sorted(parse_timestamp(row["created_at"]).date() for row in rows)
 
 
-def count_articles(dates: list[date], start: date, end: date) -> int:
-    return sum(start <= day <= end for day in dates)
+def daily_counts(rows: list[dict[str, str]]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for day in article_dates(rows):
+        key = day.isoformat()
+        counts[key] = counts.get(key, 0) + 1
+    return counts
 
 
-def news_metrics(dates: list[date], observed_day: date) -> dict[str, Decimal | int | None]:
-    latest_7d = count_articles(dates, observed_day - timedelta(days=6), observed_day)
-    prior_7d = count_articles(dates, observed_day - timedelta(days=13), observed_day - timedelta(days=7))
-    latest_24h = count_articles(dates, observed_day, observed_day)
-    velocity = Decimal(latest_7d) / prior_7d if prior_7d else None
-    return {
-        "articles_24h": latest_24h,
-        "articles_7d": latest_7d,
-        "articles_prior_7d": prior_7d,
-        "weekly_velocity": velocity,
+def write_daily_counts(
+    raw_news: dict[str, list[dict[str, str]]],
+    start: date,
+    end: date,
+) -> None:
+    payload = {
+        "from_date": start.isoformat(),
+        "to_date": end.isoformat(),
+        "tickers": {
+            ticker: daily_counts(rows)
+            for ticker, rows in sorted(raw_news.items())
+        },
     }
-
-
-def should_exit(rule: str, none_streak: int, one_month_return: Decimal, news: dict[str, Decimal | int | None]) -> bool:
-    baseline = none_streak >= 10 and one_month_return <= Decimal("-5")
-    if rule == "technical-baseline":
-        return baseline
-    if rule == "hold-while-news-active":
-        return baseline and int(news["articles_7d"]) == 0
-    if rule == "early-exit-on-news-cooling":
-        return (
-            none_streak >= 5
-            and one_month_return <= Decimal("-5")
-            and int(news["articles_7d"]) <= int(news["articles_prior_7d"])
-        )
-    if rule == "confirm-news-cooling":
-        return (
-            baseline
-            and int(news["articles_7d"]) <= int(news["articles_prior_7d"])
-        )
-    raise ValueError(f"unknown rule {rule}")
+    DAILY_COUNTS_FILE.write_text(
+        json.dumps(payload, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
 
 
 def simulate(
     rule: str,
     charts: dict[str, tuple[object, ...]],
     market_bars: tuple[object, ...],
-    news_by_ticker: dict[str, list[date]],
+    news_by_ticker: dict[str, dict[str, int]],
     end: date,
     require_news_entry: bool = False,
 ) -> dict[str, object]:
@@ -201,9 +196,7 @@ def simulate(
             observed[ticker] = live_signal(signal_bars)
             observed_news[ticker] = news_metrics(news_by_ticker[ticker], previous_session.day)
             category = entry_signal(observed[ticker])
-            if category and (
-                not require_news_entry or int(observed_news[ticker]["articles_7d"]) > 0
-            ):
+            if category:
                 desired[ticker] = category
 
         for ticker in set(active) & set(desired):
@@ -230,6 +223,8 @@ def simulate(
             closed.append(proceeds)
 
         for ticker in sorted(set(desired) - set(active)):
+            if require_news_entry and int(observed_news[ticker]["articles_7d"]) == 0:
+                continue
             price_bar = on_or_before(charts[ticker], session)
             if not price_bar:
                 continue
@@ -323,7 +318,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Backtest news-assisted signal exits.")
     parser.add_argument("--end-date", type=date.fromisoformat, default=date(2026, 6, 1))
     parser.add_argument("--max-articles", type=int, default=500)
+    parser.add_argument(
+        "--news-from-date",
+        type=date.fromisoformat,
+        default=VARIABLE_STRATEGY_START - timedelta(days=14),
+    )
     parser.add_argument("--refresh-news", action="store_true")
+    parser.add_argument("--refresh-from-ticker")
     return parser
 
 
@@ -344,13 +345,19 @@ def main() -> int:
     tickers = sorted(charts)
     raw_news = historical_news(
         tickers,
-        VARIABLE_STRATEGY_START - timedelta(days=14),
+        args.news_from_date,
         latest_market.day,
         args.max_articles,
         args.refresh_news,
+        args.refresh_from_ticker,
+    )
+    write_daily_counts(
+        raw_news,
+        args.news_from_date,
+        latest_market.day,
     )
     news_by_ticker = {
-        ticker: article_dates(raw_news.get(ticker, []))
+        ticker: daily_counts(raw_news.get(ticker, []))
         for ticker in tickers
     }
     coverage = {

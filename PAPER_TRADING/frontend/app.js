@@ -297,18 +297,23 @@ async function openTrader(investor) {
           )
           .join("")
       : "";
-    const tradeRows = (detail.simulated_trades || [])
+    const ledgerRows = [
+      ...(detail.simulated_trades || []).map((row) => ({ ...row, status: "executed" })),
+      ...(detail.pending_next_close_orders || []),
+    ];
+    const tradeRows = ledgerRows
       .map(
         (row) => `
         <tr>
+          <td>${row.status}</td>
           <td>${row.date}</td>
           <td>${row.signal_observed_date}</td>
           <td>${row.action}</td>
           <td>${row.ticker}</td>
           <td>${row.entry_signal}</td>
-          <td>${money(row.execution_price)}</td>
-          <td>${number(row.quantity)}</td>
-          <td>${money(row.usd_amount)}</td>
+          <td>${row.execution_price === null ? "-" : money(row.execution_price)}</td>
+          <td>${row.quantity === null ? "-" : number(row.quantity)}</td>
+          <td>${row.usd_amount === null ? "-" : money(row.usd_amount)}</td>
           <td class="${row.gain_loss === null ? "" : tone(row.gain_loss)}">${row.gain_loss === null ? "-" : money(row.gain_loss)}</td>
         </tr>`
       )
@@ -340,9 +345,10 @@ async function openTrader(investor) {
       ${detail.simulated_trades ? `
         <h3>Simulated EOD trade ledger</h3>
         <p class="muted">${detail.execution_convention}</p>
+        <p class="muted">${(detail.pending_next_close_orders || []).length} pending order(s) observed after the selected To-date close.</p>
         <div class="table-wrap">
           <table data-sortable>
-            <thead><tr><th>Execution date</th><th>Observed after close</th><th>Action</th><th>Ticker</th><th>Entry signal</th><th>Execution price</th><th>Quantity</th><th>USD amount</th><th>Realized gain / loss</th></tr></thead>
+            <thead><tr><th>Status</th><th>Execution date</th><th>Observed after close</th><th>Action</th><th>Ticker</th><th>Entry signal</th><th>Execution price</th><th>Quantity</th><th>USD amount</th><th>Realized gain / loss</th></tr></thead>
             <tbody>${tradeRows}</tbody>
           </table>
         </div>` : ""}

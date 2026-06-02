@@ -101,7 +101,8 @@ It does not submit trades or modify the ledger. It provides:
 - daily EOD portfolio movers and top stock movers versus the prior market close
 - click-to-sort columns in the dashboard tables and trader holding drilldowns
 - chronological simulated trade ledgers in variable-strategy drilldowns,
-  including the prior-close observation date and next-close execution date
+  including the prior-close observation date, next-close execution date, and
+  unexecuted orders implied by the selected To-date close
 - 3-day, 5-day, 1-week, 1-month, and 3-month signal indicators calculated as
   of the selected To date
 - weighted composite signal score using the 3-day, 5-day, 1-week, and 1-month

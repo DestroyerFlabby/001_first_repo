@@ -358,23 +358,61 @@ def variable_strategy_detail(
     if not isinstance(news_counts, dict):
         news_counts = {}
 
-    for session in sessions:
-        if not previous_session:
-            previous_session = on_or_before(market_bars, session - timedelta(days=1))
+    def observed_state(
+        observed_day: date,
+    ) -> tuple[
+        dict[str, str],
+        dict[str, dict[str, object] | None],
+        dict[str, dict[str, Decimal | int | None]],
+    ]:
         desired: dict[str, str] = {}
         observed: dict[str, dict[str, object] | None] = {}
         observed_news: dict[str, dict[str, Decimal | int | None]] = {}
         for ticker, bars in charts.items():
-            signal_bars = tuple(bar for bar in bars if bar.day <= previous_session.day)
+            signal_bars = tuple(bar for bar in bars if bar.day <= observed_day)
             observed[ticker] = live_signal(signal_bars)
             ticker_counts = news_counts.get(ticker, {})
             observed_news[ticker] = news_metrics(
                 ticker_counts if isinstance(ticker_counts, dict) else {},
-                previous_session.day,
+                observed_day,
             )
             category = entry_signal(observed[ticker])
             if category and (entry_categories is None or category in entry_categories):
                 desired[ticker] = category
+        return desired, observed, observed_news
+
+    def entry_news_matches(news: dict[str, Decimal | int | None]) -> bool:
+        if entry_news_rule == "active":
+            return int(news["articles_7d"]) > 0
+        if entry_news_rule == "accelerating":
+            return int(news["articles_7d"]) > int(news["articles_prior_7d"])
+        return True
+
+    def exit_matches(
+        position: dict[str, object],
+        signal: dict[str, object] | None,
+        news: dict[str, Decimal | int | None],
+    ) -> bool:
+        one_month = (signal or {}).get("horizons", {}).get("1m", {})
+        one_month_return = Decimal(str(one_month.get("return_pct", "0")))
+        if news_rule:
+            return news_should_exit(
+                news_rule,
+                int(position["none_streak"]),
+                one_month_return,
+                news,
+            )
+        return (
+            int(position["none_streak"]) >= 10
+            and one_month_return <= Decimal("-5")
+            if more_signals_exit
+            else int(position["none_streak"]) >= 1
+        )
+
+    for session in sessions:
+        if not previous_session:
+            previous_session = on_or_before(market_bars, session - timedelta(days=1))
+        desired, observed, observed_news = observed_state(previous_session.day)
 
         for ticker in set(active) & set(desired):
             active[ticker]["none_streak"] = 0
@@ -385,23 +423,7 @@ def variable_strategy_detail(
                 continue
             position = active.pop(ticker)
             position["none_streak"] = int(position.get("none_streak", 0)) + 1
-            signal = observed[ticker] or {}
-            one_month = signal.get("horizons", {}).get("1m", {})
-            one_month_return = Decimal(str(one_month.get("return_pct", "0")))
-            if news_rule:
-                should_exit = news_should_exit(
-                    news_rule,
-                    int(position["none_streak"]),
-                    one_month_return,
-                    observed_news[ticker],
-                )
-            else:
-                should_exit = (
-                    position["none_streak"] >= 10 and one_month_return <= Decimal("-5")
-                    if more_signals_exit
-                    else position["none_streak"] >= 1
-                )
-            if not should_exit:
+            if not exit_matches(position, observed[ticker], observed_news[ticker]):
                 active[ticker] = position
                 continue
             proceeds = Decimal(str(position["shares"])) * price_bar.close
@@ -421,16 +443,7 @@ def variable_strategy_detail(
             )
 
         for ticker in sorted(set(desired) - set(active)):
-            if (
-                entry_news_rule == "active"
-                and int(observed_news[ticker]["articles_7d"]) == 0
-            ):
-                continue
-            if (
-                entry_news_rule == "accelerating"
-                and int(observed_news[ticker]["articles_7d"])
-                <= int(observed_news[ticker]["articles_prior_7d"])
-            ):
+            if not entry_news_matches(observed_news[ticker]):
                 continue
             price_bar = on_or_before(charts[ticker], session)
             if not price_bar or price_bar.day <= previous_session.day:
@@ -540,6 +553,45 @@ def variable_strategy_detail(
         )
     simulated_trades.sort(key=lambda row: (row["date"], row["ticker"], row["action"]))
 
+    pending_next_close_orders: list[dict[str, object]] = []
+    latest_desired, latest_observed, latest_news = observed_state(latest_market.day)
+    for ticker in sorted(set(latest_desired) - set(active)):
+        if not entry_news_matches(latest_news[ticker]):
+            continue
+        pending_next_close_orders.append(
+            {
+                "date": "next available close",
+                "signal_observed_date": latest_market.day.isoformat(),
+                "action": "buy",
+                "ticker": ticker,
+                "entry_signal": latest_desired[ticker],
+                "execution_price": None,
+                "quantity": None,
+                "usd_amount": as_float(VARIABLE_ENTRY_USD),
+                "gain_loss": None,
+                "status": "pending",
+            }
+        )
+    for ticker in sorted(set(active) - set(latest_desired)):
+        position = {**active[ticker]}
+        position["none_streak"] = int(position.get("none_streak", 0)) + 1
+        if not exit_matches(position, latest_observed[ticker], latest_news[ticker]):
+            continue
+        pending_next_close_orders.append(
+            {
+                "date": "next available close",
+                "signal_observed_date": latest_market.day.isoformat(),
+                "action": "sell",
+                "ticker": ticker,
+                "entry_signal": position["entry_signal"],
+                "execution_price": None,
+                "quantity": as_float(Decimal(str(position["shares"]))),
+                "usd_amount": None,
+                "gain_loss": None,
+                "status": "pending",
+            }
+        )
+
     ending_series = series[-1]
     prior_series = next(
         (
@@ -580,6 +632,7 @@ def variable_strategy_detail(
         "position_count": len(open_positions),
         "positions": open_positions,
         "simulated_trades": simulated_trades,
+        "pending_next_close_orders": pending_next_close_orders,
         "execution_convention": "Observe EOD signals and news after one close; execute at the next available EOD close.",
         "series": [
             row
@@ -833,6 +886,29 @@ def variable_buy_only_detail(
         key=lambda row: (row["date"], row["ticker"]),
     )
 
+    pending_next_close_orders: list[dict[str, object]] = []
+    for ticker, bars in sorted(charts.items()):
+        if ticker in positions:
+            continue
+        signal_bars = tuple(bar for bar in bars if bar.day <= latest_market.day)
+        category = entry_signal(live_signal(signal_bars))
+        if not category or (entry_category and category != entry_category):
+            continue
+        pending_next_close_orders.append(
+            {
+                "date": "next available close",
+                "signal_observed_date": latest_market.day.isoformat(),
+                "action": "buy",
+                "ticker": ticker,
+                "entry_signal": category,
+                "execution_price": None,
+                "quantity": None,
+                "usd_amount": as_float(VARIABLE_ENTRY_USD),
+                "gain_loss": None,
+                "status": "pending",
+            }
+        )
+
     ending_series = series[-1]
     prior_series = next(
         (
@@ -865,6 +941,7 @@ def variable_buy_only_detail(
         "position_count": len(open_positions),
         "positions": open_positions,
         "simulated_trades": simulated_trades,
+        "pending_next_close_orders": pending_next_close_orders,
         "execution_convention": "Observe EOD signals after one close; execute at the next available EOD close.",
         "series": [
             row

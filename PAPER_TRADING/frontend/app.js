@@ -475,6 +475,25 @@ async function openTrader(investor) {
         </tr>`
       )
       .join("");
+    const realizedRows = (detail.realized_positions || [])
+      .map(
+        (row) => `
+        <tr>
+          <td>${tickerLabel(row.ticker)}</td>
+          <td>${row.entry_signal}</td>
+          <td>${row.signal_observed_date}</td>
+          <td>${row.entry_date}</td>
+          <td>${row.exit_signal_observed_date}</td>
+          <td>${row.exit_date}</td>
+          <td>${money(row.entry_price)}</td>
+          <td>${money(row.exit_price)}</td>
+          <td>${money(row.initial_value)}</td>
+          <td>${money(row.ending_value)}</td>
+          <td class="${tone(row.gain_loss)}">${money(row.gain_loss)}</td>
+          <td class="${tone(row.return_pct || 0)}">${pct(row.return_pct)}</td>
+        </tr>`
+      )
+      .join("");
     const categoryRows = detail.category_stats
       ? detail.category_stats
           .map(
@@ -534,6 +553,18 @@ async function openTrader(investor) {
         <table id="trader-holdings-table" data-sortable><thead><tr><th>Ticker</th><th>Start</th><th>Current</th><th>Gain / loss</th><th>Daily</th><th>5D</th><th>Monthly</th><th>Return</th></tr></thead>
         <tbody>${rows}</tbody></table>
       </div>
+      ${realizedRows ? `
+        <div class="drawer-section-heading">
+          <h3>Realized positions</h3>
+          <button class="secondary small" data-export-table="#trader-realized-table" data-export-name="realized-positions-${detail.investor}" data-export-title="${detail.investor} Realized Positions">Download realized</button>
+        </div>
+        <p class="muted">Previously exited positions with entry/exit dates and realized gain/loss.</p>
+        <div class="table-wrap">
+          <table id="trader-realized-table" data-sortable>
+            <thead><tr><th>Ticker</th><th>Entry signal</th><th>Entry observed</th><th>Entry date</th><th>Exit observed</th><th>Exit date</th><th>Entry price</th><th>Exit price</th><th>Start</th><th>Ending</th><th>Gain / loss</th><th>Return</th></tr></thead>
+            <tbody>${realizedRows}</tbody>
+          </table>
+        </div>` : ""}
       ${detail.category_stats ? `
         <div class="drawer-section-heading">
           <h3>Entry signal category results</h3>

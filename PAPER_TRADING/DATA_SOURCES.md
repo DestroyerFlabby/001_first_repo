@@ -78,3 +78,30 @@ replacements or guaranteed Wealthsimple listings.
 The dashboard caches daily news snapshots locally. News coverage is an
 attention indicator, not a complete record of every article published about a
 company.
+
+## Mass-Change Discovery Sources
+
+Use these as sector-first discovery sources for
+`data/mass_change_watchlist.csv` and the `watchlist-variable-mass-change`
+dashboard strategy:
+
+- [Stocktwits trending](https://stocktwits.com/sentiment/trending) provides
+  public trending, most active, watcher, bullish, bearish, gainer, and loser
+  views. Treat it as a social-attention source. First identify recurring
+  sectors/themes, then verify individual tickers against market data before
+  adding.
+- [Stocktwits Trending help](https://help.stocktwits.com/feed-trending)
+  describes the Trending feed as the most talked-about tickers on Stocktwits.
+- [Blossom Social](https://orange-department-016222.framer.app/) is useful for
+  manual creator-position discovery. It is not currently treated as an API
+  source; use visible creator positions to identify sectors/themes first, then
+  add tickers only when a position is visible and independently verified.
+- [nfin](https://nfin.dev/) exposes free Nasdaq-style market routes including
+  movers, lists, screeners, quotes, history, news, and earnings. Anonymous use
+  is rate-limited, so cache any broad-market scans.
+
+Candidate rows should include sector, theme, source, observed date, reason,
+confidence, and notes. Adding a ticker to the mass-change watchlist only
+expands the eligible universe; the variable strategy still waits for normal
+signal logic before simulated entries. Do not add these names to other
+watchlists until explicit promotion rules are implemented.

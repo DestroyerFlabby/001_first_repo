@@ -19,6 +19,7 @@ from backend.wealthsimple_metadata import WEALTHSIMPLE_FX_FEE_RATE, wealthsimple
 
 ROOT = Path(__file__).resolve().parents[1]
 TRADES_FILE = ROOT / "data" / "trades.csv"
+MASS_CHANGE_WATCHLIST_FILE = ROOT / "data" / "mass_change_watchlist.csv"
 DEFAULT_START = date(2026, 5, 20)
 HISTORY_START = date(2026, 1, 1)
 FETCH_START = date(2025, 12, 1)
@@ -68,6 +69,7 @@ PUBLIC_DASHBOARD = os.environ.get("PUBLIC_DASHBOARD", "").casefold() in {
     "yes",
 }
 VARIABLE_STRATEGY_NAME = "watchlist-variable"
+MASS_CHANGE_STRATEGY_NAME = "watchlist-variable-mass-change"
 VARIABLE_BUY_ONLY_NAME = "watchlist-variable-buy-only"
 VARIABLE_BUY_ONLY_STRATEGIES = {
     "watchlist-variable-buy-only-fresh-only": "fresh",
@@ -262,6 +264,39 @@ def with_variable_fx_fees(detail: dict[str, object]) -> dict[str, object]:
         }
         for position in detail["positions"]
     ]
+    realized_positions = [
+        {
+            **position,
+            "ending_value": as_float(
+                Decimal(str(position["ending_value"]))
+                - (
+                    VARIABLE_ENTRY_USD
+                    + Decimal(str(position["ending_value"]))
+                )
+                * WEALTHSIMPLE_FX_FEE
+            ),
+            "gain_loss": as_float(
+                Decimal(str(position["gain_loss"]))
+                - (
+                    VARIABLE_ENTRY_USD
+                    + Decimal(str(position["ending_value"]))
+                )
+                * WEALTHSIMPLE_FX_FEE
+            ),
+            "return_pct": as_float(
+                pct_change(
+                    Decimal(str(position["ending_value"]))
+                    - (
+                        VARIABLE_ENTRY_USD
+                        + Decimal(str(position["ending_value"]))
+                    )
+                    * WEALTHSIMPLE_FX_FEE,
+                    VARIABLE_ENTRY_USD,
+                )
+            ),
+        }
+        for position in detail.get("realized_positions", [])
+    ]
     category_stats = []
     for row in detail["category_stats"]:
         category_fees = sum(
@@ -291,6 +326,7 @@ def with_variable_fx_fees(detail: dict[str, object]) -> dict[str, object]:
         "return_pct": as_float(pct_change(adjusted_current, initial)),
         **fixed_changes_from_series(series),
         "positions": positions,
+        "realized_positions": realized_positions,
         "series": series,
         "category_stats": category_stats,
         "wealthsimple_fx_fees_enabled": True,
@@ -347,6 +383,17 @@ def read_trades() -> list[dict[str, str]]:
         return list(csv.DictReader(handle))
 
 
+def read_mass_change_watchlist() -> list[dict[str, str]]:
+    if not MASS_CHANGE_WATCHLIST_FILE.exists():
+        return []
+    with MASS_CHANGE_WATCHLIST_FILE.open(newline="", encoding="utf-8-sig") as handle:
+        return [
+            row
+            for row in csv.DictReader(handle)
+            if row.get("ticker") and row.get("security_type")
+        ]
+
+
 def allocations() -> dict[str, dict[tuple[str, str], Decimal]]:
     grouped: dict[str, dict[tuple[str, str], Decimal]] = defaultdict(
         lambda: defaultdict(lambda: Decimal("0"))
@@ -366,7 +413,19 @@ def owners_by_asset() -> dict[tuple[str, str], list[str]]:
         for asset, amount in assets.items():
             if amount:
                 owners[asset].add(investor)
+    for ticker, security_type in mass_change_assets():
+        owners[(ticker, security_type)].add(MASS_CHANGE_STRATEGY_NAME)
     return {asset: sorted(names) for asset, names in owners.items()}
+
+
+def mass_change_assets() -> list[tuple[str, str]]:
+    return sorted(
+        {
+            (row["ticker"].strip().upper(), row["security_type"].strip().lower())
+            for row in read_mass_change_watchlist()
+            if row.get("ticker") and row.get("security_type")
+        }
+    )
 
 
 def tracked_stock_assets() -> list[tuple[str, str]]:
@@ -375,6 +434,11 @@ def tracked_stock_assets() -> list[tuple[str, str]]:
             (trade["ticker"], trade["security_type"])
             for trade in read_trades()
             if trade["security_type"] == "stock"
+        }
+        | {
+            (ticker, security_type)
+            for ticker, security_type in mass_change_assets()
+            if security_type == "stock"
         }
     )
 
@@ -532,6 +596,7 @@ def variable_strategy_detail(
     entry_categories: set[str] | None = None,
     entry_news_rule: str = "ignore",
     apply_wealthsimple_fx_fees: bool = False,
+    universe_assets: list[tuple[str, str]] | None = None,
 ) -> dict[str, object]:
     selected_start = max(start, VARIABLE_STRATEGY_START)
     _, market_bars = fetch_chart("SPY")
@@ -547,7 +612,7 @@ def variable_strategy_detail(
         raise ValueError("missing strategy market sessions")
 
     charts: dict[str, tuple[Bar, ...]] = {}
-    for ticker, security_type in tracked_stock_assets():
+    for ticker, security_type in (universe_assets if universe_assets is not None else tracked_stock_assets()):
         symbol = yahoo_symbol(ticker, security_type)
         try:
             _, bars = fetch_chart(symbol)
@@ -821,6 +886,7 @@ def variable_strategy_detail(
     period_basis = starting_equity + new_deployments
     period_gain = ending_equity - period_basis
     open_positions.sort(key=lambda row: row["return_pct"], reverse=True)
+    realized_positions = sorted(cycles, key=lambda row: row["return_pct"], reverse=True)
     detail = {
         "investor": strategy_name,
         "source": (
@@ -842,6 +908,7 @@ def variable_strategy_detail(
         **fixed_changes_from_series(series),
         "position_count": len(open_positions),
         "positions": open_positions,
+        "realized_positions": realized_positions,
         "simulated_trades": simulated_trades,
         "pending_next_close_orders": pending_next_close_orders,
         "execution_convention": "Observe EOD signals and news after one close; execute at the next available EOD close.",
@@ -883,6 +950,25 @@ def variable_strategy_summary(
     apply_wealthsimple_fx_fees: bool = False,
 ) -> dict[str, object]:
     detail = variable_strategy_detail(start, end, apply_wealthsimple_fx_fees=apply_wealthsimple_fx_fees)
+    return {
+        key: detail[key]
+        for key in SUMMARY_KEYS
+    } | {"warnings": []}
+
+
+def mass_change_strategy_summary(
+    start: date,
+    end: date | None,
+    apply_wealthsimple_fx_fees: bool = False,
+) -> dict[str, object]:
+    detail = variable_strategy_detail(
+        start,
+        end,
+        strategy_name=MASS_CHANGE_STRATEGY_NAME,
+        more_signals_exit=True,
+        universe_assets=mass_change_assets(),
+        apply_wealthsimple_fx_fees=apply_wealthsimple_fx_fees,
+    )
     return {
         key: detail[key]
         for key in SUMMARY_KEYS
@@ -1428,6 +1514,7 @@ def build_overview(
     if imported:
         traders.append(imported)
     traders.append(variable_strategy_summary(start, end, apply_wealthsimple_fx_fees))
+    traders.append(mass_change_strategy_summary(start, end, apply_wealthsimple_fx_fees))
     traders.append(variable_buy_only_summary(start, end, apply_wealthsimple_fx_fees))
     for strategy_name in VARIABLE_BUY_ONLY_STRATEGIES:
         traders.append(variable_buy_only_category_summary(strategy_name, start, end, apply_wealthsimple_fx_fees))
@@ -1699,6 +1786,15 @@ def trader_detail(
         )
     if investor.casefold() == VARIABLE_BUY_ONLY_NAME:
         return variable_buy_only_detail(start, end, apply_wealthsimple_fx_fees=apply_wealthsimple_fx_fees)
+    if investor.casefold() == MASS_CHANGE_STRATEGY_NAME:
+        return variable_strategy_detail(
+            start,
+            end,
+            strategy_name=MASS_CHANGE_STRATEGY_NAME,
+            more_signals_exit=True,
+            universe_assets=mass_change_assets(),
+            apply_wealthsimple_fx_fees=apply_wealthsimple_fx_fees,
+        )
     if investor.casefold() == VARIABLE_STRATEGY_NAME:
         return variable_strategy_detail(start, end, apply_wealthsimple_fx_fees=apply_wealthsimple_fx_fees)
     if investor.casefold() == "nisarg":

@@ -159,6 +159,23 @@ input, select {
   padding: 16px;
 }
 .summary-card .value { font-size: 1.65rem; font-weight: 800; letter-spacing: -.05em; margin-top: 6px; }
+.diagnostic-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.diagnostic-card {
+  background: rgba(8, 19, 33, .78);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px;
+}
+.diagnostic-card .value {
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -.03em;
+  margin: 4px 0;
+}
 .muted { color: var(--muted); font-size: .85rem; }
 .section-heading {
   align-items: center;
@@ -282,6 +299,7 @@ tbody tr:hover { background: rgba(87, 211, 162, .07); }
   .control-copy, #apply-window { grid-column: auto; }
   .fee-toggle { max-width: none; }
   .summary-grid { grid-template-columns: 1fr 1fr; }
+  .diagnostic-grid { grid-template-columns: 1fr; }
   .eod-grid { grid-template-columns: 1fr; }
   .stock-heading { align-items: start; flex-direction: column; gap: 12px; }
   .stock-tools { width: 100%; }

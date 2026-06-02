@@ -170,6 +170,65 @@ function renderCards() {
     .join("");
 }
 
+function renderDiagnostics() {
+  const metrics = state.overview.dashboard_metrics;
+  if (!metrics) {
+    $("#diagnostic-cards").innerHTML = "";
+    return;
+  }
+  const portfolio = metrics.portfolio_breadth;
+  const stock = metrics.stock_breadth;
+  const signal = metrics.signal_mix;
+  const flags = metrics.decision_flags;
+  $("#diagnostic-cards").innerHTML = [
+    {
+      label: "Portfolio breadth",
+      value: pct(portfolio.win_rate_pct),
+      note: `${portfolio.positive_count} up / ${portfolio.negative_count} down; median ${pct(portfolio.median_return_pct)}`,
+      toneValue: portfolio.win_rate_pct - 50,
+    },
+    {
+      label: "Concentration check",
+      value: pct(portfolio.top_portfolio_concentration_pct),
+      note: "Share of dashboard value in the largest portfolio",
+      toneValue: 50 - portfolio.top_portfolio_concentration_pct,
+    },
+    {
+      label: "Stock breadth",
+      value: pct(stock.win_rate_pct),
+      note: `${stock.positive_count} stocks up / ${stock.negative_count} down; median ${pct(stock.median_return_pct)}`,
+      toneValue: stock.win_rate_pct - 50,
+    },
+    {
+      label: "Best / worst stock",
+      value: `${stock.top_stock || "-"} ${pct(stock.top_stock_return_pct)}`,
+      note: `${stock.bottom_stock || "-"} ${pct(stock.bottom_stock_return_pct)}`,
+      toneValue: stock.top_stock_return_pct,
+    },
+    {
+      label: "Active signal mix",
+      value: `${flags.fresh_or_strict_count} priority`,
+      note: `${signal.fresh} fresh, ${signal.strict} strict, ${signal.near} near, ${signal.none} inactive`,
+      toneValue: flags.fresh_or_strict_count,
+    },
+    {
+      label: "Near-signal pipeline",
+      value: signal.near,
+      note: "Names close to a stronger signal setup",
+      toneValue: signal.near,
+    },
+  ]
+    .map(
+      (card) => `
+        <article class="diagnostic-card">
+          <p class="eyebrow">${card.label}</p>
+          <p class="value ${tone(card.toneValue)}">${card.value}</p>
+          <p class="muted">${card.note}</p>
+        </article>`
+    )
+    .join("");
+}
+
 function dateOptions(meta, includeLatest = false) {
   const keyDates = meta.key_dates.map((item) => ({ ...item, group: "Key dates" }));
   const checkpoints = meta.checkpoints.map((item) => ({ ...item, group: "Monthly checkpoints" }));
@@ -556,6 +615,7 @@ async function loadOverview() {
     state.eod = await fetchJson(`/api/eod${wealthsimpleQuery()}`);
     updateLoading("Prior-close movers loaded. Rendering dashboard tables...", 95);
     renderCards();
+    renderDiagnostics();
     renderEod();
     renderTraders();
     renderStocks();

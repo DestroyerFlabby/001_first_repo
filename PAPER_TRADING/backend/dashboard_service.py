@@ -1253,6 +1253,82 @@ def nisarg_summary(start: date, end: date | None) -> dict[str, object] | None:
         }
 
 
+def median_decimal(values: list[Decimal]) -> Decimal:
+    if not values:
+        return Decimal("0")
+    ordered = sorted(values)
+    midpoint = len(ordered) // 2
+    if len(ordered) % 2:
+        return ordered[midpoint]
+    return (ordered[midpoint - 1] + ordered[midpoint]) / Decimal("2")
+
+
+def business_dashboard_metrics(
+    traders: list[dict[str, object]],
+    stocks: list[dict[str, object]],
+) -> dict[str, object]:
+    valid_trader_returns = [Decimal(str(row["return_pct"])) for row in traders]
+    valid_stock_rows = [row for row in stocks if not row.get("warning")]
+    valid_stock_returns = [Decimal(str(row["return_pct"])) for row in valid_stock_rows]
+    total_current = sum((Decimal(str(row["current_value"])) for row in traders), Decimal("0"))
+    top_current = max((Decimal(str(row["current_value"])) for row in traders), default=Decimal("0"))
+    signal_counts = {"fresh": 0, "strict": 0, "near": 0, "none": 0}
+    for row in valid_stock_rows:
+        signal = row.get("signal")
+        if not isinstance(signal, dict) or signal.get("classification") == "none":
+            signal_counts["none"] += 1
+        elif signal.get("fresh_priority"):
+            signal_counts["fresh"] += 1
+        elif signal.get("classification") == "strict":
+            signal_counts["strict"] += 1
+        elif signal.get("classification") == "near":
+            signal_counts["near"] += 1
+        else:
+            signal_counts["none"] += 1
+    top_stock = max(valid_stock_rows, key=lambda row: row["return_pct"], default=None)
+    bottom_stock = min(valid_stock_rows, key=lambda row: row["return_pct"], default=None)
+    return {
+        "portfolio_breadth": {
+            "positive_count": sum(value > 0 for value in valid_trader_returns),
+            "negative_count": sum(value < 0 for value in valid_trader_returns),
+            "flat_count": sum(value == 0 for value in valid_trader_returns),
+            "win_rate_pct": as_float(
+                Decimal(sum(value > 0 for value in valid_trader_returns))
+                / Decimal(len(valid_trader_returns))
+                * 100
+            )
+            if valid_trader_returns
+            else 0,
+            "median_return_pct": as_float(median_decimal(valid_trader_returns)),
+            "top_portfolio_concentration_pct": as_float(pct_change(top_current, total_current) + 100)
+            if total_current
+            else 0,
+        },
+        "stock_breadth": {
+            "positive_count": sum(value > 0 for value in valid_stock_returns),
+            "negative_count": sum(value < 0 for value in valid_stock_returns),
+            "win_rate_pct": as_float(
+                Decimal(sum(value > 0 for value in valid_stock_returns))
+                / Decimal(len(valid_stock_returns))
+                * 100
+            )
+            if valid_stock_returns
+            else 0,
+            "median_return_pct": as_float(median_decimal(valid_stock_returns)),
+            "top_stock": top_stock["ticker"] if top_stock else None,
+            "top_stock_return_pct": top_stock["return_pct"] if top_stock else 0,
+            "bottom_stock": bottom_stock["ticker"] if bottom_stock else None,
+            "bottom_stock_return_pct": bottom_stock["return_pct"] if bottom_stock else 0,
+        },
+        "signal_mix": signal_counts,
+        "decision_flags": {
+            "fresh_or_strict_count": signal_counts["fresh"] + signal_counts["strict"],
+            "near_count": signal_counts["near"],
+            "inactive_count": signal_counts["none"],
+        },
+    }
+
+
 def build_overview(
     start: date,
     end: date | None,
@@ -1344,6 +1420,7 @@ def build_overview(
         ),
         "traders": traders,
         "stocks": stocks,
+        "dashboard_metrics": business_dashboard_metrics(traders, stocks),
         "wealthsimple_fx_fees_enabled": apply_wealthsimple_fx_fees,
         "wealthsimple_fx_fee_rate": as_float(WEALTHSIMPLE_FX_FEE * 100),
         "wealthsimple_availability": {

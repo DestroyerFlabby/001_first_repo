@@ -90,14 +90,15 @@ def meta() -> dict[str, object]:
 def overview(
     from_date: str | None = Query(default=None),
     to_date: str | None = Query(default=None),
+    wealthsimple_fx_fees: bool = Query(default=False),
 ) -> dict[str, object]:
     start, end = window(from_date, to_date)
-    return build_overview(start, end)
+    return build_overview(start, end, wealthsimple_fx_fees)
 
 
 @app.get("/api/eod")
-def eod() -> dict[str, object]:
-    return build_eod_snapshot()
+def eod(wealthsimple_fx_fees: bool = Query(default=False)) -> dict[str, object]:
+    return build_eod_snapshot(wealthsimple_fx_fees)
 
 
 @app.get("/api/traders/{investor}")
@@ -105,10 +106,11 @@ def get_trader(
     investor: str,
     from_date: str | None = Query(default=None),
     to_date: str | None = Query(default=None),
+    wealthsimple_fx_fees: bool = Query(default=False),
 ) -> dict[str, object]:
     start, end = window(from_date, to_date)
     try:
-        return trader_detail(investor, start, end)
+        return trader_detail(investor, start, end, wealthsimple_fx_fees)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=f"unknown trader: {investor}") from exc
 

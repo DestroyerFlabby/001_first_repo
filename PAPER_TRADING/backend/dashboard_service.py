@@ -14,6 +14,7 @@ from urllib.parse import quote, urlencode
 from urllib.request import Request, urlopen
 
 from backend.news_strategy import NEWS_STRATEGIES, load_daily_news_counts, news_metrics, should_exit as news_should_exit
+from backend.wealthsimple_metadata import WEALTHSIMPLE_FX_FEE_RATE, wealthsimple_metadata
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -99,6 +100,7 @@ VARIABLE_TECHNICAL_STRATEGIES = {
 }
 VARIABLE_STRATEGY_START = date(2026, 1, 31)
 VARIABLE_ENTRY_USD = Decimal("1000")
+WEALTHSIMPLE_FX_FEE = Decimal(str(WEALTHSIMPLE_FX_FEE_RATE))
 
 
 @dataclass(frozen=True)
@@ -116,6 +118,92 @@ def pct_change(value: Decimal, baseline: Decimal) -> Decimal:
     if not baseline:
         return Decimal("0")
     return (value / baseline - 1) * 100
+
+
+def with_variable_fx_fees(detail: dict[str, object]) -> dict[str, object]:
+    executed = detail.get("simulated_trades", [])
+    if not isinstance(executed, list):
+        return detail
+    fees = sum(
+        (
+            Decimal(str(row["usd_amount"])) * WEALTHSIMPLE_FX_FEE
+            for row in executed
+            if isinstance(row, dict) and row.get("usd_amount") is not None
+        ),
+        Decimal("0"),
+    )
+    initial = Decimal(str(detail["initial_value"]))
+    adjusted_gain = Decimal(str(detail["gain_loss"])) - fees
+    adjusted_current = initial + adjusted_gain
+    fee_rows = [
+        (
+            date.fromisoformat(str(row["date"])),
+            Decimal(str(row["usd_amount"])) * WEALTHSIMPLE_FX_FEE,
+        )
+        for row in executed
+        if isinstance(row, dict) and row.get("usd_amount") is not None
+    ]
+    series = []
+    for row in detail["series"]:
+        day = date.fromisoformat(str(row["date"]))
+        cumulative_fees = sum(
+            (fee for fee_day, fee in fee_rows if fee_day <= day),
+            Decimal("0"),
+        )
+        series.append(
+            {
+                **row,
+                "value": as_float(Decimal(str(row["value"])) - cumulative_fees),
+                "gain_loss": as_float(Decimal(str(row["gain_loss"])) - cumulative_fees),
+            }
+        )
+    positions = [
+        {
+            **position,
+            "current_value": as_float(Decimal(str(position["current_value"])) - VARIABLE_ENTRY_USD * WEALTHSIMPLE_FX_FEE),
+            "gain_loss": as_float(Decimal(str(position["gain_loss"])) - VARIABLE_ENTRY_USD * WEALTHSIMPLE_FX_FEE),
+            "return_pct": as_float(
+                pct_change(
+                    Decimal(str(position["current_value"])) - VARIABLE_ENTRY_USD * WEALTHSIMPLE_FX_FEE,
+                    VARIABLE_ENTRY_USD,
+                )
+            ),
+        }
+        for position in detail["positions"]
+    ]
+    category_stats = []
+    for row in detail["category_stats"]:
+        category_fees = sum(
+            (
+                Decimal(str(trade["usd_amount"])) * WEALTHSIMPLE_FX_FEE
+                for trade in executed
+                if isinstance(trade, dict)
+                and trade.get("entry_signal") == row["category"]
+                and trade.get("usd_amount") is not None
+            ),
+            Decimal("0"),
+        )
+        ending_value = Decimal(str(row["ending_value"])) - category_fees
+        deployed = Decimal(str(row["deployed_capital"]))
+        category_stats.append(
+            {
+                **row,
+                "ending_value": as_float(ending_value),
+                "gain_loss": as_float(ending_value - deployed),
+                "return_pct": as_float(pct_change(ending_value, deployed)),
+            }
+        )
+    return {
+        **detail,
+        "current_value": as_float(adjusted_current),
+        "gain_loss": as_float(adjusted_gain),
+        "return_pct": as_float(pct_change(adjusted_current, initial)),
+        "positions": positions,
+        "series": series,
+        "category_stats": category_stats,
+        "wealthsimple_fx_fees_enabled": True,
+        "wealthsimple_fx_fees_estimate": as_float(fees),
+    }
 
 
 def parse_date(value: str | None, fallback: date | None = None) -> date | None:
@@ -323,6 +411,7 @@ def variable_strategy_detail(
     news_rule: str | None = None,
     entry_categories: set[str] | None = None,
     entry_news_rule: str = "ignore",
+    apply_wealthsimple_fx_fees: bool = False,
 ) -> dict[str, object]:
     selected_start = max(start, VARIABLE_STRATEGY_START)
     _, market_bars = fetch_chart("SPY")
@@ -611,7 +700,7 @@ def variable_strategy_detail(
     period_basis = starting_equity + new_deployments
     period_gain = ending_equity - period_basis
     open_positions.sort(key=lambda row: row["return_pct"], reverse=True)
-    return {
+    detail = {
         "investor": strategy_name,
         "source": (
             "derived-news-assisted-signal-strategy"
@@ -663,10 +752,15 @@ def variable_strategy_detail(
             "FX conversion is intentionally ignored."
         ),
     }
+    return with_variable_fx_fees(detail) if apply_wealthsimple_fx_fees else detail
 
 
-def variable_strategy_summary(start: date, end: date | None) -> dict[str, object]:
-    detail = variable_strategy_detail(start, end)
+def variable_strategy_summary(
+    start: date,
+    end: date | None,
+    apply_wealthsimple_fx_fees: bool = False,
+) -> dict[str, object]:
+    detail = variable_strategy_detail(start, end, apply_wealthsimple_fx_fees=apply_wealthsimple_fx_fees)
     return {
         key: detail[key]
         for key in (
@@ -681,12 +775,17 @@ def variable_strategy_summary(start: date, end: date | None) -> dict[str, object
     } | {"warnings": []}
 
 
-def variable_more_signals_summary(start: date, end: date | None) -> dict[str, object]:
+def variable_more_signals_summary(
+    start: date,
+    end: date | None,
+    apply_wealthsimple_fx_fees: bool = False,
+) -> dict[str, object]:
     detail = variable_strategy_detail(
         start,
         end,
         strategy_name=VARIABLE_MORE_SIGNALS_NAME,
         more_signals_exit=True,
+        apply_wealthsimple_fx_fees=apply_wealthsimple_fx_fees,
     )
     return {
         key: detail[key]
@@ -706,6 +805,7 @@ def variable_technical_strategy_summary(
     strategy_name: str,
     start: date,
     end: date | None,
+    apply_wealthsimple_fx_fees: bool = False,
 ) -> dict[str, object]:
     config = VARIABLE_TECHNICAL_STRATEGIES[strategy_name]
     detail = variable_strategy_detail(
@@ -714,6 +814,7 @@ def variable_technical_strategy_summary(
         strategy_name=strategy_name,
         more_signals_exit=bool(config.get("more_signals_exit")),
         entry_categories=config.get("entry_categories"),
+        apply_wealthsimple_fx_fees=apply_wealthsimple_fx_fees,
     )
     return {
         key: detail[key]
@@ -733,6 +834,7 @@ def variable_news_strategy_summary(
     strategy_name: str,
     start: date,
     end: date | None,
+    apply_wealthsimple_fx_fees: bool = False,
 ) -> dict[str, object]:
     config = NEWS_STRATEGIES[strategy_name]
     detail = variable_strategy_detail(
@@ -742,6 +844,7 @@ def variable_news_strategy_summary(
         news_rule=str(config["rule"]),
         entry_categories=config.get("entry_categories"),
         entry_news_rule=str(config.get("entry_news_rule", "ignore")),
+        apply_wealthsimple_fx_fees=apply_wealthsimple_fx_fees,
     )
     return {
         key: detail[key]
@@ -762,6 +865,7 @@ def variable_buy_only_detail(
     end: date | None,
     strategy_name: str = VARIABLE_BUY_ONLY_NAME,
     entry_category: str | None = None,
+    apply_wealthsimple_fx_fees: bool = False,
 ) -> dict[str, object]:
     selected_start = max(start, VARIABLE_STRATEGY_START)
     _, market_bars = fetch_chart("SPY")
@@ -928,7 +1032,7 @@ def variable_buy_only_detail(
     period_basis = starting_equity + new_deployments
     period_gain = ending_equity - period_basis
     open_positions.sort(key=lambda row: row["return_pct"], reverse=True)
-    return {
+    detail = {
         "investor": strategy_name,
         "source": "derived-buy-only-signal-strategy",
         "strategy_start": VARIABLE_STRATEGY_START.isoformat(),
@@ -958,10 +1062,15 @@ def variable_buy_only_detail(
             "Each entry deploys $1,000. FX conversion is intentionally ignored."
         ),
     }
+    return with_variable_fx_fees(detail) if apply_wealthsimple_fx_fees else detail
 
 
-def variable_buy_only_summary(start: date, end: date | None) -> dict[str, object]:
-    detail = variable_buy_only_detail(start, end)
+def variable_buy_only_summary(
+    start: date,
+    end: date | None,
+    apply_wealthsimple_fx_fees: bool = False,
+) -> dict[str, object]:
+    detail = variable_buy_only_detail(start, end, apply_wealthsimple_fx_fees=apply_wealthsimple_fx_fees)
     return {
         key: detail[key]
         for key in (
@@ -980,12 +1089,14 @@ def variable_buy_only_category_summary(
     strategy_name: str,
     start: date,
     end: date | None,
+    apply_wealthsimple_fx_fees: bool = False,
 ) -> dict[str, object]:
     detail = variable_buy_only_detail(
         start,
         end,
         strategy_name=strategy_name,
         entry_category=VARIABLE_BUY_ONLY_STRATEGIES[strategy_name],
+        apply_wealthsimple_fx_fees=apply_wealthsimple_fx_fees,
     )
     return {
         key: detail[key]
@@ -1028,6 +1139,7 @@ def asset_summary(
             "end_price": as_float(latest.close),
             "return_pct": as_float(pct_change(latest.close, baseline.close)),
             "signal": live_signal(signal_bars),
+            "wealthsimple": wealthsimple_metadata(ticker, security_type, symbol),
             "warning": None,
         }
     except Exception as exc:
@@ -1038,6 +1150,7 @@ def asset_summary(
             "owners": owners,
             "warning": str(exc),
             "signal": None,
+            "wealthsimple": wealthsimple_metadata(ticker, security_type, symbol),
         }
 
 
@@ -1084,7 +1197,11 @@ def nisarg_summary(start: date, end: date | None) -> dict[str, object] | None:
         }
 
 
-def build_overview(start: date, end: date | None) -> dict[str, object]:
+def build_overview(
+    start: date,
+    end: date | None,
+    apply_wealthsimple_fx_fees: bool = False,
+) -> dict[str, object]:
     grouped = allocations()
     stocks = all_asset_summaries(start, end)
     indexed = {(row["ticker"], row["security_type"]): row for row in stocks}
@@ -1112,6 +1229,8 @@ def build_overview(start: date, end: date | None) -> dict[str, object]:
                     if not start_fx or not end_fx:
                         raise ValueError("missing CAD/USD exchange rate")
                     growth *= start_fx.close / end_fx.close
+                elif apply_wealthsimple_fx_fees:
+                    growth *= Decimal("1") - WEALTHSIMPLE_FX_FEE
                 current += amount * growth
         gain = current - initial
         traders.append(
@@ -1129,15 +1248,15 @@ def build_overview(start: date, end: date | None) -> dict[str, object]:
     imported = nisarg_summary(start, end)
     if imported:
         traders.append(imported)
-    traders.append(variable_strategy_summary(start, end))
-    traders.append(variable_buy_only_summary(start, end))
+    traders.append(variable_strategy_summary(start, end, apply_wealthsimple_fx_fees))
+    traders.append(variable_buy_only_summary(start, end, apply_wealthsimple_fx_fees))
     for strategy_name in VARIABLE_BUY_ONLY_STRATEGIES:
-        traders.append(variable_buy_only_category_summary(strategy_name, start, end))
-    traders.append(variable_more_signals_summary(start, end))
+        traders.append(variable_buy_only_category_summary(strategy_name, start, end, apply_wealthsimple_fx_fees))
+    traders.append(variable_more_signals_summary(start, end, apply_wealthsimple_fx_fees))
     for strategy_name in VARIABLE_TECHNICAL_STRATEGIES:
-        traders.append(variable_technical_strategy_summary(strategy_name, start, end))
+        traders.append(variable_technical_strategy_summary(strategy_name, start, end, apply_wealthsimple_fx_fees))
     for strategy_name in NEWS_STRATEGIES:
-        traders.append(variable_news_strategy_summary(strategy_name, start, end))
+        traders.append(variable_news_strategy_summary(strategy_name, start, end, apply_wealthsimple_fx_fees))
     traders.sort(key=lambda row: row["return_pct"], reverse=True)
     for rank, trader in enumerate(traders, start=1):
         trader["rank"] = rank
@@ -1150,15 +1269,24 @@ def build_overview(start: date, end: date | None) -> dict[str, object]:
         ),
         "traders": traders,
         "stocks": stocks,
+        "wealthsimple_fx_fees_enabled": apply_wealthsimple_fx_fees,
+        "wealthsimple_fx_fee_rate": as_float(WEALTHSIMPLE_FX_FEE * 100),
+        "wealthsimple_availability": {
+            status: sum(
+                row.get("wealthsimple", {}).get("availability") == status
+                for row in stocks
+            )
+            for status in ("likely-supported", "verify-in-app", "likely-unsupported")
+        },
     }
 
 
-def build_eod_snapshot() -> dict[str, object]:
+def build_eod_snapshot(apply_wealthsimple_fx_fees: bool = False) -> dict[str, object]:
     _, market_bars = fetch_chart("SPY")
     if len(market_bars) < 2:
         raise ValueError("missing market sessions for EOD snapshot")
     previous, latest = market_bars[-2:]
-    overview = build_overview(previous.day, latest.day)
+    overview = build_overview(previous.day, latest.day, apply_wealthsimple_fx_fees)
     stocks = sorted(
         (row for row in overview["stocks"] if not row.get("warning")),
         key=lambda row: row["return_pct"],
@@ -1200,7 +1328,12 @@ def asset_detail(ticker: str, start: date, end: date | None) -> dict[str, object
     return {**summary, "series": series}
 
 
-def paper_trader_detail(investor: str, start: date, end: date | None) -> dict[str, object]:
+def paper_trader_detail(
+    investor: str,
+    start: date,
+    end: date | None,
+    apply_wealthsimple_fx_fees: bool = False,
+) -> dict[str, object]:
     grouped = allocations()
     matched = next((name for name in grouped if name.casefold() == investor.casefold()), None)
     if not matched:
@@ -1231,7 +1364,12 @@ def paper_trader_detail(investor: str, start: date, end: date | None) -> dict[st
                 quantity = amount * baseline_fx.close / baseline.close
                 current = quantity * latest.close / latest_fx.close
             elif currency == "USD":
-                quantity = amount / baseline.close
+                spendable = (
+                    amount * (Decimal("1") - WEALTHSIMPLE_FX_FEE)
+                    if apply_wealthsimple_fx_fees
+                    else amount
+                )
+                quantity = spendable / baseline.close
                 current = quantity * latest.close
             else:
                 raise ValueError(f"unsupported currency {currency}")
@@ -1291,6 +1429,7 @@ def paper_trader_detail(investor: str, start: date, end: date | None) -> dict[st
         "return_pct": as_float(pct_change(current, initial)),
         "positions": positions,
         "series": series,
+        "wealthsimple_fx_fees_enabled": apply_wealthsimple_fx_fees,
     }
 
 
@@ -1324,7 +1463,12 @@ def nisarg_detail(start: date, end: date | None) -> dict[str, object]:
     }
 
 
-def trader_detail(investor: str, start: date, end: date | None) -> dict[str, object]:
+def trader_detail(
+    investor: str,
+    start: date,
+    end: date | None,
+    apply_wealthsimple_fx_fees: bool = False,
+) -> dict[str, object]:
     buy_only_category = VARIABLE_BUY_ONLY_STRATEGIES.get(investor.casefold())
     if buy_only_category:
         return variable_buy_only_detail(
@@ -1332,6 +1476,7 @@ def trader_detail(investor: str, start: date, end: date | None) -> dict[str, obj
             end,
             strategy_name=investor.casefold(),
             entry_category=buy_only_category,
+            apply_wealthsimple_fx_fees=apply_wealthsimple_fx_fees,
         )
     technical_strategy = VARIABLE_TECHNICAL_STRATEGIES.get(investor.casefold())
     if technical_strategy:
@@ -1341,6 +1486,7 @@ def trader_detail(investor: str, start: date, end: date | None) -> dict[str, obj
             strategy_name=investor.casefold(),
             more_signals_exit=bool(technical_strategy.get("more_signals_exit")),
             entry_categories=technical_strategy.get("entry_categories"),
+            apply_wealthsimple_fx_fees=apply_wealthsimple_fx_fees,
         )
     news_strategy = NEWS_STRATEGIES.get(investor.casefold())
     if news_strategy:
@@ -1351,6 +1497,7 @@ def trader_detail(investor: str, start: date, end: date | None) -> dict[str, obj
             news_rule=str(news_strategy["rule"]),
             entry_categories=news_strategy.get("entry_categories"),
             entry_news_rule=str(news_strategy.get("entry_news_rule", "ignore")),
+            apply_wealthsimple_fx_fees=apply_wealthsimple_fx_fees,
         )
     if investor.casefold() == VARIABLE_MORE_SIGNALS_NAME:
         return variable_strategy_detail(
@@ -1358,13 +1505,14 @@ def trader_detail(investor: str, start: date, end: date | None) -> dict[str, obj
             end,
             strategy_name=VARIABLE_MORE_SIGNALS_NAME,
             more_signals_exit=True,
+            apply_wealthsimple_fx_fees=apply_wealthsimple_fx_fees,
         )
     if investor.casefold() == VARIABLE_BUY_ONLY_NAME:
-        return variable_buy_only_detail(start, end)
+        return variable_buy_only_detail(start, end, apply_wealthsimple_fx_fees=apply_wealthsimple_fx_fees)
     if investor.casefold() == VARIABLE_STRATEGY_NAME:
-        return variable_strategy_detail(start, end)
+        return variable_strategy_detail(start, end, apply_wealthsimple_fx_fees=apply_wealthsimple_fx_fees)
     if investor.casefold() == "nisarg":
         if PUBLIC_DASHBOARD:
             raise KeyError(investor)
         return nisarg_detail(start, end)
-    return paper_trader_detail(investor, start, end)
+    return paper_trader_detail(investor, start, end, apply_wealthsimple_fx_fees)

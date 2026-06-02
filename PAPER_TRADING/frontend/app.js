@@ -25,8 +25,24 @@ const safeUrl = (value) => {
 const query = () => {
   const params = new URLSearchParams({ from_date: $("#from-date").value });
   if ($("#to-date").value) params.set("to_date", $("#to-date").value);
+  if ($("#wealthsimple-fx-fees").checked) params.set("wealthsimple_fx_fees", "true");
   return params.toString();
 };
+const wealthsimpleQuery = () =>
+  $("#wealthsimple-fx-fees").checked ? "?wealthsimple_fx_fees=true" : "";
+
+function tickerLabel(ticker, metadata = null) {
+  const details = metadata || state.overview?.stocks.find((row) => row.ticker === ticker)?.wealthsimple;
+  if (!details) return `<strong>${ticker}</strong>`;
+  const alternative = details.canadian_hedged_alternative
+    ? ` CAD-hedged reference: ${details.canadian_hedged_alternative}.`
+    : "";
+  return `
+    <span class="ticker-tip">
+      <strong>${ticker}</strong>
+      <span class="ticker-tip-text">Wealthsimple estimate: ${details.availability}. ${details.reason}${alternative}</span>
+    </span>`;
+}
 
 async function fetchJson(url) {
   const response = await fetch(url);
@@ -91,11 +107,13 @@ function renderCards() {
   const strict = stocks.filter((row) => row.signal?.classification === "strict").length;
   const fresh = stocks.filter((row) => row.signal?.fresh_priority).length;
   const leader = traders[0];
+  const wsAvailability = state.overview.wealthsimple_availability;
   $("#summary-cards").innerHTML = [
     ["Portfolios", traders.length, state.meta?.public_dashboard ? "Public paper ledgers" : "Paper ledgers plus imported account"],
     ["Tracked instruments", stocks.length, "Stocks, ETFs, and crypto"],
     ["Fresh signal matches", fresh, `${strict} strict technical matches`],
     ["Leading portfolio", leader.investor, pct(leader.return_pct)],
+    ["Wealthsimple estimate", wsAvailability["likely-supported"], `${wsAvailability["verify-in-app"]} verify in app; ${wsAvailability["likely-unsupported"]} likely unsupported`],
   ]
     .map(
       ([label, value, note]) => `
@@ -164,7 +182,7 @@ function renderEod() {
     .map(
       (row) => `
       <tr class="clickable" data-eod-stock="${row.ticker}">
-        <td><strong>${row.ticker}</strong></td>
+        <td>${tickerLabel(row.ticker, row.wealthsimple)}</td>
         <td class="${tone(row.return_pct)}">${pct(row.return_pct)}</td>
         <td>${row.owners.join(", ")}</td>
       </tr>`
@@ -201,7 +219,7 @@ function renderStocks() {
     .map(
       (row) => `
       <tr class="clickable" data-stock="${row.ticker}">
-        <td><strong>${row.ticker}</strong><br><span class="muted">${row.yahoo_symbol}</span></td>
+        <td>${tickerLabel(row.ticker, row.wealthsimple)}<br><span class="muted">${row.yahoo_symbol}</span></td>
         <td>${row.security_type}</td>
         <td>${row.owners.join(", ")}</td>
         <td>${number(row.start_price)} ${row.currency}</td>
@@ -273,7 +291,7 @@ async function openTrader(investor) {
       .map(
         (row) => `
         <tr>
-          <td>${row.ticker}</td>
+          <td>${tickerLabel(row.ticker)}</td>
           <td>${money(row.initial_value)}</td>
           <td>${money(row.current_value)}</td>
           <td class="${tone(row.gain_loss)}">${money(row.gain_loss)}</td>
@@ -309,7 +327,7 @@ async function openTrader(investor) {
           <td>${row.date}</td>
           <td>${row.signal_observed_date}</td>
           <td>${row.action}</td>
-          <td>${row.ticker}</td>
+          <td>${tickerLabel(row.ticker)}</td>
           <td>${row.entry_signal}</td>
           <td>${row.execution_price === null ? "-" : money(row.execution_price)}</td>
           <td>${row.quantity === null ? "-" : number(row.quantity)}</td>
@@ -325,6 +343,7 @@ async function openTrader(investor) {
         ${stat("Starting value", money(detail.initial_value))}
         ${stat("Current value", money(detail.current_value))}
         ${stat("Return", pct(detail.return_pct), tone(detail.return_pct))}
+        ${detail.wealthsimple_fx_fees_estimate === undefined ? "" : stat("Estimated USD FX fees", money(detail.wealthsimple_fx_fees_estimate))}
       </div>
       <h3>Daily portfolio value</h3>
       <div class="chart">${polyline(detail.series, "value")}</div>
@@ -412,7 +431,7 @@ async function openStock(ticker) {
       : '<li class="muted">YouTube collection is unavailable or returned no matching videos.</li>';
     openDrawer(`
       <p class="eyebrow">${detail.security_type} | ${detail.currency}</p>
-      <h2>${detail.ticker}</h2>
+      <h2>${tickerLabel(detail.ticker, detail.wealthsimple)}</h2>
       <p class="muted">${detail.owners.join(", ")}</p>
       <div class="detail-grid">
         ${stat("Start price", number(detail.start_price))}
@@ -467,13 +486,14 @@ async function loadOverview() {
   $("#loading").classList.remove("hidden");
   try {
     state.overview = await fetchJson(`/api/overview?${query()}`);
-    state.eod = await fetchJson("/api/eod");
+    state.eod = await fetchJson(`/api/eod${wealthsimpleQuery()}`);
     renderCards();
     renderEod();
     renderTraders();
     renderStocks();
     $("#window-label").textContent =
-      `${state.overview.from_date} to ${state.overview.latest_available_date || "latest available close"}`;
+      `${state.overview.from_date} to ${state.overview.latest_available_date || "latest available close"}`
+      + (state.overview.wealthsimple_fx_fees_enabled ? " | Wealthsimple CAD-account USD FX fees enabled" : "");
     $("#content").classList.remove("hidden");
   } catch (error) {
     $("#error").textContent = error.message;

@@ -36,6 +36,33 @@ Use:
 Provider terms and free-tier limits can change. Keep the recorded
 `price_basis` value with every trade so results remain auditable.
 
+## Wealthsimple Eligibility and CAD-Account Fee Estimates
+
+Wealthsimple does not publish a public API for checking whether a specific
+security is currently tradable in a user's account. The dashboard therefore
+shows an estimate based on Wealthsimple's documented eligibility criteria:
+
+- `likely-supported`
+- `verify-in-app`
+- `likely-unsupported`
+
+Always confirm a ticker in Wealthsimple before placing an order. Availability
+can change because of exchange support, settlement, liquidity, halts, and
+limited OTC coverage.
+
+The optional dashboard fee switch estimates the `1.5%` FX fee Wealthsimple
+documents for USD trades placed from CAD accounts. It is disabled by default.
+The estimate is not applicable when a suitable USD account is used.
+
+Ticker hover details may include a curated Canadian-dollar CDR reference.
+These are informational alternatives to verify before use, not automatic
+replacements or guaranteed Wealthsimple listings.
+
+- [Wealthsimple stock and ETF eligibility criteria](https://help.wealthsimple.com/hc/en-ca/articles/360056580834)
+- [Wealthsimple CAD and USD conversion fees](https://help.wealthsimple.com/hc/en-ca/articles/4415548242971-Convert-funds-between-CAD-and-USD)
+- [Wealthsimple USD accounts](https://help.wealthsimple.com/hc/en-ca/articles/4414660979355-Upgrade-to-USD-accounts-for-stock-and-crypto-trading)
+- [CIBC Canadian Depositary Receipts](https://www.cibc.com/en/personal-banking/investments/canadian-depositary-receipts.html)
+
 ## Free News Enrichment
 
 - [Alpaca historical news](https://docs.alpaca.markets/us/docs/historical-news-data)

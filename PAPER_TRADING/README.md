@@ -103,6 +103,10 @@ It does not submit trades or modify the ledger. It provides:
 - chronological simulated trade ledgers in variable-strategy drilldowns,
   including the prior-close observation date, next-close execution date, and
   unexecuted orders implied by the selected To-date close
+- optional Wealthsimple CAD-account fee simulation, disabled by default,
+  applying a `1.5%` FX fee to USD security transactions
+- ticker hover details with an estimated Wealthsimple eligibility status and
+  a curated CAD-hedged CDR reference when one is known
 - 3-day, 5-day, 1-week, 1-month, and 3-month signal indicators calculated as
   of the selected To date
 - weighted composite signal score using the 3-day, 5-day, 1-week, and 1-month

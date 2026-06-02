@@ -265,6 +265,22 @@ async function openTrader(investor) {
         </tr>`
       )
       .join("");
+    const categoryRows = detail.category_stats
+      ? detail.category_stats
+          .map(
+            (row) => `
+            <tr>
+              <td>${row.category}</td>
+              <td>${row.entries}</td>
+              <td>${row.closed_positions}</td>
+              <td>${row.open_positions}</td>
+              <td>${money(row.deployed_capital)}</td>
+              <td class="${tone(row.gain_loss)}">${money(row.gain_loss)}</td>
+              <td class="${tone(row.return_pct)}">${pct(row.return_pct)}</td>
+            </tr>`
+          )
+          .join("")
+      : "";
     openDrawer(`
       <p class="eyebrow">${detail.source}</p>
       <h2>${detail.investor}</h2>
@@ -280,6 +296,15 @@ async function openTrader(investor) {
         <table data-sortable><thead><tr><th>Ticker</th><th>Start</th><th>Current</th><th>Gain / loss</th><th>Return</th></tr></thead>
         <tbody>${rows}</tbody></table>
       </div>
+      ${detail.category_stats ? `
+        <h3>Entry signal category results</h3>
+        <p class="muted">${detail.category_stats_scope}</p>
+        <div class="table-wrap">
+          <table data-sortable>
+            <thead><tr><th>Category</th><th>Entries</th><th>Closed</th><th>Open</th><th>Deployed</th><th>Gain / loss</th><th>Return</th></tr></thead>
+            <tbody>${categoryRows}</tbody>
+          </table>
+        </div>` : ""}
       ${detail.note ? `<p class="muted">${detail.note}</p>` : ""}
     `);
     enableSorting($("#drawer-content"));

@@ -64,6 +64,11 @@ PUBLIC_DASHBOARD = os.environ.get("PUBLIC_DASHBOARD", "").casefold() in {
     "true",
     "yes",
 }
+VARIABLE_STRATEGY_NAME = "watchlist-variable"
+VARIABLE_BUY_ONLY_NAME = "watchlist-variable-buy-only"
+VARIABLE_MORE_SIGNALS_NAME = "watchlist-variable-more-signals"
+VARIABLE_STRATEGY_START = date(2026, 1, 31)
+VARIABLE_ENTRY_USD = Decimal("1000")
 
 
 @dataclass(frozen=True)
@@ -152,6 +157,16 @@ def owners_by_asset() -> dict[tuple[str, str], list[str]]:
             if amount:
                 owners[asset].add(investor)
     return {asset: sorted(names) for asset, names in owners.items()}
+
+
+def tracked_stock_assets() -> list[tuple[str, str]]:
+    return sorted(
+        {
+            (trade["ticker"], trade["security_type"])
+            for trade in read_trades()
+            if trade["security_type"] == "stock"
+        }
+    )
 
 
 SIGNAL_HORIZONS = (
@@ -260,6 +275,439 @@ def live_signal(bars: tuple[Bar, ...]) -> dict[str, object] | None:
         "horizons": horizons,
         "composite_weights": {key: as_float(weight) for key, weight in COMPOSITE_WEIGHTS.items()},
     }
+
+
+def entry_signal(signal: dict[str, object] | None) -> str | None:
+    if not signal or signal["classification"] == "none":
+        return None
+    if signal["fresh_priority"]:
+        return "fresh"
+    return str(signal["classification"])
+
+
+def variable_strategy_detail(
+    start: date,
+    end: date | None,
+    strategy_name: str = VARIABLE_STRATEGY_NAME,
+    more_signals_exit: bool = False,
+) -> dict[str, object]:
+    selected_start = max(start, VARIABLE_STRATEGY_START)
+    _, market_bars = fetch_chart("SPY")
+    latest_market = on_or_before(market_bars, end)
+    if not latest_market:
+        raise ValueError("missing strategy ending market session")
+    sessions = [
+        bar.day
+        for bar in market_bars
+        if VARIABLE_STRATEGY_START <= bar.day <= latest_market.day
+    ]
+    if not sessions:
+        raise ValueError("missing strategy market sessions")
+
+    charts: dict[str, tuple[Bar, ...]] = {}
+    for ticker, security_type in tracked_stock_assets():
+        symbol = yahoo_symbol(ticker, security_type)
+        try:
+            _, bars = fetch_chart(symbol)
+        except Exception:
+            continue
+        if bars:
+            charts[ticker] = bars
+
+    active: dict[str, dict[str, object]] = {}
+    cycles: list[dict[str, object]] = []
+    series: list[dict[str, object]] = []
+    deployed = Decimal("0")
+    realized = Decimal("0")
+    previous_session = on_or_before(market_bars, VARIABLE_STRATEGY_START - timedelta(days=1))
+
+    for session in sessions:
+        if not previous_session:
+            previous_session = on_or_before(market_bars, session - timedelta(days=1))
+        desired: dict[str, str] = {}
+        observed: dict[str, dict[str, object] | None] = {}
+        for ticker, bars in charts.items():
+            signal_bars = tuple(bar for bar in bars if bar.day <= previous_session.day)
+            observed[ticker] = live_signal(signal_bars)
+            category = entry_signal(observed[ticker])
+            if category:
+                desired[ticker] = category
+
+        for ticker in set(active) & set(desired):
+            active[ticker]["none_streak"] = 0
+
+        for ticker in sorted(set(active) - set(desired)):
+            price_bar = on_or_before(charts[ticker], session)
+            if not price_bar:
+                continue
+            position = active.pop(ticker)
+            position["none_streak"] = int(position.get("none_streak", 0)) + 1
+            signal = observed[ticker] or {}
+            one_month = signal.get("horizons", {}).get("1m", {})
+            one_month_return = Decimal(str(one_month.get("return_pct", "0")))
+            should_exit = (
+                position["none_streak"] >= 10 and one_month_return <= Decimal("-5")
+                if more_signals_exit
+                else position["none_streak"] >= 1
+            )
+            if not should_exit:
+                active[ticker] = position
+                continue
+            proceeds = Decimal(str(position["shares"])) * price_bar.close
+            pnl = proceeds - VARIABLE_ENTRY_USD
+            realized += pnl
+            cycles.append(
+                {
+                    **position,
+                    "exit_date": price_bar.day.isoformat(),
+                    "exit_price": as_float(price_bar.close),
+                    "ending_value": as_float(proceeds),
+                    "gain_loss": as_float(pnl),
+                    "return_pct": as_float(pct_change(proceeds, VARIABLE_ENTRY_USD)),
+                    "status": "closed",
+                }
+            )
+
+        for ticker in sorted(set(desired) - set(active)):
+            price_bar = on_or_before(charts[ticker], session)
+            if not price_bar:
+                continue
+            shares = VARIABLE_ENTRY_USD / price_bar.close
+            deployed += VARIABLE_ENTRY_USD
+            active[ticker] = {
+                "ticker": ticker,
+                "entry_signal": desired[ticker],
+                "entry_date": price_bar.day.isoformat(),
+                "entry_price": as_float(price_bar.close),
+                "shares": shares,
+                "initial_value": as_float(VARIABLE_ENTRY_USD),
+                "none_streak": 0,
+            }
+
+        open_value = Decimal("0")
+        for ticker, position in active.items():
+            price_bar = on_or_before(charts[ticker], session)
+            if price_bar:
+                open_value += Decimal(str(position["shares"])) * price_bar.close
+        series.append(
+            {
+                "date": session.isoformat(),
+                "value": as_float(deployed + realized + open_value - VARIABLE_ENTRY_USD * len(active)),
+                "gain_loss": as_float(realized + open_value - VARIABLE_ENTRY_USD * len(active)),
+                "deployed_capital": as_float(deployed),
+                "active_positions": len(active),
+            }
+        )
+        previous_session = on_or_before(market_bars, session)
+
+    open_positions: list[dict[str, object]] = []
+    open_value = Decimal("0")
+    for ticker, position in active.items():
+        price_bar = on_or_before(charts[ticker], latest_market.day)
+        if not price_bar:
+            continue
+        current_value = Decimal(str(position["shares"])) * price_bar.close
+        pnl = current_value - VARIABLE_ENTRY_USD
+        open_value += current_value
+        open_positions.append(
+            {
+                **position,
+                "current_value": as_float(current_value),
+                "gain_loss": as_float(pnl),
+                "return_pct": as_float(pct_change(current_value, VARIABLE_ENTRY_USD)),
+                "status": "open",
+            }
+        )
+
+    category_rows: list[dict[str, object]] = []
+    for category in ("fresh", "strict", "near"):
+        category_cycles = [cycle for cycle in cycles if cycle["entry_signal"] == category]
+        category_open = [position for position in open_positions if position["entry_signal"] == category]
+        invested = VARIABLE_ENTRY_USD * (len(category_cycles) + len(category_open))
+        ending_value = sum(
+            (Decimal(str(cycle["ending_value"])) for cycle in category_cycles),
+            Decimal("0"),
+        ) + sum(
+            (Decimal(str(position["current_value"])) for position in category_open),
+            Decimal("0"),
+        )
+        category_rows.append(
+            {
+                "category": category,
+                "entries": len(category_cycles) + len(category_open),
+                "closed_positions": len(category_cycles),
+                "open_positions": len(category_open),
+                "deployed_capital": as_float(invested),
+                "ending_value": as_float(ending_value),
+                "gain_loss": as_float(ending_value - invested),
+                "return_pct": as_float(pct_change(ending_value, invested)),
+            }
+        )
+    category_rows.sort(key=lambda row: row["return_pct"], reverse=True)
+
+    ending_series = series[-1]
+    prior_series = next(
+        (
+            row
+            for row in reversed(series)
+            if date.fromisoformat(str(row["date"])) < selected_start
+        ),
+        None,
+    )
+    starting_equity = Decimal(str(prior_series["value"])) if prior_series else Decimal("0")
+    starting_deployed = (
+        Decimal(str(prior_series["deployed_capital"])) if prior_series else Decimal("0")
+    )
+    ending_equity = Decimal(str(ending_series["value"]))
+    ending_deployed = Decimal(str(ending_series["deployed_capital"]))
+    new_deployments = ending_deployed - starting_deployed
+    period_basis = starting_equity + new_deployments
+    period_gain = ending_equity - period_basis
+    open_positions.sort(key=lambda row: row["return_pct"], reverse=True)
+    return {
+        "investor": strategy_name,
+        "source": (
+            "derived-multi-signal-exit-strategy"
+            if more_signals_exit
+            else "derived-daily-signal-strategy"
+        ),
+        "strategy_start": VARIABLE_STRATEGY_START.isoformat(),
+        "from_date": selected_start.isoformat(),
+        "to_date": latest_market.day.isoformat(),
+        "initial_value": as_float(period_basis),
+        "current_value": as_float(ending_equity),
+        "gain_loss": as_float(period_gain),
+        "return_pct": as_float(pct_change(ending_equity, period_basis)),
+        "position_count": len(open_positions),
+        "positions": open_positions,
+        "series": [
+            row
+            for row in series
+            if date.fromisoformat(str(row["date"])) >= selected_start
+        ],
+        "category_stats": category_rows,
+        "category_stats_scope": f"{VARIABLE_STRATEGY_START.isoformat()} to {latest_market.day.isoformat()}",
+        "trade_cycles": len(cycles) + len(open_positions),
+        "closed_cycles": len(cycles),
+        "note": (
+            "Multi-signal EOD strategy. Entries use the five-day non-none signal. "
+            "An exit requires ten consecutive five-day none observations and a "
+            "one-month return of -5% or worse. Signals are observed at one close "
+            "and executed at the next available close. Each entry deploys $1,000. "
+            "FX conversion is intentionally ignored."
+            if more_signals_exit
+            else
+            "Daily EOD signal strategy. Signals are observed at one market close "
+            "and executed at the next available close. Each entry deploys $1,000. "
+            "FX conversion is intentionally ignored."
+        ),
+    }
+
+
+def variable_strategy_summary(start: date, end: date | None) -> dict[str, object]:
+    detail = variable_strategy_detail(start, end)
+    return {
+        key: detail[key]
+        for key in (
+            "investor",
+            "initial_value",
+            "current_value",
+            "gain_loss",
+            "return_pct",
+            "position_count",
+            "source",
+        )
+    } | {"warnings": []}
+
+
+def variable_more_signals_summary(start: date, end: date | None) -> dict[str, object]:
+    detail = variable_strategy_detail(
+        start,
+        end,
+        strategy_name=VARIABLE_MORE_SIGNALS_NAME,
+        more_signals_exit=True,
+    )
+    return {
+        key: detail[key]
+        for key in (
+            "investor",
+            "initial_value",
+            "current_value",
+            "gain_loss",
+            "return_pct",
+            "position_count",
+            "source",
+        )
+    } | {"warnings": []}
+
+
+def variable_buy_only_detail(start: date, end: date | None) -> dict[str, object]:
+    selected_start = max(start, VARIABLE_STRATEGY_START)
+    _, market_bars = fetch_chart("SPY")
+    latest_market = on_or_before(market_bars, end)
+    if not latest_market:
+        raise ValueError("missing strategy ending market session")
+    sessions = [
+        bar.day
+        for bar in market_bars
+        if VARIABLE_STRATEGY_START <= bar.day <= latest_market.day
+    ]
+    if not sessions:
+        raise ValueError("missing strategy market sessions")
+
+    charts: dict[str, tuple[Bar, ...]] = {}
+    for ticker, security_type in tracked_stock_assets():
+        symbol = yahoo_symbol(ticker, security_type)
+        try:
+            _, bars = fetch_chart(symbol)
+        except Exception:
+            continue
+        if bars:
+            charts[ticker] = bars
+
+    positions: dict[str, dict[str, object]] = {}
+    series: list[dict[str, object]] = []
+    previous_session = on_or_before(market_bars, VARIABLE_STRATEGY_START - timedelta(days=1))
+    for session in sessions:
+        if not previous_session:
+            previous_session = on_or_before(market_bars, session - timedelta(days=1))
+        for ticker, bars in charts.items():
+            if ticker in positions:
+                continue
+            signal_bars = tuple(bar for bar in bars if bar.day <= previous_session.day)
+            category = entry_signal(live_signal(signal_bars))
+            if not category:
+                continue
+            price_bar = on_or_before(bars, session)
+            if not price_bar:
+                continue
+            positions[ticker] = {
+                "ticker": ticker,
+                "entry_signal": category,
+                "entry_date": price_bar.day.isoformat(),
+                "entry_price": as_float(price_bar.close),
+                "shares": VARIABLE_ENTRY_USD / price_bar.close,
+                "initial_value": as_float(VARIABLE_ENTRY_USD),
+            }
+        deployed = VARIABLE_ENTRY_USD * len(positions)
+        current = Decimal("0")
+        for ticker, position in positions.items():
+            price_bar = on_or_before(charts[ticker], session)
+            if price_bar:
+                current += Decimal(str(position["shares"])) * price_bar.close
+        series.append(
+            {
+                "date": session.isoformat(),
+                "value": as_float(current),
+                "gain_loss": as_float(current - deployed),
+                "deployed_capital": as_float(deployed),
+                "active_positions": len(positions),
+            }
+        )
+        previous_session = on_or_before(market_bars, session)
+
+    open_positions: list[dict[str, object]] = []
+    for ticker, position in positions.items():
+        price_bar = on_or_before(charts[ticker], latest_market.day)
+        if not price_bar:
+            continue
+        current_value = Decimal(str(position["shares"])) * price_bar.close
+        open_positions.append(
+            {
+                **position,
+                "current_value": as_float(current_value),
+                "gain_loss": as_float(current_value - VARIABLE_ENTRY_USD),
+                "return_pct": as_float(pct_change(current_value, VARIABLE_ENTRY_USD)),
+                "status": "open",
+            }
+        )
+
+    category_rows: list[dict[str, object]] = []
+    for category in ("fresh", "strict", "near"):
+        category_positions = [
+            position for position in open_positions if position["entry_signal"] == category
+        ]
+        invested = VARIABLE_ENTRY_USD * len(category_positions)
+        ending_value = sum(
+            (Decimal(str(position["current_value"])) for position in category_positions),
+            Decimal("0"),
+        )
+        category_rows.append(
+            {
+                "category": category,
+                "entries": len(category_positions),
+                "closed_positions": 0,
+                "open_positions": len(category_positions),
+                "deployed_capital": as_float(invested),
+                "ending_value": as_float(ending_value),
+                "gain_loss": as_float(ending_value - invested),
+                "return_pct": as_float(pct_change(ending_value, invested)),
+            }
+        )
+    category_rows.sort(key=lambda row: row["return_pct"], reverse=True)
+
+    ending_series = series[-1]
+    prior_series = next(
+        (
+            row
+            for row in reversed(series)
+            if date.fromisoformat(str(row["date"])) < selected_start
+        ),
+        None,
+    )
+    starting_equity = Decimal(str(prior_series["value"])) if prior_series else Decimal("0")
+    starting_deployed = (
+        Decimal(str(prior_series["deployed_capital"])) if prior_series else Decimal("0")
+    )
+    ending_equity = Decimal(str(ending_series["value"]))
+    ending_deployed = Decimal(str(ending_series["deployed_capital"]))
+    new_deployments = ending_deployed - starting_deployed
+    period_basis = starting_equity + new_deployments
+    period_gain = ending_equity - period_basis
+    open_positions.sort(key=lambda row: row["return_pct"], reverse=True)
+    return {
+        "investor": VARIABLE_BUY_ONLY_NAME,
+        "source": "derived-buy-only-signal-strategy",
+        "strategy_start": VARIABLE_STRATEGY_START.isoformat(),
+        "from_date": selected_start.isoformat(),
+        "to_date": latest_market.day.isoformat(),
+        "initial_value": as_float(period_basis),
+        "current_value": as_float(ending_equity),
+        "gain_loss": as_float(period_gain),
+        "return_pct": as_float(pct_change(ending_equity, period_basis)),
+        "position_count": len(open_positions),
+        "positions": open_positions,
+        "series": [
+            row
+            for row in series
+            if date.fromisoformat(str(row["date"])) >= selected_start
+        ],
+        "category_stats": category_rows,
+        "category_stats_scope": f"{VARIABLE_STRATEGY_START.isoformat()} to {latest_market.day.isoformat()}",
+        "trade_cycles": len(open_positions),
+        "closed_cycles": 0,
+        "note": (
+            "Buy-only EOD signal strategy. A stock is purchased once, at the next "
+            "available close after its first non-none signal, and is never sold. "
+            "Each entry deploys $1,000. FX conversion is intentionally ignored."
+        ),
+    }
+
+
+def variable_buy_only_summary(start: date, end: date | None) -> dict[str, object]:
+    detail = variable_buy_only_detail(start, end)
+    return {
+        key: detail[key]
+        for key in (
+            "investor",
+            "initial_value",
+            "current_value",
+            "gain_loss",
+            "return_pct",
+            "position_count",
+            "source",
+        )
+    } | {"warnings": []}
 
 
 def asset_summary(
@@ -390,6 +838,9 @@ def build_overview(start: date, end: date | None) -> dict[str, object]:
     imported = nisarg_summary(start, end)
     if imported:
         traders.append(imported)
+    traders.append(variable_strategy_summary(start, end))
+    traders.append(variable_buy_only_summary(start, end))
+    traders.append(variable_more_signals_summary(start, end))
     traders.sort(key=lambda row: row["return_pct"], reverse=True)
     for rank, trader in enumerate(traders, start=1):
         trader["rank"] = rank
@@ -577,6 +1028,17 @@ def nisarg_detail(start: date, end: date | None) -> dict[str, object]:
 
 
 def trader_detail(investor: str, start: date, end: date | None) -> dict[str, object]:
+    if investor.casefold() == VARIABLE_MORE_SIGNALS_NAME:
+        return variable_strategy_detail(
+            start,
+            end,
+            strategy_name=VARIABLE_MORE_SIGNALS_NAME,
+            more_signals_exit=True,
+        )
+    if investor.casefold() == VARIABLE_BUY_ONLY_NAME:
+        return variable_buy_only_detail(start, end)
+    if investor.casefold() == VARIABLE_STRATEGY_NAME:
+        return variable_strategy_detail(start, end)
     if investor.casefold() == "nisarg":
         if PUBLIC_DASHBOARD:
             raise KeyError(investor)

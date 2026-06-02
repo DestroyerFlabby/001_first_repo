@@ -105,6 +105,16 @@ It does not submit trades or modify the ledger. It provides:
 - weighted composite signal score using the 3-day, 5-day, 1-week, and 1-month
   indicators, with the 3-month indicator retained as longer-term context
 - strict, near-match, and fresh-priority volume-signal classifications
+- `watchlist-variable`: derived daily-rebalanced signal portfolio that starts
+  on January 31, 2026, holds only non-`none` stock signals, executes changes
+  at the next available close, deploys `$1,000` per entry, and intentionally
+  ignores FX
+- `watchlist-variable-buy-only`: companion strategy that buys `$1,000` once
+  after each stock's first non-`none` signal and never sells, for comparison
+  against the sell-on-`none` strategy
+- `watchlist-variable-more-signals`: companion strategy that enters on the
+  same five-day non-`none` signals, but exits only after ten consecutive
+  five-day `none` observations and a one-month return of `-5%` or worse
 - Nisarg's security-only Wealthsimple summary with deposits and withdrawals
   excluded
 
@@ -204,6 +214,12 @@ Related research notes:
   and flash-memory joint ventures
 - `research/chip_design_2026-05-30.md`: sector tracker for chip design,
   accelerator vendors, custom silicon, and processor IP
+- `research/watchlist_variable_strategy_2026-01-31_to_2026-06-01.md`: derived
+  daily signal-portfolio snapshot with entry-category results
+- `research/watchlist_variable_buy_only_strategy_2026-01-31_to_2026-06-01.md`:
+  buy-only comparison snapshot and interpretation
+- `research/watchlist_variable_more_signals_strategy_2026-01-31_to_2026-06-01.md`:
+  transition analysis and the sustained-loss exit-rule comparison
 
 The initial simulated portfolios were requested for January 1, 2026, a market
 holiday, so unpriced stocks and ETFs use the next available market close. The

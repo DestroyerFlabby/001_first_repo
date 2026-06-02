@@ -23,7 +23,7 @@
         </div>
         <label>
           <span>From</span>
-          <input id="from-date" type="date" value="2026-05-20" />
+          <input id="from-date" type="date" />
         </label>
         <label>
           <span>From quick date</span>
@@ -44,16 +44,16 @@
         <button id="apply-window" class="primary">Refresh dashboard</button>
       </section>
 
-      <section id="loading" class="loading-card card" aria-live="polite">
+      <section id="loading" class="loading-card card hidden" aria-live="polite">
         <div class="loading-heading">
           <div>
             <p class="eyebrow">Loading dashboard</p>
             <p id="loading-message">Preparing tracked-market data...</p>
           </div>
-          <p id="loading-elapsed" class="muted">0s elapsed</p>
+          <p class="muted"><span id="loading-percent">0%</span> | <span id="loading-elapsed">0s elapsed</span></p>
         </div>
         <div class="progress-track" aria-label="Dashboard loading in progress">
-          <span class="progress-bar"></span>
+          <span id="progress-bar" class="progress-bar"></span>
         </div>
         <p class="muted">Market requests and strategy replays can take a minute. Keep this tab open.</p>
       </section>

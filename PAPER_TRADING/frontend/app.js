@@ -55,9 +55,15 @@ async function fetchJson(url) {
   return response.json();
 }
 
-function setLoading(message) {
+function setProgress(percent) {
+  $("#loading-percent").textContent = `${percent}%`;
+  $("#progress-bar").style.width = `${percent}%`;
+}
+
+function setLoading(message, percent = 0) {
   $("#loading-message").textContent = message;
   $("#loading").classList.remove("hidden");
+  setProgress(percent);
   loadingStartedAt = Date.now();
   $("#loading-elapsed").textContent = "0s elapsed";
   clearInterval(loadingTimer);
@@ -67,8 +73,9 @@ function setLoading(message) {
   }, 1000);
 }
 
-function updateLoading(message) {
+function updateLoading(message, percent) {
   $("#loading-message").textContent = message;
+  setProgress(percent);
 }
 
 function clearLoading() {
@@ -83,7 +90,7 @@ function loadingPanel(message) {
     <div class="drawer-loading">
       <p class="loading">${message}</p>
       <div class="progress-track" aria-label="Drilldown loading in progress">
-        <span class="progress-bar"></span>
+        <span class="progress-bar indeterminate"></span>
       </div>
     </div>`;
 }
@@ -516,16 +523,21 @@ async function openStock(ticker) {
 }
 
 async function loadOverview() {
+  if (!$("#from-date").value || !$("#to-date").value) {
+    $("#error").textContent = "Select both a From date and a To date before refreshing.";
+    $("#error").classList.remove("hidden");
+    return;
+  }
   $("#content").classList.add("hidden");
   $("#error").classList.add("hidden");
   $("#apply-window").disabled = true;
   $("#apply-window").textContent = "Refreshing...";
-  setLoading("Refreshing portfolio rankings and tracked instruments...");
+  setLoading("Refreshing portfolio rankings and tracked instruments...", 5);
   try {
     state.overview = await fetchJson(`/api/overview?${query()}`);
-    updateLoading("Loading prior-close movers...");
+    updateLoading("Portfolio rankings and tracked instruments loaded. Loading prior-close movers...", 75);
     state.eod = await fetchJson(`/api/eod${wealthsimpleQuery()}`);
-    updateLoading("Rendering dashboard tables...");
+    updateLoading("Prior-close movers loaded. Rendering dashboard tables...", 95);
     renderCards();
     renderEod();
     renderTraders();
@@ -534,6 +546,7 @@ async function loadOverview() {
       `${state.overview.from_date} to ${state.overview.latest_available_date || "latest available close"}`
       + (state.overview.wealthsimple_fx_fees_enabled ? " | Wealthsimple CAD-account USD FX fees enabled" : "");
     $("#content").classList.remove("hidden");
+    updateLoading("Dashboard ready.", 100);
   } catch (error) {
     $("#error").textContent = error.message;
     $("#error").classList.remove("hidden");
@@ -545,15 +558,16 @@ async function loadOverview() {
 }
 
 async function init() {
-  setLoading("Loading dashboard configuration...");
   const meta = await fetchJson("/api/meta");
   state.meta = meta;
   $("#from-quick-date").innerHTML = dateOptions(meta);
   $("#to-quick-date").innerHTML = dateOptions(meta, true);
-  $("#from-date").value = meta.default_from_date;
-  $("#to-date").value = meta.default_to_date;
-  $("#from-quick-date").value = meta.default_from_date;
-  $("#to-quick-date").value = meta.default_to_date;
+  $("#from-quick-date").insertAdjacentHTML("afterbegin", '<option value="">Choose date</option>');
+  $("#to-quick-date").insertAdjacentHTML("afterbegin", '<option value="">Choose date</option>');
+  $("#from-date").value = "";
+  $("#to-date").value = "";
+  $("#from-quick-date").value = "";
+  $("#to-quick-date").value = "";
   $("#from-quick-date").addEventListener("change", () => {
     $("#from-date").value = $("#from-quick-date").value;
   });
@@ -571,7 +585,6 @@ async function init() {
   $("#signal-filter").addEventListener("change", renderStocks);
   $("#close-drawer").addEventListener("click", closeDrawer);
   $("#backdrop").addEventListener("click", closeDrawer);
-  loadOverview();
 }
 
 init().catch((error) => {

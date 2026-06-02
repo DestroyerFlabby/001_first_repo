@@ -24,6 +24,7 @@ from backend.dashboard_service import (  # noqa: E402
     parse_date,
     trader_detail,
 )
+from backend.email_service import send_daily_instructions  # noqa: E402
 from backend.news_service import news_summary  # noqa: E402
 
 
@@ -99,6 +100,21 @@ def overview(
 @app.get("/api/eod")
 def eod(wealthsimple_fx_fees: bool = Query(default=False)) -> dict[str, object]:
     return build_eod_snapshot(wealthsimple_fx_fees)
+
+
+@app.post("/api/notifications/daily-instructions")
+def daily_instructions(
+    from_date: str | None = Query(default=None),
+    to_date: str | None = Query(default=None),
+    wealthsimple_fx_fees: bool = Query(default=False),
+) -> dict[str, object]:
+    start, end = window(from_date, to_date)
+    try:
+        return send_daily_instructions(start, end, wealthsimple_fx_fees)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"unknown notification strategy: {exc}") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.get("/api/traders/{investor}")

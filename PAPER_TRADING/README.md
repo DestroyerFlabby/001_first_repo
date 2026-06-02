@@ -118,6 +118,8 @@ It does not submit trades or modify the ledger. It provides:
 - cached daily news snapshots with 24-hour article count, seven-day article
   count, prior-week comparison, news velocity, source diversity, and catalyst
   links
+- optional daily-instructions email after each successful refresh for the
+  `watchlist-variable-news-optimized-experimental` strategy
 - `watchlist-variable`: derived daily-rebalanced signal portfolio that starts
   on January 31, 2026, holds only non-`none` stock signals, executes changes
   at the next available close, deploys `$1,000` per entry, and intentionally
@@ -165,6 +167,30 @@ All derived variable strategies use an end-of-day convention: each signal and
 news condition is observed only after a market close, and any resulting buy or
 sell executes at the next available market close. Intraday dashboard refreshes
 do not change simulated trade timing.
+
+### Refresh Email
+
+The dashboard can email daily instructions after a successful refresh. This is
+disabled unless SMTP settings are present, so local refreshes are safe by
+default.
+
+Add these values to `.env` locally or to the Render service environment:
+
+```env
+DAILY_INSTRUCTIONS_EMAIL_ENABLED=true
+DAILY_INSTRUCTIONS_RECIPIENT=nisargdave@hotmail.com
+DAILY_INSTRUCTIONS_STRATEGY=watchlist-variable-news-optimized-experimental
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USERNAME=your-email@example.com
+SMTP_PASSWORD=your-smtp-app-password
+EMAIL_FROM=your-email@example.com
+SMTP_USE_TLS=true
+```
+
+The email includes pending next-close orders, current holdings, recently
+realized positions, and portfolio summary stats. If any SMTP setting is
+missing, the dashboard still loads and shows that the email was skipped.
 
 ### Free Public Deployment
 

@@ -48,13 +48,39 @@ function tickerLabel(ticker, metadata = null) {
     </span>`;
 }
 
-async function fetchJson(url) {
-  const response = await fetch(url);
+async function fetchJson(url, options = {}) {
+  const response = await fetch(url, options);
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
     throw new Error(body.detail || `Request failed: ${response.status}`);
   }
   return response.json();
+}
+
+function setNotificationStatus(message, status = "") {
+  const element = $("#notification-status");
+  element.textContent = message;
+  element.className = `notification-status muted ${status ? `notification-${status}` : ""}`;
+  element.classList.toggle("hidden", !message);
+}
+
+function notificationMessage(result) {
+  if (!result) return "";
+  if (result.status === "sent") {
+    return `Daily instructions email sent to ${result.recipient} for ${result.strategy}: ${result.pending_orders} pending order(s), ${result.holdings} holding(s).`;
+  }
+  if (result.status === "skipped") {
+    return `Daily instructions email skipped: ${result.reason}.`;
+  }
+  return `Daily instructions email failed: ${result.detail || "unknown error"}.`;
+}
+
+async function sendDailyInstructionsEmail() {
+  try {
+    return await fetchJson(`/api/notifications/daily-instructions?${query()}`, { method: "POST" });
+  } catch (error) {
+    return { status: "error", detail: error.message };
+  }
 }
 
 function setProgress(percent) {
@@ -715,6 +741,7 @@ async function loadOverview() {
   }
   $("#content").classList.add("hidden");
   $("#error").classList.add("hidden");
+  setNotificationStatus("");
   $("#apply-window").disabled = true;
   $("#apply-window").textContent = "Refreshing...";
   setLoading("Refreshing portfolio rankings and tracked instruments...", 5);
@@ -732,6 +759,9 @@ async function loadOverview() {
       `${state.overview.from_date} to ${state.overview.latest_available_date || "latest available close"}`
       + (state.overview.wealthsimple_fx_fees_enabled ? " | Wealthsimple CAD-account USD FX fees enabled" : "");
     $("#content").classList.remove("hidden");
+    updateLoading("Dashboard ready. Sending daily instructions email if configured...", 98);
+    const notification = await sendDailyInstructionsEmail();
+    setNotificationStatus(notificationMessage(notification), notification.status);
     updateLoading("Dashboard ready.", 100);
   } catch (error) {
     $("#error").textContent = error.message;

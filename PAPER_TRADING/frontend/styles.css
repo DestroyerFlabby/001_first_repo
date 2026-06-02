@@ -119,6 +119,13 @@ input, select {
 .loading, .error { margin: 32px 0; text-align: center; }
 .loading { color: var(--muted); }
 .error { color: var(--danger); }
+.notification-status {
+  border-left: 3px solid var(--line);
+  margin: -6px 0 18px;
+  padding-left: 10px;
+}
+.notification-sent { border-color: var(--accent); color: var(--accent); }
+.notification-error { border-color: var(--danger); color: var(--danger); }
 .hidden { display: none !important; }
 .loading-card { margin-top: 18px; }
 .loading-heading {

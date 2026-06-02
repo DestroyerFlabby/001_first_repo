@@ -190,6 +190,11 @@ function downloadExcelTables(filenameBase, workbookTitle, tables) {
   URL.revokeObjectURL(link.href);
 }
 
+function exportNamedDrawerTable(button) {
+  const table = document.querySelector(button.dataset.exportTable);
+  downloadExcelTables(button.dataset.exportName, button.dataset.exportTitle, [table]);
+}
+
 function signalPill(signal) {
   if (!signal || signal.classification === "none") return '<span class="pill">none</span>';
   const kind = signal.fresh_priority ? "fresh" : signal.classification;
@@ -521,26 +526,35 @@ async function openTrader(investor) {
       </div>
       <h3>Daily portfolio value</h3>
       <div class="chart">${polyline(detail.series, "value")}</div>
-      <h3>Holdings</h3>
+      <div class="drawer-section-heading">
+        <h3>Holdings</h3>
+        <button class="secondary small" data-export-table="#trader-holdings-table" data-export-name="holdings-${detail.investor}" data-export-title="${detail.investor} Holdings">Download holdings</button>
+      </div>
       <div class="table-wrap">
-        <table data-sortable><thead><tr><th>Ticker</th><th>Start</th><th>Current</th><th>Gain / loss</th><th>Daily</th><th>5D</th><th>Monthly</th><th>Return</th></tr></thead>
+        <table id="trader-holdings-table" data-sortable><thead><tr><th>Ticker</th><th>Start</th><th>Current</th><th>Gain / loss</th><th>Daily</th><th>5D</th><th>Monthly</th><th>Return</th></tr></thead>
         <tbody>${rows}</tbody></table>
       </div>
       ${detail.category_stats ? `
-        <h3>Entry signal category results</h3>
+        <div class="drawer-section-heading">
+          <h3>Entry signal category results</h3>
+          <button class="secondary small" data-export-table="#trader-category-table" data-export-name="entry-signal-results-${detail.investor}" data-export-title="${detail.investor} Entry Signal Results">Download categories</button>
+        </div>
         <p class="muted">${detail.category_stats_scope}</p>
         <div class="table-wrap">
-          <table data-sortable>
+          <table id="trader-category-table" data-sortable>
             <thead><tr><th>Category</th><th>Entries</th><th>Closed</th><th>Open</th><th>Deployed</th><th>Gain / loss</th><th>Return</th></tr></thead>
             <tbody>${categoryRows}</tbody>
           </table>
         </div>` : ""}
       ${detail.simulated_trades ? `
-        <h3>Simulated EOD trade ledger</h3>
+        <div class="drawer-section-heading">
+          <h3>Simulated EOD trade ledger</h3>
+          <button class="secondary small" data-export-table="#trader-ledger-table" data-export-name="trade-ledger-${detail.investor}" data-export-title="${detail.investor} Simulated Trade Ledger">Download ledger</button>
+        </div>
         <p class="muted">${detail.execution_convention}</p>
         <p class="muted">${(detail.pending_next_close_orders || []).length} pending order(s) observed after the selected To-date close.</p>
         <div class="table-wrap">
-          <table data-sortable>
+          <table id="trader-ledger-table" data-sortable>
             <thead><tr><th>Status</th><th>Execution date</th><th>Observed after close</th><th>Action</th><th>Ticker</th><th>Entry signal</th><th>Execution price</th><th>Quantity</th><th>USD amount</th><th>Realized gain / loss</th></tr></thead>
             <tbody>${tradeRows}</tbody>
           </table>
@@ -548,6 +562,9 @@ async function openTrader(investor) {
       ${detail.note ? `<p class="muted">${detail.note}</p>` : ""}
     `);
     enableSorting($("#drawer-content"));
+    document.querySelectorAll("[data-export-table]").forEach((button) =>
+      button.addEventListener("click", () => exportNamedDrawerTable(button))
+    );
   } catch (error) {
     openDrawer(`<p class="error">${error.message}</p>`);
   }

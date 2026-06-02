@@ -111,6 +111,11 @@ input, select {
   color: var(--blue);
 }
 .secondary:hover { border-color: var(--accent); color: var(--accent); }
+.secondary.small {
+  font-size: .75rem;
+  min-height: 32px;
+  padding: 0 10px;
+}
 .loading, .error { margin: 32px 0; text-align: center; }
 .loading { color: var(--muted); }
 .error { color: var(--danger); }
@@ -281,6 +286,13 @@ tbody tr:hover { background: rgba(87, 211, 162, .07); }
   margin-bottom: 18px;
   margin-right: 42px;
 }
+.drawer-section-heading {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  margin-top: 18px;
+}
 .backdrop { background: rgba(0, 0, 0, .38); inset: 0; position: fixed; z-index: 4; }
 .detail-grid { display: grid; gap: 10px; grid-template-columns: repeat(3, 1fr); margin: 20px 0; }
 .detail-stat { background: var(--card-2); border-radius: 10px; padding: 11px; }
@@ -321,4 +333,5 @@ tbody tr:hover { background: rgba(87, 211, 162, .07); }
   .stock-heading { align-items: start; flex-direction: column; gap: 12px; }
   .stock-tools { width: 100%; }
   .stock-tools input { min-width: 0; width: 100%; }
+  .drawer-section-heading { align-items: start; flex-direction: column; }
 }

@@ -9,28 +9,39 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DAILY_COUNTS_FILE = ROOT / "data" / "historical_news_daily_counts.json"
-NEWS_STRATEGIES = {
+BASE_NEWS_STRATEGIES = {
     "watchlist-variable-news-active": {
         "rule": "hold-while-news-active",
-        "require_news_entry": False,
         "note": "Hold while the latest seven-day Alpaca news count remains above zero.",
     },
     "watchlist-variable-news-cooling": {
         "rule": "confirm-news-cooling",
-        "require_news_entry": False,
         "note": "Sell only after technical deterioration and a non-increasing seven-day Alpaca news count.",
     },
     "watchlist-variable-news-cooling-early-exit": {
         "rule": "early-exit-on-news-cooling",
-        "require_news_entry": False,
         "note": "Sell after five missing-signal sessions when one-month momentum is weak and Alpaca news is cooling.",
     },
     "watchlist-variable-news-required-entry": {
         "rule": "technical-baseline",
-        "require_news_entry": True,
+        "entry_news_rule": "active",
         "note": "Buy only when a technical entry also has at least one Alpaca news article in the latest seven days.",
     },
+    "watchlist-variable-news-optimized-experimental": {
+        "rule": "optimized-grid-winner",
+        "entry_categories": {"fresh"},
+        "entry_news_rule": "accelerating",
+        "note": "Experimental in-sample grid winner. Buy fresh signals only when seven-day Alpaca news is accelerating. Sell after twenty missing-signal sessions, weak one-month momentum, and a zero-article week.",
+    },
 }
+NEWS_STRATEGIES = dict(BASE_NEWS_STRATEGIES)
+for strategy_name, config in BASE_NEWS_STRATEGIES.items():
+    for category in ("fresh", "strict", "near"):
+        NEWS_STRATEGIES[f"{strategy_name}-{category}-only"] = {
+            **config,
+            "entry_categories": {category},
+            "note": f"Buy {category} signals only. {config['note']}",
+        }
 
 
 @lru_cache(maxsize=1)
@@ -81,5 +92,11 @@ def should_exit(
             none_streak >= 5
             and one_month_return <= Decimal("-5")
             and int(news["articles_7d"]) <= int(news["articles_prior_7d"])
+        )
+    if rule == "optimized-grid-winner":
+        return (
+            none_streak >= 20
+            and one_month_return <= Decimal("-5")
+            and int(news["articles_7d"]) == 0
         )
     raise ValueError(f"unknown news strategy rule: {rule}")

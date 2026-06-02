@@ -68,7 +68,35 @@ PUBLIC_DASHBOARD = os.environ.get("PUBLIC_DASHBOARD", "").casefold() in {
 }
 VARIABLE_STRATEGY_NAME = "watchlist-variable"
 VARIABLE_BUY_ONLY_NAME = "watchlist-variable-buy-only"
+VARIABLE_BUY_ONLY_STRATEGIES = {
+    "watchlist-variable-buy-only-fresh-only": "fresh",
+    "watchlist-variable-buy-only-strict-only": "strict",
+    "watchlist-variable-buy-only-near-only": "near",
+}
 VARIABLE_MORE_SIGNALS_NAME = "watchlist-variable-more-signals"
+VARIABLE_TECHNICAL_STRATEGIES = {
+    "watchlist-variable-fresh-only": {
+        "entry_categories": {"fresh"},
+    },
+    "watchlist-variable-strict-only": {
+        "entry_categories": {"strict"},
+    },
+    "watchlist-variable-near-only": {
+        "entry_categories": {"near"},
+    },
+    "watchlist-variable-more-signals-fresh-only": {
+        "entry_categories": {"fresh"},
+        "more_signals_exit": True,
+    },
+    "watchlist-variable-more-signals-strict-only": {
+        "entry_categories": {"strict"},
+        "more_signals_exit": True,
+    },
+    "watchlist-variable-more-signals-near-only": {
+        "entry_categories": {"near"},
+        "more_signals_exit": True,
+    },
+}
 VARIABLE_STRATEGY_START = date(2026, 1, 31)
 VARIABLE_ENTRY_USD = Decimal("1000")
 
@@ -293,7 +321,8 @@ def variable_strategy_detail(
     strategy_name: str = VARIABLE_STRATEGY_NAME,
     more_signals_exit: bool = False,
     news_rule: str | None = None,
-    require_news_entry: bool = False,
+    entry_categories: set[str] | None = None,
+    entry_news_rule: str = "ignore",
 ) -> dict[str, object]:
     selected_start = max(start, VARIABLE_STRATEGY_START)
     _, market_bars = fetch_chart("SPY")
@@ -344,7 +373,7 @@ def variable_strategy_detail(
                 previous_session.day,
             )
             category = entry_signal(observed[ticker])
-            if category:
+            if category and (entry_categories is None or category in entry_categories):
                 desired[ticker] = category
 
         for ticker in set(active) & set(desired):
@@ -352,7 +381,7 @@ def variable_strategy_detail(
 
         for ticker in sorted(set(active) - set(desired)):
             price_bar = on_or_before(charts[ticker], session)
-            if not price_bar:
+            if not price_bar or price_bar.day <= previous_session.day:
                 continue
             position = active.pop(ticker)
             position["none_streak"] = int(position.get("none_streak", 0)) + 1
@@ -381,6 +410,7 @@ def variable_strategy_detail(
             cycles.append(
                 {
                     **position,
+                    "exit_signal_observed_date": previous_session.day.isoformat(),
                     "exit_date": price_bar.day.isoformat(),
                     "exit_price": as_float(price_bar.close),
                     "ending_value": as_float(proceeds),
@@ -391,16 +421,26 @@ def variable_strategy_detail(
             )
 
         for ticker in sorted(set(desired) - set(active)):
-            if require_news_entry and int(observed_news[ticker]["articles_7d"]) == 0:
+            if (
+                entry_news_rule == "active"
+                and int(observed_news[ticker]["articles_7d"]) == 0
+            ):
+                continue
+            if (
+                entry_news_rule == "accelerating"
+                and int(observed_news[ticker]["articles_7d"])
+                <= int(observed_news[ticker]["articles_prior_7d"])
+            ):
                 continue
             price_bar = on_or_before(charts[ticker], session)
-            if not price_bar:
+            if not price_bar or price_bar.day <= previous_session.day:
                 continue
             shares = VARIABLE_ENTRY_USD / price_bar.close
             deployed += VARIABLE_ENTRY_USD
             active[ticker] = {
                 "ticker": ticker,
                 "entry_signal": desired[ticker],
+                "signal_observed_date": previous_session.day.isoformat(),
                 "entry_date": price_bar.day.isoformat(),
                 "entry_price": as_float(price_bar.close),
                 "shares": shares,
@@ -469,6 +509,37 @@ def variable_strategy_detail(
         )
     category_rows.sort(key=lambda row: row["return_pct"], reverse=True)
 
+    simulated_trades: list[dict[str, object]] = []
+    for position in [*cycles, *open_positions]:
+        simulated_trades.append(
+            {
+                "date": position["entry_date"],
+                "signal_observed_date": position["signal_observed_date"],
+                "action": "buy",
+                "ticker": position["ticker"],
+                "entry_signal": position["entry_signal"],
+                "execution_price": position["entry_price"],
+                "quantity": as_float(Decimal(str(position["shares"]))),
+                "usd_amount": as_float(VARIABLE_ENTRY_USD),
+                "gain_loss": None,
+            }
+        )
+    for position in cycles:
+        simulated_trades.append(
+            {
+                "date": position["exit_date"],
+                "signal_observed_date": position["exit_signal_observed_date"],
+                "action": "sell",
+                "ticker": position["ticker"],
+                "entry_signal": position["entry_signal"],
+                "execution_price": position["exit_price"],
+                "quantity": as_float(Decimal(str(position["shares"]))),
+                "usd_amount": position["ending_value"],
+                "gain_loss": position["gain_loss"],
+            }
+        )
+    simulated_trades.sort(key=lambda row: (row["date"], row["ticker"], row["action"]))
+
     ending_series = series[-1]
     prior_series = next(
         (
@@ -492,7 +563,7 @@ def variable_strategy_detail(
         "investor": strategy_name,
         "source": (
             "derived-news-assisted-signal-strategy"
-            if news_rule or require_news_entry
+            if news_rule or entry_news_rule != "ignore"
             else (
                 "derived-multi-signal-exit-strategy"
                 if more_signals_exit
@@ -508,6 +579,8 @@ def variable_strategy_detail(
         "return_pct": as_float(pct_change(ending_equity, period_basis)),
         "position_count": len(open_positions),
         "positions": open_positions,
+        "simulated_trades": simulated_trades,
+        "execution_convention": "Observe EOD signals and news after one close; execute at the next available EOD close.",
         "series": [
             row
             for row in series
@@ -517,13 +590,13 @@ def variable_strategy_detail(
         "category_stats_scope": f"{VARIABLE_STRATEGY_START.isoformat()} to {latest_market.day.isoformat()}",
         "trade_cycles": len(cycles) + len(open_positions),
         "closed_cycles": len(cycles),
-        "news_counts_to_date": daily_news.get("to_date") if news_rule or require_news_entry else None,
+        "news_counts_to_date": daily_news.get("to_date") if news_rule or entry_news_rule != "ignore" else None,
         "note": (
             f"News-assisted EOD strategy. {NEWS_STRATEGIES[strategy_name]['note']} "
             f"Committed Alpaca daily news counts currently end on {daily_news.get('to_date')}. "
             "Signals and news are observed at one close and executed at the next "
             "available close. Each entry deploys $1,000. FX conversion is intentionally ignored."
-            if news_rule or require_news_entry
+            if news_rule or entry_news_rule != "ignore"
             else
             "Multi-signal EOD strategy. Entries use the five-day non-none signal. "
             "An exit requires ten consecutive five-day none observations and a "
@@ -576,18 +649,18 @@ def variable_more_signals_summary(start: date, end: date | None) -> dict[str, ob
     } | {"warnings": []}
 
 
-def variable_news_strategy_summary(
+def variable_technical_strategy_summary(
     strategy_name: str,
     start: date,
     end: date | None,
 ) -> dict[str, object]:
-    config = NEWS_STRATEGIES[strategy_name]
+    config = VARIABLE_TECHNICAL_STRATEGIES[strategy_name]
     detail = variable_strategy_detail(
         start,
         end,
         strategy_name=strategy_name,
-        news_rule=str(config["rule"]),
-        require_news_entry=bool(config["require_news_entry"]),
+        more_signals_exit=bool(config.get("more_signals_exit")),
+        entry_categories=config.get("entry_categories"),
     )
     return {
         key: detail[key]
@@ -603,7 +676,40 @@ def variable_news_strategy_summary(
     } | {"warnings": []}
 
 
-def variable_buy_only_detail(start: date, end: date | None) -> dict[str, object]:
+def variable_news_strategy_summary(
+    strategy_name: str,
+    start: date,
+    end: date | None,
+) -> dict[str, object]:
+    config = NEWS_STRATEGIES[strategy_name]
+    detail = variable_strategy_detail(
+        start,
+        end,
+        strategy_name=strategy_name,
+        news_rule=str(config["rule"]),
+        entry_categories=config.get("entry_categories"),
+        entry_news_rule=str(config.get("entry_news_rule", "ignore")),
+    )
+    return {
+        key: detail[key]
+        for key in (
+            "investor",
+            "initial_value",
+            "current_value",
+            "gain_loss",
+            "return_pct",
+            "position_count",
+            "source",
+        )
+    } | {"warnings": []}
+
+
+def variable_buy_only_detail(
+    start: date,
+    end: date | None,
+    strategy_name: str = VARIABLE_BUY_ONLY_NAME,
+    entry_category: str | None = None,
+) -> dict[str, object]:
     selected_start = max(start, VARIABLE_STRATEGY_START)
     _, market_bars = fetch_chart("SPY")
     latest_market = on_or_before(market_bars, end)
@@ -638,14 +744,15 @@ def variable_buy_only_detail(start: date, end: date | None) -> dict[str, object]
                 continue
             signal_bars = tuple(bar for bar in bars if bar.day <= previous_session.day)
             category = entry_signal(live_signal(signal_bars))
-            if not category:
+            if not category or (entry_category and category != entry_category):
                 continue
             price_bar = on_or_before(bars, session)
-            if not price_bar:
+            if not price_bar or price_bar.day <= previous_session.day:
                 continue
             positions[ticker] = {
                 "ticker": ticker,
                 "entry_signal": category,
+                "signal_observed_date": previous_session.day.isoformat(),
                 "entry_date": price_bar.day.isoformat(),
                 "entry_price": as_float(price_bar.close),
                 "shares": VARIABLE_ENTRY_USD / price_bar.close,
@@ -708,6 +815,24 @@ def variable_buy_only_detail(start: date, end: date | None) -> dict[str, object]
         )
     category_rows.sort(key=lambda row: row["return_pct"], reverse=True)
 
+    simulated_trades = sorted(
+        (
+            {
+                "date": position["entry_date"],
+                "signal_observed_date": position["signal_observed_date"],
+                "action": "buy",
+                "ticker": position["ticker"],
+                "entry_signal": position["entry_signal"],
+                "execution_price": position["entry_price"],
+                "quantity": as_float(Decimal(str(position["shares"]))),
+                "usd_amount": as_float(VARIABLE_ENTRY_USD),
+                "gain_loss": None,
+            }
+            for position in open_positions
+        ),
+        key=lambda row: (row["date"], row["ticker"]),
+    )
+
     ending_series = series[-1]
     prior_series = next(
         (
@@ -728,7 +853,7 @@ def variable_buy_only_detail(start: date, end: date | None) -> dict[str, object]
     period_gain = ending_equity - period_basis
     open_positions.sort(key=lambda row: row["return_pct"], reverse=True)
     return {
-        "investor": VARIABLE_BUY_ONLY_NAME,
+        "investor": strategy_name,
         "source": "derived-buy-only-signal-strategy",
         "strategy_start": VARIABLE_STRATEGY_START.isoformat(),
         "from_date": selected_start.isoformat(),
@@ -739,6 +864,8 @@ def variable_buy_only_detail(start: date, end: date | None) -> dict[str, object]
         "return_pct": as_float(pct_change(ending_equity, period_basis)),
         "position_count": len(open_positions),
         "positions": open_positions,
+        "simulated_trades": simulated_trades,
+        "execution_convention": "Observe EOD signals after one close; execute at the next available EOD close.",
         "series": [
             row
             for row in series
@@ -750,7 +877,7 @@ def variable_buy_only_detail(start: date, end: date | None) -> dict[str, object]
         "closed_cycles": 0,
         "note": (
             "Buy-only EOD signal strategy. A stock is purchased once, at the next "
-            "available close after its first non-none signal, and is never sold. "
+            f"available close after its first {entry_category or 'non-none'} signal, and is never sold. "
             "Each entry deploys $1,000. FX conversion is intentionally ignored."
         ),
     }
@@ -758,6 +885,31 @@ def variable_buy_only_detail(start: date, end: date | None) -> dict[str, object]
 
 def variable_buy_only_summary(start: date, end: date | None) -> dict[str, object]:
     detail = variable_buy_only_detail(start, end)
+    return {
+        key: detail[key]
+        for key in (
+            "investor",
+            "initial_value",
+            "current_value",
+            "gain_loss",
+            "return_pct",
+            "position_count",
+            "source",
+        )
+    } | {"warnings": []}
+
+
+def variable_buy_only_category_summary(
+    strategy_name: str,
+    start: date,
+    end: date | None,
+) -> dict[str, object]:
+    detail = variable_buy_only_detail(
+        start,
+        end,
+        strategy_name=strategy_name,
+        entry_category=VARIABLE_BUY_ONLY_STRATEGIES[strategy_name],
+    )
     return {
         key: detail[key]
         for key in (
@@ -902,7 +1054,11 @@ def build_overview(start: date, end: date | None) -> dict[str, object]:
         traders.append(imported)
     traders.append(variable_strategy_summary(start, end))
     traders.append(variable_buy_only_summary(start, end))
+    for strategy_name in VARIABLE_BUY_ONLY_STRATEGIES:
+        traders.append(variable_buy_only_category_summary(strategy_name, start, end))
     traders.append(variable_more_signals_summary(start, end))
+    for strategy_name in VARIABLE_TECHNICAL_STRATEGIES:
+        traders.append(variable_technical_strategy_summary(strategy_name, start, end))
     for strategy_name in NEWS_STRATEGIES:
         traders.append(variable_news_strategy_summary(strategy_name, start, end))
     traders.sort(key=lambda row: row["return_pct"], reverse=True)
@@ -1092,6 +1248,23 @@ def nisarg_detail(start: date, end: date | None) -> dict[str, object]:
 
 
 def trader_detail(investor: str, start: date, end: date | None) -> dict[str, object]:
+    buy_only_category = VARIABLE_BUY_ONLY_STRATEGIES.get(investor.casefold())
+    if buy_only_category:
+        return variable_buy_only_detail(
+            start,
+            end,
+            strategy_name=investor.casefold(),
+            entry_category=buy_only_category,
+        )
+    technical_strategy = VARIABLE_TECHNICAL_STRATEGIES.get(investor.casefold())
+    if technical_strategy:
+        return variable_strategy_detail(
+            start,
+            end,
+            strategy_name=investor.casefold(),
+            more_signals_exit=bool(technical_strategy.get("more_signals_exit")),
+            entry_categories=technical_strategy.get("entry_categories"),
+        )
     news_strategy = NEWS_STRATEGIES.get(investor.casefold())
     if news_strategy:
         return variable_strategy_detail(
@@ -1099,7 +1272,8 @@ def trader_detail(investor: str, start: date, end: date | None) -> dict[str, obj
             end,
             strategy_name=investor.casefold(),
             news_rule=str(news_strategy["rule"]),
-            require_news_entry=bool(news_strategy["require_news_entry"]),
+            entry_categories=news_strategy.get("entry_categories"),
+            entry_news_rule=str(news_strategy.get("entry_news_rule", "ignore")),
         )
     if investor.casefold() == VARIABLE_MORE_SIGNALS_NAME:
         return variable_strategy_detail(

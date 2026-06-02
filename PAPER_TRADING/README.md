@@ -100,6 +100,8 @@ It does not submit trades or modify the ledger. It provides:
   To from January 2026 onward
 - daily EOD portfolio movers and top stock movers versus the prior market close
 - click-to-sort columns in the dashboard tables and trader holding drilldowns
+- chronological simulated trade ledgers in variable-strategy drilldowns,
+  including the prior-close observation date and next-close execution date
 - 3-day, 5-day, 1-week, 1-month, and 3-month signal indicators calculated as
   of the selected To date
 - weighted composite signal score using the 3-day, 5-day, 1-week, and 1-month
@@ -118,11 +120,26 @@ It does not submit trades or modify the ledger. It provides:
 - `watchlist-variable-buy-only`: companion strategy that buys `$1,000` once
   after each stock's first non-`none` signal and never sells, for comparison
   against the sell-on-`none` strategy
+- `watchlist-variable-buy-only-fresh-only`,
+  `watchlist-variable-buy-only-strict-only`, and
+  `watchlist-variable-buy-only-near-only`: technical category-specific
+  buy-once-and-never-sell companions without news filters
 - `watchlist-variable-more-signals`: companion strategy that enters on the
   same five-day non-`none` signals, but exits only after ten consecutive
   five-day `none` observations and a one-month return of `-5%` or worse
+- `watchlist-variable-fresh-only`, `watchlist-variable-strict-only`, and
+  `watchlist-variable-near-only`: category-specific companions for the base
+  daily-rebalanced portfolio
+- `watchlist-variable-more-signals-fresh-only`,
+  `watchlist-variable-more-signals-strict-only`, and
+  `watchlist-variable-more-signals-near-only`: category-specific companions
+  for the longer-exit technical portfolio
 - `watchlist-variable-news-active`: experimental companion that applies the
   sustained-loss exit only after a zero-article week
+- `watchlist-variable-news-active-fresh-only`,
+  `watchlist-variable-news-active-strict-only`, and
+  `watchlist-variable-news-active-near-only`: category-specific active-news
+  companions that isolate the entry performance of each five-day signal type
 - `watchlist-variable-news-cooling`: conservative news-assisted companion
   that applies the sustained-loss exit only when the latest seven-day Alpaca
   news count is no higher than the prior seven-day count
@@ -130,8 +147,19 @@ It does not submit trades or modify the ledger. It provides:
   reduces the missing-signal exit window to five sessions when news is cooling
 - `watchlist-variable-news-required-entry`: experimental companion that opens
   a technical entry only when Alpaca news is active in the latest seven days
+- `watchlist-variable-news-optimized-experimental`: in-sample grid-search
+  winner that opens only `fresh` signals with accelerating seven-day Alpaca
+  news and exits after 20 missing-signal sessions, weak one-month momentum,
+  and a zero-article week
+- every `watchlist-variable-news-*` strategy also has `-fresh-only`,
+  `-strict-only`, and `-near-only` companions for category-level comparison
 - Nisarg's security-only Wealthsimple summary with deposits and withdrawals
   excluded
+
+All derived variable strategies use an end-of-day convention: each signal and
+news condition is observed only after a market close, and any resulting buy or
+sell executes at the next available market close. Intraday dashboard refreshes
+do not change simulated trade timing.
 
 ### Free Public Deployment
 

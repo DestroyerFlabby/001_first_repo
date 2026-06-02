@@ -36,3 +36,18 @@ Use:
 Provider terms and free-tier limits can change. Keep the recorded
 `price_basis` value with every trade so results remain auditable.
 
+## Free News Enrichment
+
+- [Alpaca historical news](https://docs.alpaca.markets/us/docs/historical-news-data)
+  provides structured stock and crypto news dating back to 2015. The
+  dashboard uses the existing Alpaca credentials when available.
+- [GDELT DOC API](https://blog.gdeltproject.org/gdelt-doc-2-0-api-debuts/)
+  provides public-web news discovery without an API key. It is treated as a
+  best-effort source because public requests may be throttled.
+- [YouTube Data API](https://developers.google.com/youtube/v3) provides
+  optional public-video search with a free quota after `YOUTUBE_API_KEY` is
+  configured. Search calls consume quota, so results are cached daily.
+
+The dashboard caches daily news snapshots locally. News coverage is an
+attention indicator, not a complete record of every article published about a
+company.

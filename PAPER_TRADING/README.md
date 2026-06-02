@@ -105,6 +105,12 @@ It does not submit trades or modify the ledger. It provides:
 - weighted composite signal score using the 3-day, 5-day, 1-week, and 1-month
   indicators, with the 3-month indicator retained as longer-term context
 - strict, near-match, and fresh-priority volume-signal classifications
+- lazy free-news enrichment in stock drilldowns using Alpaca historical news
+  when credentials are configured and GDELT public-web discovery when
+  available
+- cached daily news snapshots with 24-hour article count, seven-day article
+  count, prior-week comparison, news velocity, source diversity, and catalyst
+  links
 - `watchlist-variable`: derived daily-rebalanced signal portfolio that starts
   on January 31, 2026, holds only non-`none` stock signals, executes changes
   at the next available close, deploys `$1,000` per entry, and intentionally
@@ -261,6 +267,47 @@ python .\lookup_alpaca_price.py AAPL "2026-05-29" --basis eod
 
 The helper uses Alpaca's free IEX feed. It does not submit orders.
 
+## Free News Signals
+
+Stock drilldowns fetch news activity lazily so a normal dashboard refresh does
+not issue a news request for every tracked ticker. The enrichment layer uses:
+
+- [Alpaca historical news](https://docs.alpaca.markets/us/docs/historical-news-data)
+  with the existing `ALPACA_KEY` and `ALPACA_SECRET` values
+- [GDELT DOC API](https://blog.gdeltproject.org/gdelt-doc-2-0-api-debuts/) as
+  an unauthenticated broad-web source when it is available
+- [YouTube Data API](https://developers.google.com/youtube/v3) for optional
+  public-video counts when `YOUTUBE_API_KEY` is configured
+
+The dashboard caches results for six hours and stores one ignored local JSON
+snapshot per ticker per day in `data/news_snapshots.json`. Free sources may be
+incomplete or temporarily rate-limited. The drawer reports each source's
+status instead of failing the stock drilldown.
+
+YouTube is optional because it requires a separate free Google API key. Add it
+to `.env` to include seven-day video counts and week-over-week video velocity:
+
+```env
+YOUTUBE_API_KEY=...
+```
+
+Refresh one or more tickers manually:
+
+```powershell
+.\.venv\Scripts\python.exe .\PAPER_TRADING\refresh_news_signals.py AAPL NVDA
+```
+
+Refresh every tracked stock with a one-second pause between tickers:
+
+```powershell
+.\.venv\Scripts\python.exe .\PAPER_TRADING\refresh_news_signals.py
+```
+
+This first version intentionally keeps news and video metrics separate from the trading
+rules. Collect forward snapshots before assigning news velocity a buy or sell
+weight. Official X public-post reads are paid usage, and Instagram's official
+API is not a broad public stock-mention feed.
+
 ## File Layout
 
 - `data/trades.csv`: append-only simulated trade ledger
@@ -270,6 +317,7 @@ The helper uses Alpaca's free IEX feed. It does not submit orders.
 - `nisarg_window_return.py`: calculate Nisarg's security-only Wealthsimple return for one window
 - `analyze_volume_spikes.py`: analyze pre-spike volume for tracked stocks up at least 25% since January 2
 - `analyze_forward_volume_signals.py`: test which technical conditions preceded elevated volume over the next five sessions
+- `refresh_news_signals.py`: cache free Alpaca and GDELT news-activity snapshots for tracked stocks
 - `scan_daily_fresh_setups.py`: rank non-extended `$10-50` stocks for the next session and optionally record a daily portfolio
 - `backend/`: read-only FastAPI analytics API for the local dashboard
 - `frontend/`: dependency-free local browser dashboard

@@ -6,6 +6,22 @@ const money = (value) =>
 const pct = (value) => `${value >= 0 ? "+" : ""}${Number(value || 0).toFixed(2)}%`;
 const number = (value) => Number(value || 0).toLocaleString("en-US", { maximumFractionDigits: 2 });
 const tone = (value) => (Number(value) >= 0 ? "positive" : "negative");
+const escapeHtml = (value) =>
+  String(value ?? "").replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;",
+  })[character]);
+const safeUrl = (value) => {
+  try {
+    const url = new URL(value);
+    return ["http:", "https:"].includes(url.protocol) ? escapeHtml(url.href) : "#";
+  } catch {
+    return "#";
+  }
+};
 const query = () => {
   const params = new URLSearchParams({ from_date: $("#from-date").value });
   if ($("#to-date").value) params.set("to_date", $("#to-date").value);
@@ -316,7 +332,10 @@ async function openTrader(investor) {
 async function openStock(ticker) {
   openDrawer(`<p class="loading">Loading ${ticker}...</p>`);
   try {
-    const detail = await fetchJson(`/api/stocks/${encodeURIComponent(ticker)}?${query()}`);
+    const [detail, news] = await Promise.all([
+      fetchJson(`/api/stocks/${encodeURIComponent(ticker)}?${query()}`),
+      fetchJson(`/api/stocks/${encodeURIComponent(ticker)}/news`),
+    ]);
     const signalRows = detail.signal
       ? ["3d", "5d", "1w", "1m", "3m"]
           .map((key) => detail.signal.horizons[key])
@@ -335,6 +354,31 @@ async function openStock(ticker) {
           )
           .join("")
       : "";
+    const newsRows = news.articles.length
+      ? news.articles
+          .map(
+            (row) => `
+            <li>
+              <a href="${safeUrl(row.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(row.headline)}</a>
+              <span>${escapeHtml(row.created_at.slice(0, 10))} | ${escapeHtml(row.domain)}</span>
+            </li>`
+          )
+          .join("")
+      : '<li class="muted">No matching articles were returned by the available free sources.</li>';
+    const sourceRows = news.sources
+      .map((row) => `${escapeHtml(row.source)}: ${escapeHtml(row.status)}${row.detail ? ` (${escapeHtml(row.detail)})` : ""}`)
+      .join(" | ");
+    const videoRows = news.videos.length
+      ? news.videos
+          .map(
+            (row) => `
+            <li>
+              <a href="${safeUrl(row.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(row.headline)}</a>
+              <span>${escapeHtml(row.created_at.slice(0, 10))} | YouTube</span>
+            </li>`
+          )
+          .join("")
+      : '<li class="muted">YouTube collection is unavailable or returned no matching videos.</li>';
     openDrawer(`
       <p class="eyebrow">${detail.security_type} | ${detail.currency}</p>
       <h2>${detail.ticker}</h2>
@@ -360,6 +404,25 @@ async function openStock(ticker) {
           <tbody>${signalRows}</tbody>
         </table>
       </div>
+      <h3>Free news activity</h3>
+      <div class="detail-grid">
+        ${stat("Articles, latest 24h", number(news.articles_24h))}
+        ${stat("Articles, latest 7d", number(news.articles_7d))}
+        ${stat("Prior 7d", number(news.articles_prior_7d))}
+        ${stat("News velocity", news.daily_velocity_ratio === null ? "-" : `${number(news.daily_velocity_ratio)}x`)}
+        ${stat("Source diversity, 7d", number(news.source_diversity_7d))}
+        ${stat("Snapshot", escapeHtml(news.snapshot_date))}
+      </div>
+      <p class="muted">${escapeHtml(news.note)}</p>
+      <p class="source-status">${sourceRows}</p>
+      <ul class="news-list">${newsRows}</ul>
+      <h3>Free YouTube activity</h3>
+      <div class="detail-grid">
+        ${stat("Videos, latest 7d", number(news.videos_7d))}
+        ${stat("Videos, prior 7d", number(news.videos_prior_7d))}
+        ${stat("Video velocity", news.video_velocity_ratio === null ? "-" : `${number(news.video_velocity_ratio)}x`)}
+      </div>
+      <ul class="news-list">${videoRows}</ul>
     `);
     enableSorting($("#drawer-content"));
   } catch (error) {

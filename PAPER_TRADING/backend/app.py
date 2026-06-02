@@ -24,6 +24,7 @@ from backend.dashboard_service import (  # noqa: E402
     parse_date,
     trader_detail,
 )
+from backend.news_service import news_summary  # noqa: E402
 
 
 app = FastAPI(title="Paper Trading Dashboard", version="1.0.0")
@@ -123,6 +124,11 @@ def get_stock(
         return asset_detail(ticker, start, end)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=f"unknown ticker: {ticker}") from exc
+
+
+@app.get("/api/stocks/{ticker}/news")
+def get_stock_news(ticker: str) -> dict[str, object]:
+    return news_summary(ticker)
 
 
 @app.get("/")

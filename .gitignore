@@ -111,4 +111,5 @@ node_modules/
 PAPER_TRADING/activities-export-*.csv
 PAPER_TRADING/data/wealthsimple_activities.csv
 PAPER_TRADING/data/wealthsimple_imports.csv
+PAPER_TRADING/data/news_snapshots.json
 

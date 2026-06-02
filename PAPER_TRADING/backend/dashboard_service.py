@@ -405,6 +405,7 @@ def horizon_signal(
     sessions: int | None,
     calendar_days: int | None,
     momentum_threshold: Decimal,
+    benchmark_bars: tuple[Bar, ...] | None = None,
 ) -> dict[str, object] | None:
     if len(bars) < 22:
         return None
@@ -431,12 +432,26 @@ def horizon_signal(
         return None
     volume_ratio = sum((bar.volume for bar in horizon_bars), Decimal("0")) / len(horizon_bars) / normal_volume
     return_pct = pct_change(current.close, baseline.close)
+    benchmark_return = Decimal("0")
+    relative_strength = return_pct
+    if benchmark_bars:
+        benchmark_baseline = on_or_before(benchmark_bars, baseline.day)
+        benchmark_current = on_or_before(benchmark_bars, current.day)
+        if benchmark_baseline and benchmark_current:
+            benchmark_return = pct_change(benchmark_current.close, benchmark_baseline.close)
+            relative_strength = return_pct - benchmark_return
     recent_high_bars = bars[max(0, len(bars) - max(21, len(horizon_bars) + 1)) : -1]
     distance = pct_change(current.close, max(bar.close for bar in recent_high_bars))
     momentum_score = clamp(return_pct / momentum_threshold * 100)
     volume_score = clamp((volume_ratio - 1) / Decimal("0.5") * 100)
     high_score = clamp((distance + 10) / 10 * 100)
-    score = momentum_score * Decimal("0.40") + volume_score * Decimal("0.40") + high_score * Decimal("0.20")
+    relative_strength_score = clamp((relative_strength + Decimal("5")) / Decimal("15") * 100)
+    score = (
+        momentum_score * Decimal("0.35")
+        + volume_score * Decimal("0.30")
+        + high_score * Decimal("0.15")
+        + relative_strength_score * Decimal("0.20")
+    )
     strict = return_pct >= momentum_threshold and volume_ratio >= Decimal("1.5") and distance >= -2
     near = volume_ratio >= Decimal("1.25") and distance >= -2
     return {
@@ -445,21 +460,33 @@ def horizon_signal(
         "start_date": baseline.day.isoformat(),
         "as_of": current.day.isoformat(),
         "return_pct": as_float(return_pct),
+        "benchmark_return_pct": as_float(benchmark_return),
+        "relative_strength_pct": as_float(relative_strength),
         "volume_ratio": as_float(volume_ratio),
         "distance_to_20d_high_pct": as_float(distance),
         "score": as_float(score),
+        "score_components": {
+            "momentum": as_float(momentum_score),
+            "volume": as_float(volume_score),
+            "trend_quality": as_float(high_score),
+            "relative_strength": as_float(relative_strength_score),
+        },
         "classification": "strict" if strict else ("near" if near else "none"),
         "fresh_priority": bool(strict and return_pct <= momentum_threshold * Decimal("2.5")),
     }
 
 
 def live_signal(bars: tuple[Bar, ...]) -> dict[str, object] | None:
+    try:
+        _, benchmark_bars = fetch_chart("SPY")
+    except Exception:
+        benchmark_bars = None
     horizons = {
         key: signal
         for key, label, sessions, calendar_days, threshold in SIGNAL_HORIZONS
         if (
             signal := horizon_signal(
-                bars, key, label, sessions, calendar_days, threshold
+                bars, key, label, sessions, calendar_days, threshold, benchmark_bars
             )
         )
     }
@@ -477,6 +504,7 @@ def live_signal(bars: tuple[Bar, ...]) -> dict[str, object] | None:
         "as_of": five_day["as_of"],
         "five_day_return_pct": five_day["return_pct"],
         "five_day_volume_ratio": five_day["volume_ratio"],
+        "five_day_relative_strength_pct": five_day["relative_strength_pct"],
         "distance_to_20d_high_pct": five_day["distance_to_20d_high_pct"],
         "classification": five_day["classification"],
         "fresh_priority": five_day["fresh_priority"],

@@ -83,7 +83,10 @@
               <p class="eyebrow">Prior close comparison</p>
               <h2>Daily EOD Movers</h2>
             </div>
-            <p id="eod-window-label" class="muted"></p>
+            <div class="section-actions">
+              <p id="eod-window-label" class="muted"></p>
+              <button id="export-eod" class="secondary">Download Excel</button>
+            </div>
           </div>
           <div class="eod-grid">
             <div>
@@ -117,7 +120,10 @@
               <p class="eyebrow">Portfolio performance</p>
               <h2>Traders</h2>
             </div>
-            <p id="window-label" class="muted"></p>
+            <div class="section-actions">
+              <p id="window-label" class="muted"></p>
+              <button id="export-traders" class="secondary">Download Excel</button>
+            </div>
           </div>
           <div class="table-wrap">
             <table data-sortable>
@@ -154,6 +160,7 @@
                 <option value="strict">Strict matches</option>
                 <option value="near">Near matches</option>
               </select>
+              <button id="export-stocks" class="secondary">Download Excel</button>
             </div>
           </div>
           <div class="table-wrap">
@@ -182,6 +189,7 @@
 
     <aside id="drawer" class="drawer" aria-hidden="true">
       <button id="close-drawer" class="drawer-close" aria-label="Close">x</button>
+      <button id="export-drawer" class="secondary drawer-export hidden">Download tables</button>
       <div id="drawer-content"></div>
     </aside>
     <div id="backdrop" class="backdrop hidden"></div>

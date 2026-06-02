@@ -133,6 +133,63 @@ function enableSorting(root = document) {
   });
 }
 
+function exportRangeSuffix() {
+  const from = $("#from-date").value || "from";
+  const to = $("#to-date").value || "to";
+  return `${from}_to_${to}`;
+}
+
+function safeFilename(value) {
+  return String(value).toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "dashboard-export";
+}
+
+function exportableTable(table) {
+  const copy = table.cloneNode(true);
+  copy.querySelectorAll(".ticker-tip-text").forEach((node) => node.remove());
+  copy.querySelectorAll("button").forEach((button) => {
+    const replacement = document.createElement("span");
+    replacement.textContent = button.textContent.trim();
+    button.replaceWith(replacement);
+  });
+  copy.querySelectorAll("th").forEach((header) => header.classList.remove("sort-asc", "sort-desc"));
+  return copy.outerHTML;
+}
+
+function downloadExcelTables(filenameBase, workbookTitle, tables) {
+  const selectedTables = tables.filter((table) => table && table.tBodies[0]?.rows.length);
+  if (!selectedTables.length) {
+    window.alert("No table rows are available to export yet.");
+    return;
+  }
+  const html = `
+    <!doctype html>
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <style>
+          body { font-family: Arial, sans-serif; }
+          h1, h2 { text-align: left; }
+          table { border-collapse: collapse; margin-bottom: 24px; width: 100%; }
+          th, td { border: 1px solid #999; padding: 6px; text-align: left; }
+          th { background: #ddebf7; font-weight: bold; }
+        </style>
+      </head>
+      <body>
+        <h1>${escapeHtml(workbookTitle)}</h1>
+        <p>Exported ${escapeHtml(new Date().toISOString())}</p>
+        ${selectedTables.map((table, index) => `<h2>Table ${index + 1}</h2>${exportableTable(table)}`).join("")}
+      </body>
+    </html>`;
+  const blob = new Blob([html], { type: "application/vnd.ms-excel;charset=utf-8" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `${safeFilename(`${filenameBase}_${exportRangeSuffix()}`)}.xls`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(link.href);
+}
+
 function signalPill(signal) {
   if (!signal || signal.classification === "none") return '<span class="pill">none</span>';
   const kind = signal.fresh_priority ? "fresh" : signal.classification;
@@ -384,12 +441,14 @@ function openDrawer(html) {
   $("#drawer").classList.add("open");
   $("#drawer").setAttribute("aria-hidden", "false");
   $("#backdrop").classList.remove("hidden");
+  $("#export-drawer").classList.toggle("hidden", !$("#drawer-content table"));
 }
 
 function closeDrawer() {
   $("#drawer").classList.remove("open");
   $("#drawer").setAttribute("aria-hidden", "true");
   $("#backdrop").classList.add("hidden");
+  $("#export-drawer").classList.add("hidden");
 }
 
 async function openTrader(investor) {
@@ -511,6 +570,7 @@ async function openStock(ticker) {
               <td>${row.label}</td>
               <td>${row.start_date}</td>
               <td class="${tone(row.return_pct)}">${pct(row.return_pct)}</td>
+              <td class="${tone(row.relative_strength_pct)}">${pct(row.relative_strength_pct)}</td>
               <td>${number(row.volume_ratio)}x</td>
               <td>${pct(row.distance_to_20d_high_pct)}</td>
               <td>${number(row.score)}</td>
@@ -561,14 +621,15 @@ async function openStock(ticker) {
       <div class="detail-grid">
         ${stat("Overall signal", detail.signal ? classificationPill(detail.signal.overall_classification) : "-")}
         ${stat("Weighted score", detail.signal ? `${number(detail.signal.overall_score)} / 100` : "-")}
+        ${stat("5d vs SPY", detail.signal ? pct(detail.signal.five_day_relative_strength_pct) : "-", detail.signal ? tone(detail.signal.five_day_relative_strength_pct) : "")}
         ${stat("5d volume", detail.signal ? `${number(detail.signal.five_day_volume_ratio)}x` : "-")}
         ${stat("Distance to 20d high", detail.signal ? pct(detail.signal.distance_to_20d_high_pct) : "-")}
       </div>
       <h3>Multi-horizon signal indicators</h3>
-      <p class="muted">The weighted score combines 3-day, 5-day, 1-week, and 1-month indicators. The 3-month signal is shown as context.</p>
+      <p class="muted">The weighted score combines 3-day, 5-day, 1-week, and 1-month indicators. Scores now include relative strength versus SPY; the 3-month signal is shown as context.</p>
       <div class="table-wrap signal-matrix">
         <table data-sortable>
-          <thead><tr><th>Horizon</th><th>From</th><th>Return</th><th>Volume ratio</th><th>Distance to high</th><th>Score</th><th>Signal</th></tr></thead>
+          <thead><tr><th>Horizon</th><th>From</th><th>Return</th><th>Vs SPY</th><th>Volume ratio</th><th>Distance to high</th><th>Score</th><th>Signal</th></tr></thead>
           <tbody>${signalRows}</tbody>
         </table>
       </div>
@@ -660,6 +721,23 @@ async function init() {
   $("#apply-window").addEventListener("click", loadOverview);
   $("#stock-search").addEventListener("input", renderStocks);
   $("#signal-filter").addEventListener("change", renderStocks);
+  $("#export-eod").addEventListener("click", () => {
+    downloadExcelTables(
+      "daily-eod-movers",
+      "Daily EOD Movers",
+      [$("#eod-trader-rows")?.closest("table"), $("#eod-stock-rows")?.closest("table")]
+    );
+  });
+  $("#export-traders").addEventListener("click", () => {
+    downloadExcelTables("traders", "Portfolio Performance - Traders", [$("#trader-rows")?.closest("table")]);
+  });
+  $("#export-stocks").addEventListener("click", () => {
+    downloadExcelTables("tracked-stocks", "Tracked Stocks", [$("#stock-rows")?.closest("table")]);
+  });
+  $("#export-drawer").addEventListener("click", () => {
+    const title = $("#drawer-content h2")?.textContent || "Dashboard Drilldown";
+    downloadExcelTables(`drilldown-${title}`, title, [...document.querySelectorAll("#drawer-content table")]);
+  });
   $("#close-drawer").addEventListener("click", closeDrawer);
   $("#backdrop").addEventListener("click", closeDrawer);
 }

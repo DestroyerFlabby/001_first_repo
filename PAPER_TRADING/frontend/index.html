@@ -17,31 +17,35 @@
 
     <main>
       <section class="controls card">
-        <div>
-          <p class="label">Selected comparison window</p>
-          <p class="muted">All rankings and drilldowns use the From and To dates.</p>
+        <div class="controls-main">
+          <div class="control-copy">
+            <p class="label">Selected comparison window</p>
+            <p class="muted">All rankings and drilldowns use the From and To dates.</p>
+          </div>
+          <label>
+            <span>From</span>
+            <input id="from-date" type="date" />
+          </label>
+          <label>
+            <span>From quick date</span>
+            <select id="from-quick-date"></select>
+          </label>
+          <label>
+            <span>To</span>
+            <input id="to-date" type="date" />
+          </label>
+          <label>
+            <span>To quick date</span>
+            <select id="to-quick-date"></select>
+          </label>
+          <button id="apply-window" class="primary">Refresh dashboard</button>
         </div>
-        <label>
-          <span>From</span>
-          <input id="from-date" type="date" />
-        </label>
-        <label>
-          <span>From quick date</span>
-          <select id="from-quick-date"></select>
-        </label>
-        <label>
-          <span>To</span>
-          <input id="to-date" type="date" />
-        </label>
-        <label>
-          <span>To quick date</span>
-          <select id="to-quick-date"></select>
-        </label>
-        <label class="fee-toggle">
-          <input id="wealthsimple-fx-fees" type="checkbox" />
-          <span>Apply Wealthsimple CAD-account USD trade FX fees (1.5%)</span>
-        </label>
-        <button id="apply-window" class="primary">Refresh dashboard</button>
+        <div class="control-options">
+          <label class="fee-toggle">
+            <input id="wealthsimple-fx-fees" type="checkbox" />
+            <span>Apply Wealthsimple CAD-account USD trade FX fees (1.5%)</span>
+          </label>
+        </div>
       </section>
 
       <section id="loading" class="loading-card card hidden" aria-live="polite">
@@ -114,6 +118,9 @@
                   <th>Starting value</th>
                   <th>Current value</th>
                   <th>Gain / loss</th>
+                  <th>Daily</th>
+                  <th>5D</th>
+                  <th>Monthly</th>
                   <th>Return</th>
                 </tr>
               </thead>
@@ -147,6 +154,9 @@
                   <th>Owners</th>
                   <th>Start</th>
                   <th>Latest</th>
+                  <th>Daily</th>
+                  <th>5D</th>
+                  <th>Monthly</th>
                   <th>Return</th>
                   <th>Overall score</th>
                   <th>5d signal</th>

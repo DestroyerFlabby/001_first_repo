@@ -101,6 +101,18 @@ VARIABLE_TECHNICAL_STRATEGIES = {
 VARIABLE_STRATEGY_START = date(2026, 1, 31)
 VARIABLE_ENTRY_USD = Decimal("1000")
 WEALTHSIMPLE_FX_FEE = Decimal(str(WEALTHSIMPLE_FX_FEE_RATE))
+SUMMARY_KEYS = (
+    "investor",
+    "initial_value",
+    "current_value",
+    "gain_loss",
+    "return_pct",
+    "daily_change_pct",
+    "five_day_change_pct",
+    "monthly_change_pct",
+    "position_count",
+    "source",
+)
 
 
 @dataclass(frozen=True)
@@ -118,6 +130,85 @@ def pct_change(value: Decimal, baseline: Decimal) -> Decimal:
     if not baseline:
         return Decimal("0")
     return (value / baseline - 1) * 100
+
+
+def fixed_change_fields(
+    daily: Decimal,
+    five_day: Decimal,
+    monthly: Decimal,
+) -> dict[str, float]:
+    return {
+        "daily_change_pct": as_float(daily),
+        "five_day_change_pct": as_float(five_day),
+        "monthly_change_pct": as_float(monthly),
+    }
+
+
+def fixed_changes_from_bars(
+    bars: tuple[Bar, ...],
+    end: date | None,
+) -> dict[str, float]:
+    latest = on_or_before(bars, end)
+    if not latest:
+        return fixed_change_fields(Decimal("0"), Decimal("0"), Decimal("0"))
+    history = [bar for bar in bars if bar.day <= latest.day]
+    latest_index = len(history) - 1
+    daily = (
+        pct_change(latest.close, history[latest_index - 1].close)
+        if latest_index >= 1
+        else Decimal("0")
+    )
+    five_day = (
+        pct_change(latest.close, history[latest_index - 5].close)
+        if latest_index >= 5
+        else Decimal("0")
+    )
+    monthly_bar = on_or_before(tuple(history), latest.day - timedelta(days=30))
+    monthly = pct_change(latest.close, monthly_bar.close) if monthly_bar else Decimal("0")
+    return fixed_change_fields(daily, five_day, monthly)
+
+
+def fixed_changes_from_series(
+    rows: list[dict[str, object]],
+    key: str = "value",
+) -> dict[str, float]:
+    if not rows:
+        return fixed_change_fields(Decimal("0"), Decimal("0"), Decimal("0"))
+    latest_day = date.fromisoformat(str(rows[-1]["date"]))
+    latest_value = Decimal(str(rows[-1][key]))
+    daily_value = Decimal(str(rows[-2][key])) if len(rows) >= 2 else latest_value
+    five_day_value = Decimal(str(rows[-6][key])) if len(rows) >= 6 else latest_value
+    monthly_row = next(
+        (
+            row
+            for row in reversed(rows)
+            if date.fromisoformat(str(row["date"])) <= latest_day - timedelta(days=30)
+        ),
+        None,
+    )
+    monthly_value = Decimal(str(monthly_row[key])) if monthly_row else latest_value
+    return fixed_change_fields(
+        pct_change(latest_value, daily_value),
+        pct_change(latest_value, five_day_value),
+        pct_change(latest_value, monthly_value),
+    )
+
+
+def weighted_fixed_changes(parts: list[dict[str, Decimal]]) -> dict[str, float]:
+    current = sum((part["current"] for part in parts), Decimal("0"))
+    daily = sum((part["daily"] for part in parts), Decimal("0"))
+    five_day = sum((part["five_day"] for part in parts), Decimal("0"))
+    monthly = sum((part["monthly"] for part in parts), Decimal("0"))
+    return fixed_change_fields(
+        pct_change(current, daily),
+        pct_change(current, five_day),
+        pct_change(current, monthly),
+    )
+
+
+def prior_value_from_return(current: Decimal, return_pct: object) -> Decimal:
+    rate = Decimal(str(return_pct)) / Decimal("100")
+    return current / (Decimal("1") + rate) if rate != Decimal("-1") else current
 
 
 def with_variable_fx_fees(detail: dict[str, object]) -> dict[str, object]:
@@ -198,6 +289,7 @@ def with_variable_fx_fees(detail: dict[str, object]) -> dict[str, object]:
         "current_value": as_float(adjusted_current),
         "gain_loss": as_float(adjusted_gain),
         "return_pct": as_float(pct_change(adjusted_current, initial)),
+        **fixed_changes_from_series(series),
         "positions": positions,
         "series": series,
         "category_stats": category_stats,
@@ -581,6 +673,7 @@ def variable_strategy_detail(
                 "current_value": as_float(current_value),
                 "gain_loss": as_float(pnl),
                 "return_pct": as_float(pct_change(current_value, VARIABLE_ENTRY_USD)),
+                **fixed_changes_from_bars(charts[ticker], latest_market.day),
                 "status": "open",
             }
         )
@@ -718,6 +811,7 @@ def variable_strategy_detail(
         "current_value": as_float(ending_equity),
         "gain_loss": as_float(period_gain),
         "return_pct": as_float(pct_change(ending_equity, period_basis)),
+        **fixed_changes_from_series(series),
         "position_count": len(open_positions),
         "positions": open_positions,
         "simulated_trades": simulated_trades,
@@ -763,15 +857,7 @@ def variable_strategy_summary(
     detail = variable_strategy_detail(start, end, apply_wealthsimple_fx_fees=apply_wealthsimple_fx_fees)
     return {
         key: detail[key]
-        for key in (
-            "investor",
-            "initial_value",
-            "current_value",
-            "gain_loss",
-            "return_pct",
-            "position_count",
-            "source",
-        )
+        for key in SUMMARY_KEYS
     } | {"warnings": []}
 
 
@@ -789,15 +875,7 @@ def variable_more_signals_summary(
     )
     return {
         key: detail[key]
-        for key in (
-            "investor",
-            "initial_value",
-            "current_value",
-            "gain_loss",
-            "return_pct",
-            "position_count",
-            "source",
-        )
+        for key in SUMMARY_KEYS
     } | {"warnings": []}
 
 
@@ -818,15 +896,7 @@ def variable_technical_strategy_summary(
     )
     return {
         key: detail[key]
-        for key in (
-            "investor",
-            "initial_value",
-            "current_value",
-            "gain_loss",
-            "return_pct",
-            "position_count",
-            "source",
-        )
+        for key in SUMMARY_KEYS
     } | {"warnings": []}
 
 
@@ -848,15 +918,7 @@ def variable_news_strategy_summary(
     )
     return {
         key: detail[key]
-        for key in (
-            "investor",
-            "initial_value",
-            "current_value",
-            "gain_loss",
-            "return_pct",
-            "position_count",
-            "source",
-        )
+        for key in SUMMARY_KEYS
     } | {"warnings": []}
 
 
@@ -944,6 +1006,7 @@ def variable_buy_only_detail(
                 "current_value": as_float(current_value),
                 "gain_loss": as_float(current_value - VARIABLE_ENTRY_USD),
                 "return_pct": as_float(pct_change(current_value, VARIABLE_ENTRY_USD)),
+                **fixed_changes_from_bars(charts[ticker], latest_market.day),
                 "status": "open",
             }
         )
@@ -1042,6 +1105,7 @@ def variable_buy_only_detail(
         "current_value": as_float(ending_equity),
         "gain_loss": as_float(period_gain),
         "return_pct": as_float(pct_change(ending_equity, period_basis)),
+        **fixed_changes_from_series(series),
         "position_count": len(open_positions),
         "positions": open_positions,
         "simulated_trades": simulated_trades,
@@ -1073,15 +1137,7 @@ def variable_buy_only_summary(
     detail = variable_buy_only_detail(start, end, apply_wealthsimple_fx_fees=apply_wealthsimple_fx_fees)
     return {
         key: detail[key]
-        for key in (
-            "investor",
-            "initial_value",
-            "current_value",
-            "gain_loss",
-            "return_pct",
-            "position_count",
-            "source",
-        )
+        for key in SUMMARY_KEYS
     } | {"warnings": []}
 
 
@@ -1100,15 +1156,7 @@ def variable_buy_only_category_summary(
     )
     return {
         key: detail[key]
-        for key in (
-            "investor",
-            "initial_value",
-            "current_value",
-            "gain_loss",
-            "return_pct",
-            "position_count",
-            "source",
-        )
+        for key in SUMMARY_KEYS
     } | {"warnings": []}
 
 
@@ -1138,6 +1186,7 @@ def asset_summary(
             "start_price": as_float(baseline.close),
             "end_price": as_float(latest.close),
             "return_pct": as_float(pct_change(latest.close, baseline.close)),
+            **fixed_changes_from_bars(bars, latest.day),
             "signal": live_signal(signal_bars),
             "wealthsimple": wealthsimple_metadata(ticker, security_type, symbol),
             "warning": None,
@@ -1151,6 +1200,7 @@ def asset_summary(
             "warning": str(exc),
             "signal": None,
             "wealthsimple": wealthsimple_metadata(ticker, security_type, symbol),
+            **fixed_change_fields(Decimal("0"), Decimal("0"), Decimal("0")),
         }
 
 
@@ -1167,6 +1217,10 @@ def all_asset_summaries(start: date, end: date | None) -> list[dict[str, object]
     return sorted(rows, key=lambda row: row["ticker"])
 
 
+def nisarg_fixed_changes(end: date | None) -> dict[str, float]:
+    return fixed_change_fields(Decimal("0"), Decimal("0"), Decimal("0"))
+
+
 def nisarg_summary(start: date, end: date | None) -> dict[str, object] | None:
     if PUBLIC_DASHBOARD:
         return None
@@ -1180,6 +1234,7 @@ def nisarg_summary(start: date, end: date | None) -> dict[str, object] | None:
             "current_value": as_float(result.ending_proceeds_and_value_usd),
             "gain_loss": as_float(result.gain_usd),
             "return_pct": as_float(result.return_pct),
+            **nisarg_fixed_changes(end),
             "position_count": len(result.details),
             "source": "wealthsimple-import",
             "warnings": result.warnings,
@@ -1191,6 +1246,7 @@ def nisarg_summary(start: date, end: date | None) -> dict[str, object] | None:
             "current_value": 0,
             "gain_loss": 0,
             "return_pct": 0,
+            **fixed_change_fields(Decimal("0"), Decimal("0"), Decimal("0")),
             "position_count": 0,
             "source": "wealthsimple-import",
             "warnings": [str(exc)],
@@ -1212,6 +1268,7 @@ def build_overview(
     for investor, assets in grouped.items():
         initial = Decimal("0")
         current = Decimal("0")
+        lookback_parts: list[dict[str, Decimal]] = []
         warnings: list[str] = []
         for asset, amount in assets.items():
             if not amount:
@@ -1220,6 +1277,14 @@ def build_overview(
             row = indexed[asset]
             if row.get("warning"):
                 current += amount
+                lookback_parts.append(
+                    {
+                        "current": amount,
+                        "daily": amount,
+                        "five_day": amount,
+                        "monthly": amount,
+                    }
+                )
                 warnings.append(f"{asset[0]}: {row['warning']}")
             else:
                 growth = Decimal(str(row["end_price"])) / Decimal(str(row["start_price"]))
@@ -1231,7 +1296,16 @@ def build_overview(
                     growth *= start_fx.close / end_fx.close
                 elif apply_wealthsimple_fx_fees:
                     growth *= Decimal("1") - WEALTHSIMPLE_FX_FEE
-                current += amount * growth
+                current_part = amount * growth
+                current += current_part
+                lookback_parts.append(
+                    {
+                        "current": current_part,
+                        "daily": prior_value_from_return(current_part, row["daily_change_pct"]),
+                        "five_day": prior_value_from_return(current_part, row["five_day_change_pct"]),
+                        "monthly": prior_value_from_return(current_part, row["monthly_change_pct"]),
+                    }
+                )
         gain = current - initial
         traders.append(
             {
@@ -1240,6 +1314,7 @@ def build_overview(
                 "current_value": as_float(current),
                 "gain_loss": as_float(gain),
                 "return_pct": as_float(pct_change(current, initial)),
+                **weighted_fixed_changes(lookback_parts),
                 "position_count": sum(bool(amount) for amount in assets.values()),
                 "source": "paper-ledger",
                 "warnings": warnings,
@@ -1382,6 +1457,7 @@ def paper_trader_detail(
                     "current_value": as_float(current),
                     "gain_loss": as_float(current - amount),
                     "return_pct": as_float(pct_change(current, amount)),
+                    **fixed_changes_from_bars(bars, latest.day),
                     "warning": None,
                 }
             )
@@ -1394,6 +1470,7 @@ def paper_trader_detail(
                     "current_value": as_float(amount),
                     "gain_loss": 0,
                     "return_pct": 0,
+                    **fixed_change_fields(Decimal("0"), Decimal("0"), Decimal("0")),
                     "warning": str(exc),
                 }
             )
@@ -1402,7 +1479,7 @@ def paper_trader_detail(
             bar.day
             for _, _, bars, _ in daily_parts
             for bar in bars
-            if bar.day >= start and (end is None or bar.day <= end)
+            if end is None or bar.day <= end
         }
     )
     series = []
@@ -1419,6 +1496,7 @@ def paper_trader_detail(
         series.append({"date": day.isoformat(), "value": as_float(total)})
     initial = sum((Decimal(str(row["initial_value"])) for row in positions), Decimal("0"))
     current = sum((Decimal(str(row["current_value"])) for row in positions), Decimal("0"))
+    fixed_changes = fixed_changes_from_series(series)
     positions.sort(key=lambda row: row["return_pct"], reverse=True)
     return {
         "investor": matched,
@@ -1427,8 +1505,13 @@ def paper_trader_detail(
         "current_value": as_float(current),
         "gain_loss": as_float(current - initial),
         "return_pct": as_float(pct_change(current, initial)),
+        **fixed_changes,
         "positions": positions,
-        "series": series,
+        "series": [
+            row
+            for row in series
+            if date.fromisoformat(str(row["date"])) >= start
+        ],
         "wealthsimple_fx_fees_enabled": apply_wealthsimple_fx_fees,
     }
 
@@ -1443,6 +1526,7 @@ def nisarg_detail(start: date, end: date | None) -> dict[str, object]:
             "initial_value": as_float(detail.opening_value_usd),
             "current_value": as_float(detail.ending_value_usd),
             "gain_loss": as_float(detail.ending_value_usd - detail.opening_value_usd),
+            **fixed_change_fields(Decimal("0"), Decimal("0"), Decimal("0")),
             "opening_quantity": as_float(detail.opening_quantity),
             "ending_quantity": as_float(detail.ending_quantity),
         }
@@ -1456,6 +1540,7 @@ def nisarg_detail(start: date, end: date | None) -> dict[str, object]:
         "current_value": as_float(result.ending_proceeds_and_value_usd),
         "gain_loss": as_float(result.gain_usd),
         "return_pct": as_float(result.return_pct),
+        **nisarg_fixed_changes(end),
         "positions": positions,
         "series": [],
         "warnings": result.warnings,

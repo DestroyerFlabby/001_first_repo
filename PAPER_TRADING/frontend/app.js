@@ -6,8 +6,10 @@ let loadingStartedAt = null;
 const money = (value) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value || 0);
 const pct = (value) => `${value >= 0 ? "+" : ""}${Number(value || 0).toFixed(2)}%`;
+const pctOrDash = (value) => value === undefined || value === null ? "-" : pct(value);
 const number = (value) => Number(value || 0).toLocaleString("en-US", { maximumFractionDigits: 2 });
 const tone = (value) => (Number(value) >= 0 ? "positive" : "negative");
+const toneOrEmpty = (value) => value === undefined || value === null ? "" : tone(value);
 const escapeHtml = (value) =>
   String(value ?? "").replace(/[&<>"']/g, (character) => ({
     "&": "&amp;",
@@ -196,6 +198,9 @@ function renderTraders() {
         <td>${money(row.initial_value)}</td>
         <td>${money(row.current_value)}</td>
         <td class="${tone(row.gain_loss)}">${money(row.gain_loss)}</td>
+        <td class="${toneOrEmpty(row.daily_change_pct)}">${pctOrDash(row.daily_change_pct)}</td>
+        <td class="${toneOrEmpty(row.five_day_change_pct)}">${pctOrDash(row.five_day_change_pct)}</td>
+        <td class="${toneOrEmpty(row.monthly_change_pct)}">${pctOrDash(row.monthly_change_pct)}</td>
         <td class="${tone(row.return_pct)}">${pct(row.return_pct)}</td>
       </tr>`
     )
@@ -266,6 +271,9 @@ function renderStocks() {
         <td>${row.owners.join(", ")}</td>
         <td>${number(row.start_price)} ${row.currency}</td>
         <td>${number(row.end_price)} ${row.currency}</td>
+        <td class="${toneOrEmpty(row.daily_change_pct)}">${pctOrDash(row.daily_change_pct)}</td>
+        <td class="${toneOrEmpty(row.five_day_change_pct)}">${pctOrDash(row.five_day_change_pct)}</td>
+        <td class="${toneOrEmpty(row.monthly_change_pct)}">${pctOrDash(row.monthly_change_pct)}</td>
         <td class="${tone(row.return_pct)}">${pct(row.return_pct)}</td>
         <td>${row.signal ? `${number(row.signal.overall_score)} / 100` : "-"}</td>
         <td><button class="signal-button" data-stock-signal="${row.ticker}" title="Open multi-horizon signal drilldown">${signalPill(row.signal)}</button></td>
@@ -337,6 +345,9 @@ async function openTrader(investor) {
           <td>${money(row.initial_value)}</td>
           <td>${money(row.current_value)}</td>
           <td class="${tone(row.gain_loss)}">${money(row.gain_loss)}</td>
+          <td class="${toneOrEmpty(row.daily_change_pct)}">${pctOrDash(row.daily_change_pct)}</td>
+          <td class="${toneOrEmpty(row.five_day_change_pct)}">${pctOrDash(row.five_day_change_pct)}</td>
+          <td class="${toneOrEmpty(row.monthly_change_pct)}">${pctOrDash(row.monthly_change_pct)}</td>
           <td class="${tone(row.return_pct || 0)}">${row.return_pct === undefined ? "-" : pct(row.return_pct)}</td>
         </tr>`
       )
@@ -384,6 +395,9 @@ async function openTrader(investor) {
       <div class="detail-grid">
         ${stat("Starting value", money(detail.initial_value))}
         ${stat("Current value", money(detail.current_value))}
+        ${stat("Daily", pctOrDash(detail.daily_change_pct), toneOrEmpty(detail.daily_change_pct))}
+        ${stat("5D", pctOrDash(detail.five_day_change_pct), toneOrEmpty(detail.five_day_change_pct))}
+        ${stat("Monthly", pctOrDash(detail.monthly_change_pct), toneOrEmpty(detail.monthly_change_pct))}
         ${stat("Return", pct(detail.return_pct), tone(detail.return_pct))}
         ${detail.wealthsimple_fx_fees_estimate === undefined ? "" : stat("Estimated USD FX fees", money(detail.wealthsimple_fx_fees_estimate))}
       </div>
@@ -391,7 +405,7 @@ async function openTrader(investor) {
       <div class="chart">${polyline(detail.series, "value")}</div>
       <h3>Holdings</h3>
       <div class="table-wrap">
-        <table data-sortable><thead><tr><th>Ticker</th><th>Start</th><th>Current</th><th>Gain / loss</th><th>Return</th></tr></thead>
+        <table data-sortable><thead><tr><th>Ticker</th><th>Start</th><th>Current</th><th>Gain / loss</th><th>Daily</th><th>5D</th><th>Monthly</th><th>Return</th></tr></thead>
         <tbody>${rows}</tbody></table>
       </div>
       ${detail.category_stats ? `
@@ -478,6 +492,9 @@ async function openStock(ticker) {
       <div class="detail-grid">
         ${stat("Start price", number(detail.start_price))}
         ${stat("Latest price", number(detail.end_price))}
+        ${stat("Daily", pctOrDash(detail.daily_change_pct), toneOrEmpty(detail.daily_change_pct))}
+        ${stat("5D", pctOrDash(detail.five_day_change_pct), toneOrEmpty(detail.five_day_change_pct))}
+        ${stat("Monthly", pctOrDash(detail.monthly_change_pct), toneOrEmpty(detail.monthly_change_pct))}
         ${stat("Return", pct(detail.return_pct), tone(detail.return_pct))}
       </div>
       <h3>Daily close</h3>

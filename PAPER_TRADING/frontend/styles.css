@@ -84,12 +84,45 @@ input, select {
   padding: 0 15px;
 }
 .primary { background: var(--accent); color: #062018; }
+.primary:disabled { cursor: wait; opacity: .7; }
 .preset { background: #18304c; color: var(--blue); margin-right: 8px; }
 .preset.active { background: var(--accent-2); color: #2a2206; }
 .loading, .error { margin: 32px 0; text-align: center; }
 .loading { color: var(--muted); }
 .error { color: var(--danger); }
 .hidden { display: none !important; }
+.loading-card { margin-top: 18px; }
+.loading-heading {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.progress-track {
+  background: #081321;
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  height: 12px;
+  margin-bottom: 10px;
+  overflow: hidden;
+  position: relative;
+}
+.progress-bar {
+  animation: loading-sweep 1.35s ease-in-out infinite;
+  background: linear-gradient(90deg, transparent, var(--accent), var(--blue), transparent);
+  border-radius: inherit;
+  display: block;
+  height: 100%;
+  left: -42%;
+  position: absolute;
+  width: 42%;
+}
+.drawer-loading { margin-top: 42px; }
+.drawer-loading .loading { margin-bottom: 14px; }
+@keyframes loading-sweep {
+  from { transform: translateX(0); }
+  to { transform: translateX(340%); }
+}
 .summary-grid {
   display: grid;
   gap: 14px;

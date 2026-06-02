@@ -44,7 +44,19 @@
         <button id="apply-window" class="primary">Refresh dashboard</button>
       </section>
 
-      <p id="loading" class="loading">Loading tracked-market data...</p>
+      <section id="loading" class="loading-card card" aria-live="polite">
+        <div class="loading-heading">
+          <div>
+            <p class="eyebrow">Loading dashboard</p>
+            <p id="loading-message">Preparing tracked-market data...</p>
+          </div>
+          <p id="loading-elapsed" class="muted">0s elapsed</p>
+        </div>
+        <div class="progress-track" aria-label="Dashboard loading in progress">
+          <span class="progress-bar"></span>
+        </div>
+        <p class="muted">Market requests and strategy replays can take a minute. Keep this tab open.</p>
+      </section>
       <p id="error" class="error hidden"></p>
 
       <section id="content" class="hidden">

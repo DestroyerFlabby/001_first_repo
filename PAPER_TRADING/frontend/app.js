@@ -1,5 +1,7 @@
 const state = { overview: null, eod: null, meta: null };
 const $ = (selector) => document.querySelector(selector);
+let loadingTimer = null;
+let loadingStartedAt = null;
 
 const money = (value) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value || 0);
@@ -51,6 +53,39 @@ async function fetchJson(url) {
     throw new Error(body.detail || `Request failed: ${response.status}`);
   }
   return response.json();
+}
+
+function setLoading(message) {
+  $("#loading-message").textContent = message;
+  $("#loading").classList.remove("hidden");
+  loadingStartedAt = Date.now();
+  $("#loading-elapsed").textContent = "0s elapsed";
+  clearInterval(loadingTimer);
+  loadingTimer = setInterval(() => {
+    const seconds = Math.floor((Date.now() - loadingStartedAt) / 1000);
+    $("#loading-elapsed").textContent = `${seconds}s elapsed`;
+  }, 1000);
+}
+
+function updateLoading(message) {
+  $("#loading-message").textContent = message;
+}
+
+function clearLoading() {
+  clearInterval(loadingTimer);
+  loadingTimer = null;
+  loadingStartedAt = null;
+  $("#loading").classList.add("hidden");
+}
+
+function loadingPanel(message) {
+  return `
+    <div class="drawer-loading">
+      <p class="loading">${message}</p>
+      <div class="progress-track" aria-label="Drilldown loading in progress">
+        <span class="progress-bar"></span>
+      </div>
+    </div>`;
 }
 
 function sortableValue(cell) {
@@ -284,7 +319,7 @@ function closeDrawer() {
 }
 
 async function openTrader(investor) {
-  openDrawer(`<p class="loading">Loading ${investor}...</p>`);
+  openDrawer(loadingPanel(`Loading ${investor} portfolio details...`));
   try {
     const detail = await fetchJson(`/api/traders/${encodeURIComponent(investor)}?${query()}`);
     const rows = detail.positions
@@ -380,7 +415,7 @@ async function openTrader(investor) {
 }
 
 async function openStock(ticker) {
-  openDrawer(`<p class="loading">Loading ${ticker}...</p>`);
+  openDrawer(loadingPanel(`Loading ${ticker} prices, signals, and news...`));
   try {
     const [detail, news] = await Promise.all([
       fetchJson(`/api/stocks/${encodeURIComponent(ticker)}?${query()}`),
@@ -483,10 +518,14 @@ async function openStock(ticker) {
 async function loadOverview() {
   $("#content").classList.add("hidden");
   $("#error").classList.add("hidden");
-  $("#loading").classList.remove("hidden");
+  $("#apply-window").disabled = true;
+  $("#apply-window").textContent = "Refreshing...";
+  setLoading("Refreshing portfolio rankings and tracked instruments...");
   try {
     state.overview = await fetchJson(`/api/overview?${query()}`);
+    updateLoading("Loading prior-close movers...");
     state.eod = await fetchJson(`/api/eod${wealthsimpleQuery()}`);
+    updateLoading("Rendering dashboard tables...");
     renderCards();
     renderEod();
     renderTraders();
@@ -499,11 +538,14 @@ async function loadOverview() {
     $("#error").textContent = error.message;
     $("#error").classList.remove("hidden");
   } finally {
-    $("#loading").classList.add("hidden");
+    clearLoading();
+    $("#apply-window").disabled = false;
+    $("#apply-window").textContent = "Refresh dashboard";
   }
 }
 
 async function init() {
+  setLoading("Loading dashboard configuration...");
   const meta = await fetchJson("/api/meta");
   state.meta = meta;
   $("#from-quick-date").innerHTML = dateOptions(meta);
@@ -533,7 +575,7 @@ async function init() {
 }
 
 init().catch((error) => {
-  $("#loading").classList.add("hidden");
+  clearLoading();
   $("#error").textContent = error.message;
   $("#error").classList.remove("hidden");
 });

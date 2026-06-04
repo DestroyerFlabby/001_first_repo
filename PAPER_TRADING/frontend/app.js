@@ -1,4 +1,4 @@
-const state = { overview: null, eod: null, meta: null, universe: null, benchmarks: null };
+const state = { overview: null, eod: null, meta: null, universe: null, benchmarks: null, strategies: null };
 const $ = (selector) => document.querySelector(selector);
 let loadingTimer = null;
 let loadingStartedAt = null;
@@ -343,7 +343,7 @@ function renderUniverseControls() {
 }
 
 function renderUniverse() {
-  if (!state.universe || !state.benchmarks) return;
+  if (!state.universe || !state.benchmarks || !state.strategies) return;
   $("#universe-status").textContent = universeStatusText();
   $("#asset-universe-rows").innerHTML = state.universe.assets
     .map(
@@ -386,6 +386,23 @@ function renderUniverse() {
         </tr>`
     )
     .join("");
+  $("#strategy-registry-rows").innerHTML = state.strategies.strategies
+    .map(
+      (row) => `
+        <tr>
+          <td><strong>${escapeHtml(row.strategy_name)}</strong></td>
+          <td>${escapeHtml(row.status)}</td>
+          <td>${escapeHtml(row.forward_test_start_date || "-")}</td>
+          <td>${escapeHtml(row.universe || "-")}</td>
+          <td>${escapeHtml(row.benchmark || "-")}</td>
+          <td>${escapeHtml(row.position_size || "-")}</td>
+          <td>${escapeHtml(row.entry_rule || "-")}</td>
+          <td>${escapeHtml(row.exit_rule || "-")}</td>
+          <td>${escapeHtml(row.news_rule || "-")}</td>
+          <td>${escapeHtml(row.notes || "-")}</td>
+        </tr>`
+    )
+    .join("");
   document.querySelectorAll("[data-asset-action]").forEach((button) =>
     button.addEventListener("click", () => updateAssetStatus(button))
   );
@@ -393,12 +410,14 @@ function renderUniverse() {
 }
 
 async function refreshUniverse() {
-  const [universe, benchmarks] = await Promise.all([
+  const [universe, benchmarks, strategies] = await Promise.all([
     fetchJson("/api/universe/assets"),
     fetchJson("/api/benchmarks"),
+    fetchJson("/api/strategies"),
   ]);
   state.universe = universe;
   state.benchmarks = benchmarks;
+  state.strategies = strategies;
   renderUniverseControls();
   renderUniverse();
 }

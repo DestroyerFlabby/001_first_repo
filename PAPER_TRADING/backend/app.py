@@ -33,6 +33,7 @@ from backend.dashboard_cache import (  # noqa: E402
 from backend.benchmark_service import benchmark_registry_response  # noqa: E402
 from backend.email_service import send_daily_instructions  # noqa: E402
 from backend.news_service import news_summary  # noqa: E402
+from backend.strategy_registry_service import strategy_registry_response  # noqa: E402
 from backend.universe_service import asset_universe_response, update_asset, upsert_asset  # noqa: E402
 
 
@@ -194,6 +195,11 @@ def patch_universe_asset(
 @app.get("/api/benchmarks")
 def benchmarks(include_inactive: bool = Query(default=False)) -> dict[str, object]:
     return benchmark_registry_response(include_inactive=include_inactive)
+
+
+@app.get("/api/strategies")
+def strategies(include_retired: bool = Query(default=False)) -> dict[str, object]:
+    return strategy_registry_response(include_retired=include_retired)
 
 
 @app.post("/api/notifications/daily-instructions")

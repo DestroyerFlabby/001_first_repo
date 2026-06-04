@@ -188,6 +188,35 @@
         <section class="card">
           <div class="section-heading">
             <div>
+              <p class="eyebrow">Recommendation engine</p>
+              <h2>Asset Universe Suggestions</h2>
+            </div>
+            <p class="muted">Suggestions are advisory only. Actions update metadata and never create trades.</p>
+          </div>
+          <p id="recommendation-action-status" class="muted"></p>
+          <div class="table-wrap">
+            <table data-sortable>
+              <thead>
+                <tr>
+                  <th>Ticker</th>
+                  <th>Suggested action</th>
+                  <th>Reason</th>
+                  <th>Signal</th>
+                  <th>Return</th>
+                  <th>5D</th>
+                  <th>Monthly</th>
+                  <th>Current status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="recommendation-rows"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="section-heading">
+            <div>
               <p class="eyebrow">Prior close comparison</p>
               <h2>Daily EOD Movers</h2>
             </div>

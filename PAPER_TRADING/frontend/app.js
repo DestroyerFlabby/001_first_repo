@@ -234,6 +234,93 @@ function signalPill(signal) {
   return `<span class="pill ${kind}">${label}</span>`;
 }
 
+function signalClassification(row) {
+  if (!row.signal || row.signal.classification === "none") return "none";
+  return row.signal.fresh_priority ? "fresh" : row.signal.classification;
+}
+
+function universeByTicker() {
+  const rows = state.universe?.assets || [];
+  return new Map(rows.map((row) => [String(row.ticker).toUpperCase(), row]));
+}
+
+function recommendationRows() {
+  const universe = universeByTicker();
+  const rows = [];
+  for (const stock of state.overview?.stocks || []) {
+    if (stock.warning) continue;
+    const ticker = String(stock.ticker).toUpperCase();
+    const asset = universe.get(ticker);
+    const classification = signalClassification(stock);
+    const monthly = Number(stock.monthly_change_pct || 0);
+    const fiveDay = Number(stock.five_day_change_pct || 0);
+    const relative = Number(stock.signal?.five_day_relative_strength_pct || 0);
+    if (["fresh", "strict"].includes(classification) && !asset?.strategy_eligible) {
+      rows.push({
+        stock,
+        asset,
+        action: "strategy_eligible",
+        reason: `${classification} signal with ${pct(relative)} 5D relative strength versus SPY`,
+        priority: classification === "fresh" ? 1 : 2,
+      });
+    } else if (classification === "near" && asset?.status !== "candidate") {
+      rows.push({
+        stock,
+        asset,
+        action: "candidate",
+        reason: "Near signal: keep watching before strategy promotion",
+        priority: 3,
+      });
+    } else if (classification === "none" && monthly < -10 && fiveDay < 0 && asset?.status === "active") {
+      rows.push({
+        stock,
+        asset,
+        action: "archived",
+        reason: `No active signal, ${pct(monthly)} monthly move, and weak 5D trend`,
+        priority: 4,
+      });
+    }
+  }
+  return rows
+    .sort((left, right) => left.priority - right.priority || Number(right.stock.return_pct || 0) - Number(left.stock.return_pct || 0))
+    .slice(0, 25);
+}
+
+function renderRecommendations() {
+  const rows = recommendationRows();
+  $("#recommendation-rows").innerHTML = rows.length
+    ? rows.map(({ stock, asset, action, reason }) => `
+      <tr>
+        <td>${tickerLabel(stock.ticker, stock.wealthsimple)}</td>
+        <td>${escapeHtml(action)}</td>
+        <td>${escapeHtml(reason)}</td>
+        <td>${signalPill(stock.signal)}</td>
+        <td class="${tone(stock.return_pct)}">${pct(stock.return_pct)}</td>
+        <td class="${toneOrEmpty(stock.five_day_change_pct)}">${pctOrDash(stock.five_day_change_pct)}</td>
+        <td class="${toneOrEmpty(stock.monthly_change_pct)}">${pctOrDash(stock.monthly_change_pct)}</td>
+        <td>${escapeHtml(asset?.status || "untracked")}</td>
+        <td>
+          <div class="asset-action-group">
+            <button class="asset-action" data-recommendation-action="${escapeHtml(action)}" data-recommendation-ticker="${escapeHtml(stock.ticker)}" data-recommendation-type="${escapeHtml(stock.security_type)}">Approve</button>
+            <button class="asset-action" data-recommendation-action="candidate" data-recommendation-ticker="${escapeHtml(stock.ticker)}" data-recommendation-type="${escapeHtml(stock.security_type)}">Watch</button>
+            <button class="asset-action" data-recommendation-action="archived" data-recommendation-ticker="${escapeHtml(stock.ticker)}" data-recommendation-type="${escapeHtml(stock.security_type)}">Archive</button>
+          </div>
+        </td>
+      </tr>`)
+      .join("")
+    : '<tr><td colspan="9">No current universe suggestions for this window.</td></tr>';
+  document.querySelectorAll("[data-recommendation-action]").forEach((button) =>
+    button.addEventListener("click", () =>
+      saveStockUniverseAction(
+        button.dataset.recommendationTicker,
+        button.dataset.recommendationType,
+        button.dataset.recommendationAction
+      )
+    )
+  );
+  enableSorting();
+}
+
 function classificationPill(classification, label = classification) {
   if (!classification || classification === "none") return '<span class="pill">none</span>';
   return `<span class="pill ${classification}">${label}</span>`;
@@ -482,6 +569,7 @@ async function updateAssetStatus(button) {
 }
 
 async function saveStockUniverseAction(ticker, assetType, action) {
+  const statusNode = $("#stock-universe-action-status") || $("#recommendation-action-status");
   const basePayload = {
     ticker,
     asset_type: assetType,
@@ -493,9 +581,10 @@ async function saveStockUniverseAction(ticker, assetType, action) {
   try {
     await fetchJson("/api/universe/assets", jsonRequest("POST", payload));
     await refreshUniverse();
-    $("#stock-universe-action-status").textContent = `Saved ${ticker} as ${action}. ${universeStatusText()}`;
+    if (state.overview) renderRecommendations();
+    if (statusNode) statusNode.textContent = `Saved ${ticker} as ${action}. ${universeStatusText()}`;
   } catch (error) {
-    $("#stock-universe-action-status").textContent = `Asset update failed: ${error.message}`;
+    if (statusNode) statusNode.textContent = `Asset update failed: ${error.message}`;
   }
 }
 
@@ -1028,6 +1117,7 @@ async function loadOverview() {
     renderEod();
     renderSectors();
     renderTraders();
+    renderRecommendations();
     renderStocks();
     $("#window-label").textContent =
       `${state.overview.from_date} to ${state.overview.latest_available_date || "latest available close"}`

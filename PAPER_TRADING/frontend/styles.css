@@ -69,7 +69,11 @@ button { cursor: pointer; }
   grid-template-columns: minmax(230px, 1fr) 142px 185px 142px 185px auto;
 }
 .control-options {
+  align-items: start;
   border-top: 1px solid var(--line);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
   padding-top: 12px;
 }
 .fee-toggle {
@@ -103,7 +107,7 @@ input, select {
 }
 .primary { background: var(--accent); color: #062018; }
 .primary:disabled { cursor: wait; opacity: .7; }
-.preset { background: #18304c; color: var(--blue); margin-right: 8px; }
+.preset { background: #18304c; color: var(--blue); }
 .preset.active { background: var(--accent-2); color: #2a2206; }
 .secondary {
   background: #18304c;

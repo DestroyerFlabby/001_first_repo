@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import sys
+import os
+import threading
 from calendar import monthrange
 from datetime import date
 from pathlib import Path
@@ -22,7 +24,12 @@ from backend.dashboard_service import (  # noqa: E402
     parse_date,
     trader_detail,
 )
-from backend.dashboard_cache import cached_or_build_eod, cached_or_build_overview  # noqa: E402
+from backend.dashboard_cache import (  # noqa: E402
+    cached_or_build_eod,
+    cached_or_build_overview,
+    default_preload_window,
+    preload_dashboard_cache,
+)
 from backend.benchmark_service import benchmark_registry_response  # noqa: E402
 from backend.email_service import send_daily_instructions  # noqa: E402
 from backend.news_service import news_summary  # noqa: E402
@@ -31,6 +38,46 @@ from backend.universe_service import asset_universe_response, update_asset, upse
 
 app = FastAPI(title="Paper Trading Dashboard", version="1.0.0")
 FRONTEND = ROOT / "frontend"
+
+
+def env_bool(name: str, default: bool = False) -> bool:
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value.strip().casefold() in {"1", "true", "yes", "on"}
+
+
+def configured_preload_window() -> tuple[date, date]:
+    from_value = os.environ.get("PRELOAD_DASHBOARD_CACHE_FROM_DATE", "").strip()
+    to_value = os.environ.get("PRELOAD_DASHBOARD_CACHE_TO_DATE", "").strip()
+    start = date.fromisoformat(from_value) if from_value else None
+    end = date.fromisoformat(to_value) if to_value else None
+    return default_preload_window(start, end)
+
+
+def warm_dashboard_cache_in_background() -> None:
+    if not env_bool("PRELOAD_DASHBOARD_CACHE"):
+        return
+
+    def worker() -> None:
+        try:
+            start, end = configured_preload_window()
+            rows = preload_dashboard_cache(
+                start,
+                end,
+                include_fx=env_bool("PRELOAD_DASHBOARD_CACHE_INCLUDE_FX"),
+                force=env_bool("PRELOAD_DASHBOARD_CACHE_FORCE"),
+            )
+            print(f"Dashboard cache warmup complete: {rows}", flush=True)
+        except Exception as exc:
+            print(f"Dashboard cache warmup failed: {exc}", flush=True)
+
+    threading.Thread(target=worker, name="dashboard-cache-warmup", daemon=True).start()
+
+
+@app.on_event("startup")
+def startup() -> None:
+    warm_dashboard_cache_in_background()
 
 
 def month_checkpoints(start: date, end: date) -> list[dict[str, str]]:
@@ -74,11 +121,18 @@ def health() -> dict[str, str]:
 
 @app.get("/api/meta")
 def meta() -> dict[str, object]:
+    preload_start, preload_end = configured_preload_window()
     return {
         "default_from_date": DEFAULT_START.isoformat(),
         "default_to_date": latest_market_date().isoformat(),
         "history_from_date": HISTORY_START.isoformat(),
         "public_dashboard": PUBLIC_DASHBOARD,
+        "preload_preset": {
+            "label": f"Preloaded {preload_start.isoformat()} to {preload_end.isoformat()}",
+            "from_date": preload_start.isoformat(),
+            "to_date": preload_end.isoformat(),
+            "includes_wealthsimple_fx_fees": env_bool("PRELOAD_DASHBOARD_CACHE_INCLUDE_FX"),
+        },
         "key_dates": [
             {"label": "Jan 1 reference", "date": "2026-01-01"},
             {"label": "May 20 reference", "date": "2026-05-20"},

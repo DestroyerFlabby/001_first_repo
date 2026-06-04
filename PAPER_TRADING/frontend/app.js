@@ -933,6 +933,7 @@ async function loadOverview() {
 async function init() {
   const meta = await fetchJson("/api/meta");
   state.meta = meta;
+  const preloadPreset = meta.preload_preset;
   $("#from-quick-date").innerHTML = dateOptions(meta);
   $("#to-quick-date").innerHTML = dateOptions(meta, true);
   $("#from-quick-date").insertAdjacentHTML("afterbegin", '<option value="">Choose date</option>');
@@ -953,6 +954,16 @@ async function init() {
   $("#to-date").addEventListener("change", () => {
     $("#to-quick-date").value = $("#to-date").value;
   });
+  if (preloadPreset) {
+    $("#preload-preset").textContent = `${preloadPreset.label} + fees`;
+    $("#preload-preset").addEventListener("click", () => {
+      $("#from-date").value = preloadPreset.from_date;
+      $("#to-date").value = preloadPreset.to_date;
+      $("#from-quick-date").value = preloadPreset.from_date;
+      $("#to-quick-date").value = preloadPreset.to_date;
+      $("#wealthsimple-fx-fees").checked = Boolean(preloadPreset.includes_wealthsimple_fx_fees);
+    });
+  }
   $("#apply-window").addEventListener("click", loadOverview);
   $("#asset-form").addEventListener("submit", submitAssetForm);
   $("#stock-search").addEventListener("input", renderStocks);

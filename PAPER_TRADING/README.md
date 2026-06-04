@@ -100,6 +100,13 @@ if you also plan to refresh with the Wealthsimple FX-fee toggle enabled, and
 add `--force` when you want to rebuild existing cached files after changing
 calculation logic.
 
+The Render deployment starts a background cache warmup after the service
+boots. The current hosted preset warms `2026-06-01` through `2026-06-03` for
+both normal returns and the Wealthsimple FX-fee scenario. The dashboard has a
+`Use preloaded window + fees` button that selects that same range and enables
+the fee toggle. Render free instances can still lose generated cache files
+after sleeping or restarting, but the warmup starts again on the next boot.
+
 The dashboard reads `data/trades.csv` and the imported Wealthsimple history.
 It does not submit trades or modify the ledger. It provides:
 

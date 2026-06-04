@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
-from datetime import date, datetime, timezone
+import os
+import threading
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Callable
 
@@ -61,7 +63,7 @@ def write_cache(
         },
         "payload": payload,
     }
-    temporary = path.with_suffix(".tmp")
+    temporary = path.with_name(f"{path.name}.{os.getpid()}.{threading.get_ident()}.tmp")
     temporary.write_text(json.dumps(wrapped, indent=2, sort_keys=True), encoding="utf-8")
     temporary.replace(path)
     return path
@@ -122,3 +124,68 @@ def cached_or_build_eod(
         lambda: build_eod_snapshot(apply_wealthsimple_fx_fees),
         force=force,
     )
+
+
+def prior_month_end_market_date(latest: date) -> date:
+    first_of_month = latest.replace(day=1)
+    previous_month_calendar_end = first_of_month - timedelta(days=1)
+    _, bars = fetch_chart("SPY")
+    month_end = next(
+        (bar.day for bar in reversed(bars) if bar.day <= previous_month_calendar_end),
+        None,
+    )
+    if not month_end:
+        raise ValueError("missing prior month-end market session")
+    return month_end
+
+
+def default_preload_window(
+    from_date: date | None = None,
+    to_date: date | None = None,
+) -> tuple[date, date]:
+    if from_date and to_date:
+        if to_date < from_date:
+            raise ValueError("preload end date must be on or after start date")
+        return from_date, to_date
+    _, latest = latest_eod_window()
+    end = to_date or latest
+    start = from_date or prior_month_end_market_date(end)
+    if end < start:
+        raise ValueError("preload end date must be on or after start date")
+    return start, end
+
+
+def preload_dashboard_cache(
+    start: date,
+    end: date,
+    include_fx: bool = False,
+    force: bool = False,
+) -> list[dict[str, Any]]:
+    warmed: list[dict[str, Any]] = []
+    fee_options = [False, True] if include_fx else [False]
+    for apply_fees in fee_options:
+        overview = cached_or_build_overview(start, end, apply_fees, force=force)
+        warmed.append(
+            {
+                "kind": "overview",
+                "from_date": start.isoformat(),
+                "to_date": end.isoformat(),
+                "wealthsimple_fx_fees": apply_fees,
+                "cache_status": overview.get("cache_status"),
+                "path": str(cache_path("overview", start, end, apply_fees)),
+            }
+        )
+
+        previous, latest = latest_eod_window()
+        eod = cached_or_build_eod(apply_fees, force=force)
+        warmed.append(
+            {
+                "kind": "eod",
+                "from_date": previous.isoformat(),
+                "to_date": latest.isoformat(),
+                "wealthsimple_fx_fees": apply_fees,
+                "cache_status": eod.get("cache_status"),
+                "path": str(cache_path("eod", previous, latest, apply_fees)),
+            }
+        )
+    return warmed

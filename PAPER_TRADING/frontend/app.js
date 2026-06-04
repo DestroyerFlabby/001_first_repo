@@ -794,6 +794,38 @@ function comparisonPolyline(series, benchmarkSeries) {
     </svg>`;
 }
 
+function drawdownPolyline(series) {
+  if (series.length < 2) return '<p class="chart-empty">Drawdown needs at least two daily values.</p>';
+  let peak = Number(series[0].value);
+  const points = series.map((row) => {
+    const value = Number(row.value);
+    if (value > peak) peak = value;
+    const drawdown = peak ? ((value - peak) / peak) * 100 : 0;
+    return { date: row.date, drawdown };
+  });
+  const min = Math.min(...points.map((row) => row.drawdown), 0);
+  const width = 680;
+  const height = 190;
+  const spread = Math.abs(min) || 1;
+  const path = points
+    .map((row, index) => {
+      const x = (index / Math.max(points.length - 1, 1)) * width;
+      const y = 12 + (Math.abs(row.drawdown) / spread) * (height - 22);
+      return `${x.toFixed(2)},${y.toFixed(2)}`;
+    })
+    .join(" ");
+  return `
+    <svg viewBox="0 0 ${width} 235" preserveAspectRatio="none" role="img">
+      <line x1="0" y1="12" x2="${width}" y2="12" stroke="#213653" />
+      <line x1="0" y1="${height}" x2="${width}" y2="${height}" stroke="#213653" />
+      <polyline points="${path}" fill="none" stroke="#ff7b7b" stroke-width="3" vector-effect="non-scaling-stroke" />
+      <text x="4" y="28" fill="#91a4bd" font-size="12">0%</text>
+      <text x="4" y="${height - 6}" fill="#ff7b7b" font-size="12">${pct(min)}</text>
+      <text x="4" y="215" fill="#91a4bd" font-size="12">${points[0].date}</text>
+      <text x="${width - 82}" y="215" fill="#91a4bd" font-size="12">${points.at(-1).date}</text>
+    </svg>`;
+}
+
 function stat(label, value, className = "") {
   return `<div class="detail-stat"><p>${label}</p><p class="${className}">${value}</p></div>`;
 }
@@ -910,6 +942,8 @@ async function openTrader(investor) {
       ${benchmark ? `
         <h3>Portfolio vs ${benchmark.benchmark}</h3>
         <div class="chart">${comparisonPolyline(detail.series, benchmark.benchmark_series)}</div>` : ""}
+      <h3>Drawdown</h3>
+      <div class="chart">${drawdownPolyline(detail.series)}</div>
       <h3>Daily portfolio value</h3>
       <div class="chart">${polyline(detail.series, "value")}</div>
       <div class="drawer-section-heading">

@@ -24,8 +24,10 @@ from backend.dashboard_service import (  # noqa: E402
     parse_date,
     trader_detail,
 )
+from backend.benchmark_service import benchmark_registry_response  # noqa: E402
 from backend.email_service import send_daily_instructions  # noqa: E402
 from backend.news_service import news_summary  # noqa: E402
+from backend.universe_service import asset_universe_response  # noqa: E402
 
 
 app = FastAPI(title="Paper Trading Dashboard", version="1.0.0")
@@ -100,6 +102,16 @@ def overview(
 @app.get("/api/eod")
 def eod(wealthsimple_fx_fees: bool = Query(default=False)) -> dict[str, object]:
     return build_eod_snapshot(wealthsimple_fx_fees)
+
+
+@app.get("/api/universe/assets")
+def universe_assets() -> dict[str, object]:
+    return asset_universe_response()
+
+
+@app.get("/api/benchmarks")
+def benchmarks(include_inactive: bool = Query(default=False)) -> dict[str, object]:
+    return benchmark_registry_response(include_inactive=include_inactive)
 
 
 @app.post("/api/notifications/daily-instructions")

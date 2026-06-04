@@ -426,6 +426,12 @@ API is not a broad public stock-mention feed.
 - `frontend/`: dependency-free local browser dashboard
 - `run_dashboard.py`: start the local dashboard server
 - `wealthsimple_tracker.py`: import and summarize real Wealthsimple account history
+- `data/asset_universe.csv`: additive ticker registry for active, candidate,
+  strategy-eligible, benchmark, archived, and excluded assets. This does not
+  replace `trades.csv`; it is the foundation for future universe management.
+- `data/benchmark_registry.csv`: benchmark/index registry used to list
+  available comparison benchmarks before benchmark-relative calculations are
+  wired into portfolio charts.
 - `data/wealthsimple_activities.csv`: normalized granular Wealthsimple history
 - `data/wealthsimple_imports.csv`: Wealthsimple import audit log
 - `DATA_SOURCES.md`: provider notes and tradeoffs

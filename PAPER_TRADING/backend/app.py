@@ -5,7 +5,7 @@ from calendar import monthrange
 from datetime import date
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import Body, FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -27,7 +27,7 @@ from backend.dashboard_service import (  # noqa: E402
 from backend.benchmark_service import benchmark_registry_response  # noqa: E402
 from backend.email_service import send_daily_instructions  # noqa: E402
 from backend.news_service import news_summary  # noqa: E402
-from backend.universe_service import asset_universe_response  # noqa: E402
+from backend.universe_service import asset_universe_response, update_asset, upsert_asset  # noqa: E402
 
 
 app = FastAPI(title="Paper Trading Dashboard", version="1.0.0")
@@ -107,6 +107,35 @@ def eod(wealthsimple_fx_fees: bool = Query(default=False)) -> dict[str, object]:
 @app.get("/api/universe/assets")
 def universe_assets() -> dict[str, object]:
     return asset_universe_response()
+
+
+def ensure_private_write() -> None:
+    if PUBLIC_DASHBOARD:
+        raise HTTPException(status_code=403, detail="asset universe writes are disabled in public dashboard mode")
+
+
+@app.post("/api/universe/assets")
+def create_or_update_universe_asset(payload: dict[str, object] = Body(...)) -> dict[str, object]:
+    ensure_private_write()
+    try:
+        return {"asset": upsert_asset(payload)}
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.patch("/api/universe/assets/{ticker}")
+def patch_universe_asset(
+    ticker: str,
+    asset_type: str | None = Query(default=None),
+    payload: dict[str, object] = Body(...),
+) -> dict[str, object]:
+    ensure_private_write()
+    try:
+        return {"asset": update_asset(ticker, payload, asset_type)}
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"unknown asset: {ticker}") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.get("/api/benchmarks")

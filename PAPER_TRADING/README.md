@@ -429,6 +429,8 @@ API is not a broad public stock-mention feed.
 - `data/asset_universe.csv`: additive ticker registry for active, candidate,
   strategy-eligible, benchmark, archived, and excluded assets. This does not
   replace `trades.csv`; it is the foundation for future universe management.
+  The dashboard can add/update/archive rows locally, but universe edits never
+  create trades and write endpoints are disabled in public-dashboard mode.
 - `data/benchmark_registry.csv`: benchmark/index registry used to list
   available comparison benchmarks before benchmark-relative calculations are
   wired into portfolio charts.

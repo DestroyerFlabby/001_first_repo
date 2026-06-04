@@ -1,4 +1,4 @@
-const state = { overview: null, eod: null, meta: null };
+const state = { overview: null, eod: null, meta: null, universe: null, benchmarks: null };
 const $ = (selector) => document.querySelector(selector);
 let loadingTimer = null;
 let loadingStartedAt = null;
@@ -56,6 +56,12 @@ async function fetchJson(url, options = {}) {
   }
   return response.json();
 }
+
+const jsonRequest = (method, body) => ({
+  method,
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(body),
+});
 
 function setNotificationStatus(message, status = "") {
   const element = $("#notification-status");
@@ -317,6 +323,126 @@ function renderDiagnostics() {
         </article>`
     )
     .join("");
+}
+
+function boolLabel(value) {
+  return value ? "yes" : "no";
+}
+
+function universeStatusText() {
+  if (!state.universe) return "";
+  const counts = state.universe.status_counts || {};
+  return `${state.universe.total} assets | active ${counts.active || 0}, candidate ${counts.candidate || 0}, archived ${counts.archived || 0}`;
+}
+
+function renderUniverseControls() {
+  const statuses = state.universe?.statuses || [];
+  $("#asset-status").innerHTML = statuses
+    .map((status) => `<option value="${status}"${status === "candidate" ? " selected" : ""}>${status}</option>`)
+    .join("");
+}
+
+function renderUniverse() {
+  if (!state.universe || !state.benchmarks) return;
+  $("#universe-status").textContent = universeStatusText();
+  $("#asset-universe-rows").innerHTML = state.universe.assets
+    .map(
+      (row) => `
+        <tr>
+          <td><strong>${escapeHtml(row.ticker)}</strong></td>
+          <td>${escapeHtml(row.asset_type)}</td>
+          <td>${escapeHtml(row.status)}</td>
+          <td>${escapeHtml(row.sector || "-")}</td>
+          <td>${escapeHtml(row.theme || "-")}</td>
+          <td>${boolLabel(row.strategy_eligible)}</td>
+          <td>${boolLabel(row.watchlist_eligible)}</td>
+          <td>${boolLabel(row.benchmark_eligible)}</td>
+          <td>${escapeHtml(row.source || "-")}</td>
+          <td>${escapeHtml(row.notes || "-")}</td>
+          <td>
+            <div class="asset-action-group">
+              <button class="asset-action" data-asset-action="candidate" data-asset-ticker="${escapeHtml(row.ticker)}" data-asset-type="${escapeHtml(row.asset_type)}">Candidate</button>
+              <button class="asset-action" data-asset-action="active" data-asset-ticker="${escapeHtml(row.ticker)}" data-asset-type="${escapeHtml(row.asset_type)}">Active</button>
+              <button class="asset-action" data-asset-action="strategy_eligible" data-asset-ticker="${escapeHtml(row.ticker)}" data-asset-type="${escapeHtml(row.asset_type)}">Strategy</button>
+              <button class="asset-action" data-asset-action="archived" data-asset-ticker="${escapeHtml(row.ticker)}" data-asset-type="${escapeHtml(row.asset_type)}">Archive</button>
+            </div>
+          </td>
+        </tr>`
+    )
+    .join("");
+  $("#benchmark-rows").innerHTML = state.benchmarks.benchmarks
+    .map(
+      (row) => `
+        <tr>
+          <td>${escapeHtml(row.benchmark_id)}</td>
+          <td><strong>${escapeHtml(row.ticker)}</strong></td>
+          <td>${escapeHtml(row.name)}</td>
+          <td>${escapeHtml(row.asset_type)}</td>
+          <td>${escapeHtml(row.exchange)}</td>
+          <td>${escapeHtml(row.currency)}</td>
+          <td>${escapeHtml(row.category)}</td>
+          <td>${escapeHtml(row.default_for)}</td>
+          <td>${boolLabel(row.active)}</td>
+        </tr>`
+    )
+    .join("");
+  document.querySelectorAll("[data-asset-action]").forEach((button) =>
+    button.addEventListener("click", () => updateAssetStatus(button))
+  );
+  enableSorting();
+}
+
+async function refreshUniverse() {
+  const [universe, benchmarks] = await Promise.all([
+    fetchJson("/api/universe/assets"),
+    fetchJson("/api/benchmarks"),
+  ]);
+  state.universe = universe;
+  state.benchmarks = benchmarks;
+  renderUniverseControls();
+  renderUniverse();
+}
+
+async function submitAssetForm(event) {
+  event.preventDefault();
+  const payload = {
+    ticker: $("#asset-ticker").value,
+    asset_type: $("#asset-type").value,
+    status: $("#asset-status").value,
+    sector: $("#asset-sector").value,
+    theme: $("#asset-theme").value,
+    notes: $("#asset-notes").value,
+    source: "manual-ui",
+  };
+  try {
+    await fetchJson("/api/universe/assets", jsonRequest("POST", payload));
+    $("#asset-form").reset();
+    $("#asset-status").value = "candidate";
+    await refreshUniverse();
+    $("#universe-status").textContent = `Saved ${payload.ticker.toUpperCase()}. ${universeStatusText()}`;
+  } catch (error) {
+    $("#universe-status").textContent = `Asset save failed: ${error.message}`;
+  }
+}
+
+async function updateAssetStatus(button) {
+  const ticker = button.dataset.assetTicker;
+  const assetType = button.dataset.assetType;
+  const status = button.dataset.assetAction;
+  const payload = {
+    status,
+    strategy_eligible: status === "strategy_eligible" ? true : undefined,
+  };
+  try {
+    await fetchJson(
+      `/api/universe/assets/${encodeURIComponent(ticker)}?asset_type=${encodeURIComponent(assetType)}`,
+      jsonRequest("PATCH", payload)
+    );
+    await refreshUniverse();
+    $("#universe-status").textContent = `Updated ${ticker} to ${status}. ${universeStatusText()}`;
+  } catch (error) {
+    $("#universe-status").textContent = `Asset update failed: ${error.message}`;
+  }
 }
 
 function dateOptions(meta, includeLatest = false) {
@@ -777,7 +903,9 @@ async function loadOverview() {
     state.overview = await fetchJson(`/api/overview?${query()}`);
     updateLoading("Portfolio rankings and tracked instruments loaded. Loading prior-close movers...", 75);
     state.eod = await fetchJson(`/api/eod${wealthsimpleQuery()}`);
-    updateLoading("Prior-close movers loaded. Rendering dashboard tables...", 95);
+    updateLoading("Prior-close movers loaded. Loading universe registries...", 88);
+    await refreshUniverse();
+    updateLoading("Universe registries loaded. Rendering dashboard tables...", 95);
     renderCards();
     renderDiagnostics();
     renderEod();
@@ -826,6 +954,7 @@ async function init() {
     $("#to-quick-date").value = $("#to-date").value;
   });
   $("#apply-window").addEventListener("click", loadOverview);
+  $("#asset-form").addEventListener("submit", submitAssetForm);
   $("#stock-search").addEventListener("input", renderStocks);
   $("#signal-filter").addEventListener("change", renderStocks);
   $("#export-eod").addEventListener("click", () => {
@@ -840,6 +969,13 @@ async function init() {
   });
   $("#export-sectors").addEventListener("click", () => {
     downloadExcelTables("sector-breakdown", "Sector Breakdown", [$("#sector-rows")?.closest("table")]);
+  });
+  $("#export-universe").addEventListener("click", () => {
+    downloadExcelTables(
+      "asset-universe",
+      "Asset Universe and Benchmarks",
+      [$("#asset-universe-rows")?.closest("table"), $("#benchmark-rows")?.closest("table")]
+    );
   });
   $("#export-stocks").addEventListener("click", () => {
     downloadExcelTables("tracked-stocks", "Tracked Stocks", [$("#stock-rows")?.closest("table")]);

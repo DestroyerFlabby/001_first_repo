@@ -81,6 +81,72 @@
         <section class="card">
           <div class="section-heading">
             <div>
+              <p class="eyebrow">Universe manager</p>
+              <h2>Asset Universe & Benchmarks</h2>
+            </div>
+            <div class="section-actions">
+              <p id="universe-status" class="muted"></p>
+              <button id="export-universe" class="secondary">Download Excel</button>
+            </div>
+          </div>
+          <form id="asset-form" class="asset-form">
+            <input id="asset-ticker" name="ticker" placeholder="Ticker" />
+            <select id="asset-type" name="asset_type">
+              <option value="stock">Stock</option>
+              <option value="etf">ETF</option>
+              <option value="crypto">Crypto</option>
+            </select>
+            <select id="asset-status" name="status"></select>
+            <input id="asset-sector" name="sector" placeholder="Sector" />
+            <input id="asset-theme" name="theme" placeholder="Theme" />
+            <input id="asset-notes" name="notes" placeholder="Notes" />
+            <button class="primary" type="submit">Add / update asset</button>
+          </form>
+          <p class="muted">Universe edits do not create trades. Strategies can decide later whether eligible assets should be bought.</p>
+          <div class="table-wrap">
+            <table data-sortable>
+              <thead>
+                <tr>
+                  <th>Ticker</th>
+                  <th>Type</th>
+                  <th>Status</th>
+                  <th>Sector</th>
+                  <th>Theme</th>
+                  <th>Strategy</th>
+                  <th>Watchlist</th>
+                  <th>Benchmark</th>
+                  <th>Source</th>
+                  <th>Notes</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="asset-universe-rows"></tbody>
+            </table>
+          </div>
+          <h3>Benchmark Registry</h3>
+          <div class="table-wrap">
+            <table data-sortable>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Ticker</th>
+                  <th>Name</th>
+                  <th>Type</th>
+                  <th>Exchange</th>
+                  <th>Currency</th>
+                  <th>Category</th>
+                  <th>Default for</th>
+                  <th>Active</th>
+                </tr>
+              </thead>
+              <tbody id="benchmark-rows"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="section-heading">
+            <div>
               <p class="eyebrow">Prior close comparison</p>
               <h2>Daily EOD Movers</h2>
             </div>

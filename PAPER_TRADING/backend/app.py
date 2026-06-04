@@ -18,12 +18,11 @@ from backend.dashboard_service import (  # noqa: E402
     HISTORY_START,
     PUBLIC_DASHBOARD,
     asset_detail,
-    build_eod_snapshot,
-    build_overview,
     latest_market_date,
     parse_date,
     trader_detail,
 )
+from backend.dashboard_cache import cached_or_build_eod, cached_or_build_overview  # noqa: E402
 from backend.benchmark_service import benchmark_registry_response  # noqa: E402
 from backend.email_service import send_daily_instructions  # noqa: E402
 from backend.news_service import news_summary  # noqa: E402
@@ -96,12 +95,12 @@ def overview(
     wealthsimple_fx_fees: bool = Query(default=False),
 ) -> dict[str, object]:
     start, end = window(from_date, to_date)
-    return build_overview(start, end, wealthsimple_fx_fees)
+    return cached_or_build_overview(start, end, wealthsimple_fx_fees)
 
 
 @app.get("/api/eod")
 def eod(wealthsimple_fx_fees: bool = Query(default=False)) -> dict[str, object]:
-    return build_eod_snapshot(wealthsimple_fx_fees)
+    return cached_or_build_eod(wealthsimple_fx_fees)
 
 
 @app.get("/api/universe/assets")

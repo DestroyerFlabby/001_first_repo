@@ -10,7 +10,8 @@ from threading import Lock
 from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from backend.dashboard_service import build_eod_snapshot, build_overview, trader_detail
+from backend.dashboard_cache import cached_or_build_eod, cached_or_build_overview
+from backend.dashboard_service import trader_detail
 from backend.news_service import load_dotenv
 
 
@@ -423,8 +424,8 @@ def send_daily_instructions(
         end,
         apply_wealthsimple_fx_fees=apply_wealthsimple_fx_fees,
     )
-    overview = build_overview(start, end, apply_wealthsimple_fx_fees)
-    eod = build_eod_snapshot(apply_wealthsimple_fx_fees)
+    overview = cached_or_build_overview(start, end, apply_wealthsimple_fx_fees)
+    eod = cached_or_build_eod(apply_wealthsimple_fx_fees)
     message = EmailMessage()
     message["Subject"] = f"Daily dashboard report: {config['strategy']} as of {detail.get('to_date')}"
     message["From"] = config["from_email"]

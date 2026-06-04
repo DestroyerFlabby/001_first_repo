@@ -88,6 +88,18 @@ Start the local read-only dashboard from the repository root:
 
 Then open [http://127.0.0.1:8000](http://127.0.0.1:8000).
 
+Preload the most common dashboard window before opening the UI:
+
+```powershell
+.\.venv\Scripts\python.exe .\PAPER_TRADING\preload_dashboard_cache.py
+```
+
+By default this warms the prior month-end market close through the latest
+available close, plus the latest daily EOD mover snapshot. Add `--include-fx`
+if you also plan to refresh with the Wealthsimple FX-fee toggle enabled, and
+add `--force` when you want to rebuild existing cached files after changing
+calculation logic.
+
 The dashboard reads `data/trades.csv` and the imported Wealthsimple history.
 It does not submit trades or modify the ledger. It provides:
 
@@ -425,6 +437,8 @@ API is not a broad public stock-mention feed.
 - `backend/`: read-only FastAPI analytics API for the local dashboard
 - `frontend/`: dependency-free local browser dashboard
 - `run_dashboard.py`: start the local dashboard server
+- `preload_dashboard_cache.py`: warm generated dashboard snapshots for faster
+  first-page loads
 - `wealthsimple_tracker.py`: import and summarize real Wealthsimple account history
 - `data/asset_universe.csv`: additive ticker registry for active, candidate,
   strategy-eligible, benchmark, archived, and excluded assets. This does not

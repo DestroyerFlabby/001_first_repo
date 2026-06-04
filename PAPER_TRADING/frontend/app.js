@@ -916,10 +916,10 @@ async function loadOverview() {
       `${state.overview.from_date} to ${state.overview.latest_available_date || "latest available close"}`
       + (state.overview.wealthsimple_fx_fees_enabled ? " | Wealthsimple CAD-account USD FX fees enabled" : "");
     $("#content").classList.remove("hidden");
-    updateLoading("Dashboard ready. Sending daily dashboard report email if configured...", 98);
-    const notification = await sendDailyInstructionsEmail();
-    setNotificationStatus(notificationMessage(notification), notification.status);
     updateLoading("Dashboard ready.", 100);
+    sendDailyInstructionsEmail().then((notification) => {
+      setNotificationStatus(notificationMessage(notification), notification.status);
+    });
   } catch (error) {
     $("#error").textContent = error.message;
     $("#error").classList.remove("hidden");

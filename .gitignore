@@ -114,4 +114,5 @@ PAPER_TRADING/data/wealthsimple_imports.csv
 PAPER_TRADING/data/news_snapshots.json
 PAPER_TRADING/data/historical_alpaca_news.json
 PAPER_TRADING/data/email_notification_log.json
+PAPER_TRADING/data/dashboard_cache/
 

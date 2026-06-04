@@ -740,6 +740,7 @@ def variable_strategy_detail(
     entry_news_rule: str = "ignore",
     apply_wealthsimple_fx_fees: bool = False,
     universe_assets: list[tuple[str, str]] | None = None,
+    news_note: str | None = None,
 ) -> dict[str, object]:
     selected_start = max(start, VARIABLE_STRATEGY_START)
     _, market_bars = fetch_chart("SPY")
@@ -1066,7 +1067,7 @@ def variable_strategy_detail(
         "closed_cycles": len(cycles),
         "news_counts_to_date": daily_news.get("to_date") if news_rule or entry_news_rule != "ignore" else None,
         "note": (
-            f"News-assisted EOD strategy. {NEWS_STRATEGIES[strategy_name]['note']} "
+            f"News-assisted EOD strategy. {news_note or NEWS_STRATEGIES.get(strategy_name, {}).get('note', 'News-assisted strategy.')} "
             f"Committed Alpaca daily news counts currently end on {daily_news.get('to_date')}. "
             "Signals and news are observed at one close and executed at the next "
             "available close. Each entry deploys $1,000. FX conversion is intentionally ignored."
@@ -1172,6 +1173,7 @@ def variable_news_strategy_summary(
         entry_categories=config.get("entry_categories"),
         entry_news_rule=str(config.get("entry_news_rule", "ignore")),
         apply_wealthsimple_fx_fees=apply_wealthsimple_fx_fees,
+        news_note=str(config["note"]),
     )
     return {
         key: detail[key]
@@ -1194,6 +1196,7 @@ def hybrid_news_optimized_strategy_summary(
         entry_news_rule=str(config.get("entry_news_rule", "ignore")),
         universe_assets=hybrid_news_optimized_assets(),
         apply_wealthsimple_fx_fees=apply_wealthsimple_fx_fees,
+        news_note=f"Expanded-universe version of {config['note']}",
     )
     return {
         key: detail[key]
@@ -2043,6 +2046,7 @@ def trader_detail(
             entry_news_rule=str(config.get("entry_news_rule", "ignore")),
             universe_assets=hybrid_news_optimized_assets(),
             apply_wealthsimple_fx_fees=apply_wealthsimple_fx_fees,
+            news_note=f"Expanded-universe version of {config['note']}",
         )
     if investor.casefold() == VARIABLE_STRATEGY_NAME:
         return variable_strategy_detail(start, end, apply_wealthsimple_fx_fees=apply_wealthsimple_fx_fees)

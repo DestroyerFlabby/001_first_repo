@@ -955,7 +955,9 @@ async function init() {
     $("#to-quick-date").value = $("#to-date").value;
   });
   if (preloadPreset) {
-    $("#preload-preset").textContent = `${preloadPreset.label} + fees`;
+    $("#preload-preset").textContent = preloadPreset.includes_wealthsimple_fx_fees
+      ? `${preloadPreset.label} + fees`
+      : preloadPreset.label;
     $("#preload-preset").addEventListener("click", () => {
       $("#from-date").value = preloadPreset.from_date;
       $("#to-date").value = preloadPreset.to_date;

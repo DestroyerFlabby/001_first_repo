@@ -13,6 +13,7 @@ from backend.dashboard_service import build_eod_snapshot, build_overview, fetch_
 ROOT = Path(__file__).resolve().parents[1]
 CACHE_DIR = ROOT / "data" / "dashboard_cache"
 CACHE_VERSION = 1
+DEFAULT_PRELOAD_START = date(2026, 1, 31)
 
 
 def cache_token(value: object) -> str:
@@ -41,6 +42,23 @@ def read_cache(kind: str, start: date | None, end: date | None, apply_fees: bool
     if metadata.get("version") != CACHE_VERSION or metadata.get("kind") != kind:
         return None
     return {**payload, "cache_status": "hit", "cache_created_at": metadata.get("created_at")}
+
+
+def cache_created_on(kind: str, start: date | None, end: date | None, apply_fees: bool) -> date | None:
+    path = cache_path(kind, start, end, apply_fees)
+    if not path.exists():
+        return None
+    try:
+        wrapped = json.loads(path.read_text(encoding="utf-8"))
+        created_at = wrapped.get("cache", {}).get("created_at")
+    except (AttributeError, json.JSONDecodeError, OSError):
+        return None
+    if not created_at:
+        return None
+    try:
+        return datetime.fromisoformat(str(created_at)).date()
+    except ValueError:
+        return None
 
 
 def write_cache(
@@ -111,6 +129,10 @@ def latest_eod_window() -> tuple[date, date]:
     return market_bars[-2].day, market_bars[-1].day
 
 
+def latest_market_window() -> tuple[date, date]:
+    return latest_eod_window()
+
+
 def cached_or_build_eod(
     apply_wealthsimple_fx_fees: bool = False,
     force: bool = False,
@@ -147,12 +169,20 @@ def default_preload_window(
         if to_date < from_date:
             raise ValueError("preload end date must be on or after start date")
         return from_date, to_date
-    _, latest = latest_eod_window()
-    end = to_date or latest
-    start = from_date or prior_month_end_market_date(end)
+    previous, latest = latest_market_window()
+    start = from_date or DEFAULT_PRELOAD_START
+    end = to_date or smart_preload_end(start, previous, latest)
     if end < start:
         raise ValueError("preload end date must be on or after start date")
     return start, end
+
+
+def smart_preload_end(start: date, previous: date, latest: date) -> date:
+    today = datetime.now(timezone.utc).date()
+    latest_cache_day = cache_created_on("overview", start, latest, False)
+    if latest == today and latest_cache_day != today:
+        return previous
+    return latest
 
 
 def preload_dashboard_cache(

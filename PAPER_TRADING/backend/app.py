@@ -31,6 +31,7 @@ from backend.dashboard_cache import (  # noqa: E402
     preload_dashboard_cache,
 )
 from backend.benchmark_service import benchmark_registry_response  # noqa: E402
+from backend.basket_service import custom_basket_response  # noqa: E402
 from backend.email_service import send_daily_instructions  # noqa: E402
 from backend.news_service import news_summary  # noqa: E402
 from backend.strategy_registry_service import strategy_registry_response  # noqa: E402
@@ -195,6 +196,11 @@ def patch_universe_asset(
 @app.get("/api/benchmarks")
 def benchmarks(include_inactive: bool = Query(default=False)) -> dict[str, object]:
     return benchmark_registry_response(include_inactive=include_inactive)
+
+
+@app.get("/api/baskets")
+def baskets(include_archived: bool = Query(default=False)) -> dict[str, object]:
+    return custom_basket_response(include_archived=include_archived)
 
 
 @app.get("/api/strategies")

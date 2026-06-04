@@ -1,4 +1,4 @@
-const state = { overview: null, eod: null, meta: null, universe: null, benchmarks: null, strategies: null };
+const state = { overview: null, eod: null, meta: null, universe: null, benchmarks: null, strategies: null, baskets: null };
 const $ = (selector) => document.querySelector(selector);
 let loadingTimer = null;
 let loadingStartedAt = null;
@@ -343,7 +343,7 @@ function renderUniverseControls() {
 }
 
 function renderUniverse() {
-  if (!state.universe || !state.benchmarks || !state.strategies) return;
+  if (!state.universe || !state.benchmarks || !state.strategies || !state.baskets) return;
   $("#universe-status").textContent = universeStatusText();
   $("#asset-universe-rows").innerHTML = state.universe.assets
     .map(
@@ -403,6 +403,21 @@ function renderUniverse() {
         </tr>`
     )
     .join("");
+  $("#basket-rows").innerHTML = state.baskets.baskets
+    .map(
+      (row) => `
+        <tr>
+          <td><strong>${escapeHtml(row.basket_name)}</strong></td>
+          <td>${escapeHtml(row.status)}</td>
+          <td>${escapeHtml(row.weighting_method)}</td>
+          <td>${escapeHtml(row.rebalance_frequency)}</td>
+          <td>${escapeHtml(row.benchmark || "-")}</td>
+          <td>${row.member_count}</td>
+          <td>${escapeHtml(row.members.map((member) => member.ticker).join(", "))}</td>
+          <td>${escapeHtml(row.notes || "-")}</td>
+        </tr>`
+    )
+    .join("");
   document.querySelectorAll("[data-asset-action]").forEach((button) =>
     button.addEventListener("click", () => updateAssetStatus(button))
   );
@@ -410,14 +425,16 @@ function renderUniverse() {
 }
 
 async function refreshUniverse() {
-  const [universe, benchmarks, strategies] = await Promise.all([
+  const [universe, benchmarks, strategies, baskets] = await Promise.all([
     fetchJson("/api/universe/assets"),
     fetchJson("/api/benchmarks"),
     fetchJson("/api/strategies"),
+    fetchJson("/api/baskets"),
   ]);
   state.universe = universe;
   state.benchmarks = benchmarks;
   state.strategies = strategies;
+  state.baskets = baskets;
   renderUniverseControls();
   renderUniverse();
 }

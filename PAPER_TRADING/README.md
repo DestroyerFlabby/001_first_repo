@@ -460,6 +460,9 @@ API is not a broad public stock-mention feed.
 - `data/strategy_registry.csv`: strategy status registry used to distinguish
   research, backtested, forward-testing, active, and retired strategy logic
   without changing the existing strategy scripts.
+- `data/custom_baskets.csv` and `data/custom_basket_members.csv`: thesis
+  basket/index registry for future equal-weight, custom-weight, monthly,
+  quarterly, or no-rebalance benchmark construction.
 - `data/wealthsimple_activities.csv`: normalized granular Wealthsimple history
 - `data/wealthsimple_imports.csv`: Wealthsimple import audit log
 - `DATA_SOURCES.md`: provider notes and tradeoffs

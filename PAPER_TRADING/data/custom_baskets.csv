@@ -1,0 +1,6 @@
+"basket_id","basket_name","status","weighting_method","rebalance_frequency","benchmark","created_at","notes"
+"ai-infrastructure","AI Infrastructure Index","active","equal_weight","monthly","SPY","2026-06-04","AI data center, power, networking, and accelerator infrastructure basket."
+"semiconductor-supply-chain","Semiconductor Supply Chain Index","active","equal_weight","quarterly","SPY","2026-06-04","Semiconductor equipment, materials, foundry, memory, and packaging exposure."
+"crypto-proxy","Crypto Proxy Index","active","equal_weight","monthly","BTC-USD","2026-06-04","Crypto miners, infrastructure, and related ETF/proxy exposure."
+"creator-watchlist","Creator Watchlist Index","research","equal_weight","none","SPY","2026-06-04","Creator and social-watchlist names."
+"mass-change-candidate","Mass-Change Candidate Index","research","equal_weight","none","SPY","2026-06-04","Discovery-stage sector/news-driven candidates."

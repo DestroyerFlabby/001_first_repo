@@ -464,6 +464,24 @@ async function updateAssetStatus(button) {
   }
 }
 
+async function saveStockUniverseAction(ticker, assetType, action) {
+  const basePayload = {
+    ticker,
+    asset_type: assetType,
+    source: "stock-drilldown-ui",
+  };
+  const payload = action === "strategy_eligible"
+    ? { ...basePayload, status: "active", strategy_eligible: true, watchlist_eligible: true }
+    : { ...basePayload, status: action };
+  try {
+    await fetchJson("/api/universe/assets", jsonRequest("POST", payload));
+    await refreshUniverse();
+    $("#stock-universe-action-status").textContent = `Saved ${ticker} as ${action}. ${universeStatusText()}`;
+  } catch (error) {
+    $("#stock-universe-action-status").textContent = `Asset update failed: ${error.message}`;
+  }
+}
+
 function dateOptions(meta, includeLatest = false) {
   const keyDates = meta.key_dates.map((item) => ({ ...item, group: "Key dates" }));
   const checkpoints = meta.checkpoints.map((item) => ({ ...item, group: "Monthly checkpoints" }));
@@ -899,6 +917,16 @@ async function openStock(ticker) {
       <p class="eyebrow">${detail.security_type} | ${detail.currency}</p>
       <h2>${tickerLabel(detail.ticker, detail.wealthsimple)}</h2>
       <p class="muted">${detail.owners.join(", ")}</p>
+      <div class="asset-action-panel">
+        <p class="muted">Universe actions update tracking metadata only. They do not create trades.</p>
+        <div class="asset-action-group left">
+          <button class="asset-action" data-stock-universe-action="candidate" data-stock-ticker="${escapeHtml(detail.ticker)}" data-stock-type="${escapeHtml(detail.security_type)}">Candidate</button>
+          <button class="asset-action" data-stock-universe-action="active" data-stock-ticker="${escapeHtml(detail.ticker)}" data-stock-type="${escapeHtml(detail.security_type)}">Active</button>
+          <button class="asset-action" data-stock-universe-action="strategy_eligible" data-stock-ticker="${escapeHtml(detail.ticker)}" data-stock-type="${escapeHtml(detail.security_type)}">Strategy eligible</button>
+          <button class="asset-action" data-stock-universe-action="archived" data-stock-ticker="${escapeHtml(detail.ticker)}" data-stock-type="${escapeHtml(detail.security_type)}">Archive</button>
+        </div>
+        <p id="stock-universe-action-status" class="muted"></p>
+      </div>
       <div class="detail-grid">
         ${stat("Start price", number(detail.start_price))}
         ${stat("Latest price", number(detail.end_price))}
@@ -945,6 +973,15 @@ async function openStock(ticker) {
       <ul class="news-list">${videoRows}</ul>
     `);
     enableSorting($("#drawer-content"));
+    document.querySelectorAll("[data-stock-universe-action]").forEach((button) =>
+      button.addEventListener("click", () =>
+        saveStockUniverseAction(
+          button.dataset.stockTicker,
+          button.dataset.stockType,
+          button.dataset.stockUniverseAction
+        )
+      )
+    );
   } catch (error) {
     openDrawer(`<p class="error">${error.message}</p>`);
   }

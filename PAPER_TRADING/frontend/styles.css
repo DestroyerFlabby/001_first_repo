@@ -226,6 +226,18 @@ input, select {
   gap: 6px;
   justify-content: flex-end;
 }
+.asset-action-group.left {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+.asset-action-panel {
+  background: rgba(8, 19, 33, .72);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  margin: 14px 0 18px;
+  padding: 12px;
+}
+.asset-action-panel .asset-action-group { margin: 10px 0; }
 .asset-action {
   background: #10243a;
   border: 1px solid var(--line);

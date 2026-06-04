@@ -120,6 +120,9 @@ It does not submit trades or modify the ledger. It provides:
 - beginning-of-month, mid-month, and end-of-month shortcuts for both From and
   To from January 2026 onward
 - daily EOD portfolio movers and top stock movers versus the prior market close
+- Daily Command Center summary for fresh signals, sector heat,
+  benchmark-relative movers, derived-strategy 5D momentum, and universe
+  suggestions
 - sector-level company group breakdowns with average return, median return,
   win rate, daily/5D/monthly changes, signal mix, and top/worst contributors
 - click-to-sort columns in the dashboard tables and trader holding drilldowns

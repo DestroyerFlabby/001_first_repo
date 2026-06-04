@@ -433,6 +433,72 @@ function renderCards() {
     .join("");
 }
 
+function listItems(rows, formatter, empty = "No items for this window.") {
+  return rows.length
+    ? `<ul>${rows.map((row) => `<li>${formatter(row)}</li>`).join("")}</ul>`
+    : `<p class="muted">${empty}</p>`;
+}
+
+function commandCenterPanel(title, rows, formatter, empty) {
+  return `
+    <article class="command-card">
+      <h3>${escapeHtml(title)}</h3>
+      ${listItems(rows, formatter, empty)}
+    </article>`;
+}
+
+function renderCommandCenter() {
+  const stocks = state.overview.stocks || [];
+  const sectors = state.overview.sector_breakdowns || [];
+  const traders = state.overview.traders || [];
+  const recommendations = recommendationRows();
+  const freshSignals = stocks
+    .filter((row) => row.signal?.fresh_priority)
+    .sort((left, right) => Number(right.signal?.five_day_relative_strength_pct || 0) - Number(left.signal?.five_day_relative_strength_pct || 0))
+    .slice(0, 5);
+  const relativeMovers = stocks
+    .filter((row) => row.signal && !row.warning)
+    .sort((left, right) => Number(right.signal?.five_day_relative_strength_pct || 0) - Number(left.signal?.five_day_relative_strength_pct || 0))
+    .slice(0, 5);
+  const strategyMomentum = traders
+    .filter((row) => String(row.source || "").startsWith("derived"))
+    .sort((left, right) => Number(right.five_day_change_pct || 0) - Number(left.five_day_change_pct || 0))
+    .slice(0, 5);
+  const suggestionRows = recommendations.slice(0, 5);
+  $("#command-center-grid").innerHTML = [
+    commandCenterPanel(
+      "New Fresh Signals",
+      freshSignals,
+      (row) => `${tickerLabel(row.ticker, row.wealthsimple)} <span class="${tone(row.signal.five_day_relative_strength_pct)}">${pct(row.signal.five_day_relative_strength_pct)} vs SPY</span>`,
+      "No fresh-priority signals."
+    ),
+    commandCenterPanel(
+      "Sector Heat",
+      sectors.slice(0, 5),
+      (row) => `<strong>${escapeHtml(row.sector)}</strong> ${pct(row.average_return_pct)} avg; ${row.signal_counts?.fresh || 0} fresh`,
+      "No sector breakdown available."
+    ),
+    commandCenterPanel(
+      "Benchmark-Relative Movers",
+      relativeMovers,
+      (row) => `${tickerLabel(row.ticker, row.wealthsimple)} <span class="${tone(row.signal.five_day_relative_strength_pct)}">${pct(row.signal.five_day_relative_strength_pct)}</span>`,
+      "No benchmark-relative movers."
+    ),
+    commandCenterPanel(
+      "Strategy Momentum",
+      strategyMomentum,
+      (row) => `<strong>${escapeHtml(row.investor)}</strong> <span class="${toneOrEmpty(row.five_day_change_pct)}">${pctOrDash(row.five_day_change_pct)}</span> 5D`,
+      "No derived strategy momentum rows."
+    ),
+    commandCenterPanel(
+      "Universe Suggestions",
+      suggestionRows,
+      ({ stock, action }) => `${tickerLabel(stock.ticker, stock.wealthsimple)} -> ${escapeHtml(action)}`,
+      "No add/archive suggestions."
+    ),
+  ].join("");
+}
+
 function renderDiagnostics() {
   const metrics = state.overview.dashboard_metrics;
   if (!metrics) {
@@ -1227,6 +1293,7 @@ async function loadOverview() {
     await refreshUniverse();
     updateLoading("Universe registries loaded. Rendering dashboard tables...", 95);
     renderCards();
+    renderCommandCenter();
     renderDiagnostics();
     renderEod();
     renderSectors();

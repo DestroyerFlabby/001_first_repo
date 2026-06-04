@@ -617,6 +617,40 @@ function polyline(series, key) {
     </svg>`;
 }
 
+function comparisonPolyline(series, benchmarkSeries) {
+  if (!series.length || !benchmarkSeries?.length) {
+    return '<p class="chart-empty">Benchmark comparison is not available for this view.</p>';
+  }
+  const benchmarkByDate = new Map(benchmarkSeries.map((row) => [row.date, Number(row.value)]));
+  const points = series
+    .map((row) => ({ date: row.date, portfolio: Number(row.value), benchmark: benchmarkByDate.get(row.date) }))
+    .filter((row) => row.benchmark !== undefined);
+  if (points.length < 2) return '<p class="chart-empty">Benchmark comparison needs at least two aligned days.</p>';
+  const values = points.flatMap((row) => [row.portfolio, row.benchmark]);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const spread = max - min || 1;
+  const width = 680;
+  const height = 190;
+  const pathFor = (key) => points
+    .map((row, index) => {
+      const x = (index / Math.max(points.length - 1, 1)) * width;
+      const y = height - ((row[key] - min) / spread) * (height - 14) + 2;
+      return `${x.toFixed(2)},${y.toFixed(2)}`;
+    })
+    .join(" ");
+  return `
+    <svg viewBox="0 0 ${width} 235" preserveAspectRatio="none" role="img">
+      <line x1="0" y1="192" x2="${width}" y2="192" stroke="#213653" />
+      <polyline points="${pathFor("benchmark")}" fill="none" stroke="#6fb7ff" stroke-width="2" vector-effect="non-scaling-stroke" />
+      <polyline points="${pathFor("portfolio")}" fill="none" stroke="#57d3a2" stroke-width="3" vector-effect="non-scaling-stroke" />
+      <text x="4" y="210" fill="#91a4bd" font-size="12">${points[0].date}</text>
+      <text x="${width - 82}" y="210" fill="#91a4bd" font-size="12">${points.at(-1).date}</text>
+      <text x="4" y="230" fill="#57d3a2" font-size="12">Portfolio</text>
+      <text x="92" y="230" fill="#6fb7ff" font-size="12">Benchmark</text>
+    </svg>`;
+}
+
 function stat(label, value, className = "") {
   return `<div class="detail-stat"><p>${label}</p><p class="${className}">${value}</p></div>`;
 }
@@ -694,6 +728,7 @@ async function openTrader(investor) {
       ...(detail.simulated_trades || []).map((row) => ({ ...row, status: "executed" })),
       ...(detail.pending_next_close_orders || []),
     ];
+    const benchmark = detail.benchmark_comparison;
     const tradeRows = ledgerRows
       .map(
         (row) => `
@@ -721,8 +756,17 @@ async function openTrader(investor) {
         ${stat("5D", pctOrDash(detail.five_day_change_pct), toneOrEmpty(detail.five_day_change_pct))}
         ${stat("Monthly", pctOrDash(detail.monthly_change_pct), toneOrEmpty(detail.monthly_change_pct))}
         ${stat("Return", pct(detail.return_pct), tone(detail.return_pct))}
+        ${benchmark ? stat(`${benchmark.benchmark} return`, pct(benchmark.benchmark_return_pct), tone(benchmark.benchmark_return_pct)) : ""}
+        ${benchmark ? stat("Alpha", pct(benchmark.alpha_pct), tone(benchmark.alpha_pct)) : ""}
+        ${benchmark ? stat("Volatility", pct(benchmark.volatility_pct)) : ""}
+        ${benchmark ? stat("Max drawdown", pct(benchmark.max_drawdown_pct), tone(benchmark.max_drawdown_pct)) : ""}
+        ${benchmark ? stat("Best / worst day", `${pct(benchmark.best_day_pct)} / ${pct(benchmark.worst_day_pct)}`) : ""}
+        ${benchmark ? stat("Win vs benchmark", pct(benchmark.win_rate_vs_benchmark_pct)) : ""}
         ${detail.wealthsimple_fx_fees_estimate === undefined ? "" : stat("Estimated USD FX fees", money(detail.wealthsimple_fx_fees_estimate))}
       </div>
+      ${benchmark ? `
+        <h3>Portfolio vs ${benchmark.benchmark}</h3>
+        <div class="chart">${comparisonPolyline(detail.series, benchmark.benchmark_series)}</div>` : ""}
       <h3>Daily portfolio value</h3>
       <div class="chart">${polyline(detail.series, "value")}</div>
       <div class="drawer-section-heading">

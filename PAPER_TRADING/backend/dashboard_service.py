@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import json
+import math
 import os
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -315,6 +316,124 @@ def weighted_fixed_changes(parts: list[dict[str, Decimal]]) -> dict[str, float]:
         pct_change(current, five_day),
         pct_change(current, monthly),
     )
+
+
+def benchmark_comparison(
+    series: list[dict[str, object]],
+    benchmark_symbol: str = "SPY",
+) -> dict[str, object]:
+    if len(series) < 2:
+        return {
+            "benchmark": benchmark_symbol,
+            "benchmark_return_pct": 0,
+            "alpha_pct": 0,
+            "volatility_pct": 0,
+            "max_drawdown_pct": 0,
+            "best_day_pct": 0,
+            "worst_day_pct": 0,
+            "win_rate_vs_benchmark_pct": 0,
+            "benchmark_series": [],
+        }
+    try:
+        _, benchmark_bars = fetch_chart(benchmark_symbol)
+    except Exception as exc:
+        return {
+            "benchmark": benchmark_symbol,
+            "benchmark_return_pct": 0,
+            "alpha_pct": 0,
+            "volatility_pct": 0,
+            "max_drawdown_pct": 0,
+            "best_day_pct": 0,
+            "worst_day_pct": 0,
+            "win_rate_vs_benchmark_pct": 0,
+            "benchmark_series": [],
+            "warning": str(exc),
+        }
+
+    first_value = Decimal(str(series[0]["value"]))
+    last_value = Decimal(str(series[-1]["value"]))
+    first_day = date.fromisoformat(str(series[0]["date"]))
+    last_day = date.fromisoformat(str(series[-1]["date"]))
+    first_benchmark = on_or_before(benchmark_bars, first_day)
+    last_benchmark = on_or_before(benchmark_bars, last_day)
+    if not first_value or not first_benchmark or not last_benchmark:
+        return {
+            "benchmark": benchmark_symbol,
+            "benchmark_return_pct": 0,
+            "alpha_pct": 0,
+            "volatility_pct": 0,
+            "max_drawdown_pct": 0,
+            "best_day_pct": 0,
+            "worst_day_pct": 0,
+            "win_rate_vs_benchmark_pct": 0,
+            "benchmark_series": [],
+            "warning": "missing benchmark baseline",
+        }
+
+    benchmark_series: list[dict[str, object]] = []
+    portfolio_daily_returns: list[Decimal] = []
+    benchmark_daily_returns: list[Decimal] = []
+    peak = first_value
+    max_drawdown = Decimal("0")
+    previous_value = first_value
+    previous_benchmark = first_benchmark.close
+    wins = 0
+    comparisons = 0
+
+    for index, row in enumerate(series):
+        row_day = date.fromisoformat(str(row["date"]))
+        row_value = Decimal(str(row["value"]))
+        benchmark_bar = on_or_before(benchmark_bars, row_day)
+        if benchmark_bar:
+            normalized_value = first_value * benchmark_bar.close / first_benchmark.close
+            benchmark_series.append(
+                {
+                    "date": row_day.isoformat(),
+                    "value": as_float(normalized_value),
+                    "return_pct": as_float(pct_change(benchmark_bar.close, first_benchmark.close)),
+                }
+            )
+        if row_value > peak:
+            peak = row_value
+        drawdown = pct_change(row_value, peak)
+        if drawdown < max_drawdown:
+            max_drawdown = drawdown
+        if index == 0 or not benchmark_bar:
+            previous_value = row_value
+            if benchmark_bar:
+                previous_benchmark = benchmark_bar.close
+            continue
+        portfolio_return = pct_change(row_value, previous_value)
+        benchmark_return = pct_change(benchmark_bar.close, previous_benchmark)
+        portfolio_daily_returns.append(portfolio_return)
+        benchmark_daily_returns.append(benchmark_return)
+        if portfolio_return > benchmark_return:
+            wins += 1
+        comparisons += 1
+        previous_value = row_value
+        previous_benchmark = benchmark_bar.close
+
+    portfolio_return = pct_change(last_value, first_value)
+    benchmark_return = pct_change(last_benchmark.close, first_benchmark.close)
+    volatility = Decimal("0")
+    if len(portfolio_daily_returns) >= 2:
+        daily_values = [float(value) for value in portfolio_daily_returns]
+        mean = sum(daily_values) / len(daily_values)
+        variance = sum((value - mean) ** 2 for value in daily_values) / (len(daily_values) - 1)
+        volatility = Decimal(str(math.sqrt(variance) * math.sqrt(252)))
+    return {
+        "benchmark": benchmark_symbol,
+        "benchmark_return_pct": as_float(benchmark_return),
+        "alpha_pct": as_float(portfolio_return - benchmark_return),
+        "volatility_pct": as_float(volatility),
+        "max_drawdown_pct": as_float(max_drawdown),
+        "best_day_pct": as_float(max(portfolio_daily_returns, default=Decimal("0"))),
+        "worst_day_pct": as_float(min(portfolio_daily_returns, default=Decimal("0"))),
+        "win_rate_vs_benchmark_pct": as_float(
+            Decimal(wins) / Decimal(comparisons) * 100 if comparisons else Decimal("0")
+        ),
+        "benchmark_series": benchmark_series,
+    }
 
 
 def prior_value_from_return(current: Decimal, return_pct: object) -> Decimal:
@@ -1031,6 +1150,11 @@ def variable_strategy_detail(
     period_gain = ending_equity - period_basis
     open_positions.sort(key=lambda row: row["return_pct"], reverse=True)
     realized_positions = sorted(cycles, key=lambda row: row["return_pct"], reverse=True)
+    visible_series = [
+        row
+        for row in series
+        if date.fromisoformat(str(row["date"])) >= selected_start
+    ]
     detail = {
         "investor": strategy_name,
         "source": (
@@ -1056,11 +1180,8 @@ def variable_strategy_detail(
         "simulated_trades": simulated_trades,
         "pending_next_close_orders": pending_next_close_orders,
         "execution_convention": "Observe EOD signals and news after one close; execute at the next available EOD close.",
-        "series": [
-            row
-            for row in series
-            if date.fromisoformat(str(row["date"])) >= selected_start
-        ],
+        "series": visible_series,
+        "benchmark_comparison": benchmark_comparison(visible_series),
         "category_stats": category_rows,
         "category_stats_scope": f"{VARIABLE_STRATEGY_START.isoformat()} to {latest_market.day.isoformat()}",
         "trade_cycles": len(cycles) + len(open_positions),
@@ -1377,6 +1498,11 @@ def variable_buy_only_detail(
     period_basis = starting_equity + new_deployments
     period_gain = ending_equity - period_basis
     open_positions.sort(key=lambda row: row["return_pct"], reverse=True)
+    visible_series = [
+        row
+        for row in series
+        if date.fromisoformat(str(row["date"])) >= selected_start
+    ]
     detail = {
         "investor": strategy_name,
         "source": "derived-buy-only-signal-strategy",
@@ -1393,11 +1519,8 @@ def variable_buy_only_detail(
         "simulated_trades": simulated_trades,
         "pending_next_close_orders": pending_next_close_orders,
         "execution_convention": "Observe EOD signals after one close; execute at the next available EOD close.",
-        "series": [
-            row
-            for row in series
-            if date.fromisoformat(str(row["date"])) >= selected_start
-        ],
+        "series": visible_series,
+        "benchmark_comparison": benchmark_comparison(visible_series),
         "category_stats": category_rows,
         "category_stats_scope": f"{VARIABLE_STRATEGY_START.isoformat()} to {latest_market.day.isoformat()}",
         "trade_cycles": len(open_positions),
@@ -1930,6 +2053,11 @@ def paper_trader_detail(
     current = sum((Decimal(str(row["current_value"])) for row in positions), Decimal("0"))
     fixed_changes = fixed_changes_from_series(series)
     positions.sort(key=lambda row: row["return_pct"], reverse=True)
+    visible_series = [
+        row
+        for row in series
+        if date.fromisoformat(str(row["date"])) >= start
+    ]
     return {
         "investor": matched,
         "source": "paper-ledger",
@@ -1939,11 +2067,8 @@ def paper_trader_detail(
         "return_pct": as_float(pct_change(current, initial)),
         **fixed_changes,
         "positions": positions,
-        "series": [
-            row
-            for row in series
-            if date.fromisoformat(str(row["date"])) >= start
-        ],
+        "series": visible_series,
+        "benchmark_comparison": benchmark_comparison(visible_series),
         "wealthsimple_fx_fees_enabled": apply_wealthsimple_fx_fees,
     }
 

@@ -150,6 +150,8 @@ It does not submit trades or modify the ledger. It provides:
   universe, entry signal, entry-news rule, and exit rule; the first version
   uses the existing `$1,000` EOD position-size convention and does not save or
   alter portfolios
+- clickable custom basket/index rows with member-level window returns,
+  contribution, benchmark return, and alpha preview
 - optional daily dashboard report email after the first successful refresh of
   each day, with a focused activity section for
   `watchlist-variable-news-optimized-experimental`

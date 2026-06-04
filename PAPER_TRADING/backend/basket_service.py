@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import csv
+from datetime import date
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
+
+from backend.dashboard_service import as_float, fetch_chart, on_or_before, pct_change, yahoo_symbol
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -137,4 +140,118 @@ def custom_basket_response(include_archived: bool = False) -> dict[str, object]:
         "statuses": sorted(VALID_STATUSES),
         "weighting_methods": sorted(VALID_WEIGHTING),
         "rebalance_frequencies": sorted(VALID_REBALANCE),
+    }
+
+
+def member_weight(member: dict[str, object], fallback_weight: Decimal) -> Decimal:
+    value = str(member.get("target_weight") or "").strip()
+    if not value:
+        return fallback_weight
+    return Decimal(value)
+
+
+def basket_performance(
+    basket_id: str,
+    start: date,
+    end: date | None,
+) -> dict[str, object]:
+    basket_id = basket_id.casefold()
+    payload = custom_basket_response(include_archived=True)
+    basket = next((row for row in payload["baskets"] if row["basket_id"] == basket_id), None)
+    if not basket:
+        raise KeyError(basket_id)
+    members = list(basket["members"])
+    if not members:
+        return {
+            "basket": basket,
+            "from_date": start.isoformat(),
+            "to_date": end.isoformat() if end else None,
+            "return_pct": 0,
+            "benchmark_return_pct": None,
+            "alpha_pct": None,
+            "members": [],
+            "note": "Basket has no members.",
+        }
+
+    fallback_weight = Decimal("1") / Decimal(len(members))
+    raw_weights = [member_weight(member, fallback_weight) for member in members]
+    total_weight = sum(raw_weights, Decimal("0"))
+    weights = [weight / total_weight for weight in raw_weights] if total_weight else [fallback_weight for _ in members]
+
+    member_rows: list[dict[str, object]] = []
+    basket_return = Decimal("0")
+    effective_end: date | None = None
+    for member, weight in zip(members, weights):
+        ticker = str(member["ticker"])
+        asset_type = str(member["asset_type"])
+        symbol = yahoo_symbol(ticker, asset_type)
+        try:
+            _, bars = fetch_chart(symbol)
+            start_bar = on_or_before(bars, start)
+            end_bar = on_or_before(bars, end)
+        except Exception as exc:
+            member_rows.append(
+                {
+                    **member,
+                    "weight_pct": as_float(weight * 100),
+                    "return_pct": None,
+                    "contribution_pct": None,
+                    "warning": str(exc),
+                }
+            )
+            continue
+        if not start_bar or not end_bar:
+            member_rows.append(
+                {
+                    **member,
+                    "weight_pct": as_float(weight * 100),
+                    "return_pct": None,
+                    "contribution_pct": None,
+                    "warning": "missing price window",
+                }
+            )
+            continue
+        effective_end = max(effective_end or end_bar.day, end_bar.day)
+        member_return = pct_change(end_bar.close, start_bar.close)
+        contribution = member_return * weight
+        basket_return += contribution
+        member_rows.append(
+            {
+                **member,
+                "weight_pct": as_float(weight * 100),
+                "start_price": as_float(start_bar.close),
+                "end_price": as_float(end_bar.close),
+                "start_date": start_bar.day.isoformat(),
+                "end_date": end_bar.day.isoformat(),
+                "return_pct": as_float(member_return),
+                "contribution_pct": as_float(contribution),
+                "warning": None,
+            }
+        )
+
+    benchmark_return: Decimal | None = None
+    benchmark = str(basket.get("benchmark") or "").strip()
+    if benchmark:
+        try:
+            _, benchmark_bars = fetch_chart(benchmark)
+            benchmark_start = on_or_before(benchmark_bars, start)
+            benchmark_end = on_or_before(benchmark_bars, end)
+            if benchmark_start and benchmark_end:
+                benchmark_return = pct_change(benchmark_end.close, benchmark_start.close)
+        except Exception:
+            benchmark_return = None
+
+    return {
+        "basket": basket,
+        "from_date": start.isoformat(),
+        "to_date": effective_end.isoformat() if effective_end else (end.isoformat() if end else None),
+        "return_pct": as_float(basket_return),
+        "benchmark_return_pct": as_float(benchmark_return) if benchmark_return is not None else None,
+        "alpha_pct": as_float(basket_return - benchmark_return) if benchmark_return is not None else None,
+        "members": sorted(
+            member_rows,
+            key=lambda row: Decimal(str(row["contribution_pct"] if row["contribution_pct"] is not None else "-999999")),
+            reverse=True,
+        ),
+        "note": "Window-return preview. Rebalance frequency is stored as metadata; this preview does not yet simulate monthly or quarterly rebalances.",
     }

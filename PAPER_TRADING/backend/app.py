@@ -32,7 +32,7 @@ from backend.dashboard_cache import (  # noqa: E402
     preload_dashboard_cache,
 )
 from backend.benchmark_service import benchmark_registry_response  # noqa: E402
-from backend.basket_service import custom_basket_response  # noqa: E402
+from backend.basket_service import basket_performance, custom_basket_response  # noqa: E402
 from backend.email_service import send_daily_instructions  # noqa: E402
 from backend.news_service import news_summary  # noqa: E402
 from backend.strategy_registry_service import strategy_registry_response  # noqa: E402
@@ -202,6 +202,21 @@ def benchmarks(include_inactive: bool = Query(default=False)) -> dict[str, objec
 @app.get("/api/baskets")
 def baskets(include_archived: bool = Query(default=False)) -> dict[str, object]:
     return custom_basket_response(include_archived=include_archived)
+
+
+@app.get("/api/baskets/{basket_id}/performance")
+def basket_detail(
+    basket_id: str,
+    from_date: str | None = Query(default=None),
+    to_date: str | None = Query(default=None),
+) -> dict[str, object]:
+    start, end = window(from_date, to_date)
+    try:
+        return basket_performance(basket_id, start, end)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"unknown basket: {basket_id}") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.get("/api/strategies")

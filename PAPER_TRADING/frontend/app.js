@@ -639,7 +639,7 @@ function renderUniverse() {
   $("#basket-rows").innerHTML = state.baskets.baskets
     .map(
       (row) => `
-        <tr>
+        <tr class="clickable" data-basket="${escapeHtml(row.basket_id)}">
           <td><strong>${escapeHtml(row.basket_name)}</strong></td>
           <td>${escapeHtml(row.status)}</td>
           <td>${escapeHtml(row.weighting_method)}</td>
@@ -653,6 +653,9 @@ function renderUniverse() {
     .join("");
   document.querySelectorAll("[data-asset-action]").forEach((button) =>
     button.addEventListener("click", () => updateAssetStatus(button))
+  );
+  document.querySelectorAll("[data-basket]").forEach((row) =>
+    row.addEventListener("click", () => openBasket(row.dataset.basket))
   );
   enableSorting();
 }
@@ -989,6 +992,48 @@ function closeDrawer() {
   $("#drawer").setAttribute("aria-hidden", "true");
   $("#backdrop").classList.add("hidden");
   $("#export-drawer").classList.add("hidden");
+}
+
+async function openBasket(basketId) {
+  openDrawer(loadingPanel(`Loading ${basketId} basket performance...`));
+  try {
+    const detail = await fetchJson(`/api/baskets/${encodeURIComponent(basketId)}/performance?${query()}`);
+    const basket = detail.basket;
+    const rows = (detail.members || [])
+      .map((row) => `
+        <tr>
+          <td>${tickerLabel(row.ticker)}</td>
+          <td>${escapeHtml(row.asset_type)}</td>
+          <td>${pct(row.weight_pct)}</td>
+          <td>${row.start_price === undefined ? "-" : number(row.start_price)}</td>
+          <td>${row.end_price === undefined ? "-" : number(row.end_price)}</td>
+          <td class="${row.return_pct === null ? "" : tone(row.return_pct)}">${row.return_pct === null ? "-" : pct(row.return_pct)}</td>
+          <td class="${row.contribution_pct === null ? "" : tone(row.contribution_pct)}">${row.contribution_pct === null ? "-" : pct(row.contribution_pct)}</td>
+          <td>${escapeHtml(row.warning || "-")}</td>
+        </tr>`)
+      .join("");
+    openDrawer(`
+      <p class="eyebrow">Custom basket preview</p>
+      <h2>${escapeHtml(basket.basket_name)}</h2>
+      <div class="detail-grid">
+        ${stat("Basket return", pct(detail.return_pct), tone(detail.return_pct))}
+        ${detail.benchmark_return_pct === null ? "" : stat(`${basket.benchmark} return`, pct(detail.benchmark_return_pct), tone(detail.benchmark_return_pct))}
+        ${detail.alpha_pct === null ? "" : stat("Alpha", pct(detail.alpha_pct), tone(detail.alpha_pct))}
+        ${stat("Members", number(basket.member_count))}
+        ${stat("Weighting", escapeHtml(basket.weighting_method))}
+        ${stat("Rebalance", escapeHtml(basket.rebalance_frequency))}
+      </div>
+      <p class="muted">${escapeHtml(detail.note || "")}</p>
+      <div class="table-wrap">
+        <table id="basket-member-performance-table" data-sortable>
+          <thead><tr><th>Ticker</th><th>Type</th><th>Weight</th><th>Start</th><th>End</th><th>Return</th><th>Contribution</th><th>Warning</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`);
+    enableSorting();
+  } catch (error) {
+    openDrawer(`<p class="error">Basket performance failed: ${escapeHtml(error.message)}</p>`);
+  }
 }
 
 async function openTrader(investor) {

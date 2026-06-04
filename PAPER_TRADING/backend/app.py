@@ -35,6 +35,7 @@ from backend.benchmark_service import benchmark_registry_response  # noqa: E402
 from backend.basket_service import basket_performance, custom_basket_response  # noqa: E402
 from backend.email_service import send_daily_instructions  # noqa: E402
 from backend.news_service import news_summary  # noqa: E402
+from backend.research_service import research_index_response, research_note_response  # noqa: E402
 from backend.strategy_registry_service import strategy_registry_response  # noqa: E402
 from backend.universe_service import asset_universe_response, update_asset, upsert_asset  # noqa: E402
 
@@ -222,6 +223,19 @@ def basket_detail(
 @app.get("/api/strategies")
 def strategies(include_retired: bool = Query(default=False)) -> dict[str, object]:
     return strategy_registry_response(include_retired=include_retired)
+
+
+@app.get("/api/research")
+def research_index() -> dict[str, object]:
+    return research_index_response()
+
+
+@app.get("/api/research/{slug}")
+def research_note(slug: str) -> dict[str, object]:
+    try:
+        return research_note_response(slug)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"unknown research note: {slug}") from exc
 
 
 @app.get("/api/strategy-lab/run")

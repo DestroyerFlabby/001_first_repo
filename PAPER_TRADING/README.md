@@ -152,6 +152,8 @@ It does not submit trades or modify the ledger. It provides:
   alter portfolios
 - clickable custom basket/index rows with member-level window returns,
   contribution, benchmark return, and alpha preview
+- dashboard research library that indexes existing Markdown notes and opens
+  them in a safe read-only drilldown
 - optional daily dashboard report email after the first successful refresh of
   each day, with a focused activity section for
   `watchlist-variable-news-optimized-experimental`

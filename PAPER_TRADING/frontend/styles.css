@@ -397,6 +397,19 @@ tbody tr:hover { background: rgba(87, 211, 162, .07); }
 .news-list a { color: var(--blue); font-size: .88rem; text-decoration: none; }
 .news-list a:hover { color: var(--accent); text-decoration: underline; }
 .news-list span { color: var(--muted); display: block; font-size: .72rem; margin-top: 5px; }
+.research-note {
+  background: #081321;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--text);
+  font-size: .78rem;
+  line-height: 1.5;
+  margin-top: 16px;
+  max-height: 70vh;
+  overflow: auto;
+  padding: 14px;
+  white-space: pre-wrap;
+}
 
 @media (max-width: 1180px) {
   .controls-main { grid-template-columns: 1fr 1fr 1fr; }

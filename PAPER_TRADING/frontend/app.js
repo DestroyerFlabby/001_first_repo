@@ -1,4 +1,4 @@
-const state = { overview: null, eod: null, meta: null, universe: null, benchmarks: null, strategies: null, baskets: null };
+const state = { overview: null, eod: null, meta: null, universe: null, benchmarks: null, strategies: null, baskets: null, research: null };
 const $ = (selector) => document.querySelector(selector);
 let loadingTimer = null;
 let loadingStartedAt = null;
@@ -576,7 +576,7 @@ function renderUniverseControls() {
 }
 
 function renderUniverse() {
-  if (!state.universe || !state.benchmarks || !state.strategies || !state.baskets) return;
+  if (!state.universe || !state.benchmarks || !state.strategies || !state.baskets || !state.research) return;
   $("#universe-status").textContent = universeStatusText();
   $("#asset-universe-rows").innerHTML = state.universe.assets
     .map(
@@ -651,26 +651,42 @@ function renderUniverse() {
         </tr>`
     )
     .join("");
+  $("#research-rows").innerHTML = state.research.notes
+    .map(
+      (row) => `
+        <tr class="clickable" data-research="${escapeHtml(row.slug)}">
+          <td><strong>${escapeHtml(row.title)}</strong></td>
+          <td>${escapeHtml(row.tags.join(", "))}</td>
+          <td>${escapeHtml(row.filename)}</td>
+          <td>${number(row.size_bytes / 1024)} KB</td>
+        </tr>`
+    )
+    .join("");
   document.querySelectorAll("[data-asset-action]").forEach((button) =>
     button.addEventListener("click", () => updateAssetStatus(button))
   );
   document.querySelectorAll("[data-basket]").forEach((row) =>
     row.addEventListener("click", () => openBasket(row.dataset.basket))
   );
+  document.querySelectorAll("[data-research]").forEach((row) =>
+    row.addEventListener("click", () => openResearch(row.dataset.research))
+  );
   enableSorting();
 }
 
 async function refreshUniverse() {
-  const [universe, benchmarks, strategies, baskets] = await Promise.all([
+  const [universe, benchmarks, strategies, baskets, research] = await Promise.all([
     fetchJson("/api/universe/assets"),
     fetchJson("/api/benchmarks"),
     fetchJson("/api/strategies"),
     fetchJson("/api/baskets"),
+    fetchJson("/api/research"),
   ]);
   state.universe = universe;
   state.benchmarks = benchmarks;
   state.strategies = strategies;
   state.baskets = baskets;
+  state.research = research;
   renderUniverseControls();
   renderUniverse();
 }
@@ -1033,6 +1049,20 @@ async function openBasket(basketId) {
     enableSorting();
   } catch (error) {
     openDrawer(`<p class="error">Basket performance failed: ${escapeHtml(error.message)}</p>`);
+  }
+}
+
+async function openResearch(slug) {
+  openDrawer(loadingPanel(`Loading ${slug} research note...`));
+  try {
+    const note = await fetchJson(`/api/research/${encodeURIComponent(slug)}`);
+    openDrawer(`
+      <p class="eyebrow">Research note</p>
+      <h2>${escapeHtml(note.title)}</h2>
+      <p class="muted">${escapeHtml(note.filename)} | ${escapeHtml(note.tags.join(", "))}</p>
+      <pre class="research-note">${escapeHtml(note.content)}</pre>`);
+  } catch (error) {
+    openDrawer(`<p class="error">Research note failed: ${escapeHtml(error.message)}</p>`);
   }
 }
 

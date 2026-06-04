@@ -82,6 +82,62 @@
         <section class="card">
           <div class="section-heading">
             <div>
+              <p class="eyebrow">Strategy lab</p>
+              <h2>Unsaved Backtest Preview</h2>
+            </div>
+            <p class="muted">Runs a configurable EOD strategy preview without saving it or changing portfolios.</p>
+          </div>
+          <div class="strategy-lab-controls">
+            <label>
+              <span>Universe</span>
+              <select id="lab-universe">
+                <option value="tracked-stocks">Tracked stocks</option>
+                <option value="mass-change">Mass-change candidates</option>
+                <option value="hybrid">Tracked + mass-change</option>
+              </select>
+            </label>
+            <label>
+              <span>Entry signal</span>
+              <select id="lab-entry-signal">
+                <option value="any">Any non-none</option>
+                <option value="fresh">Fresh only</option>
+                <option value="strict">Strict only</option>
+                <option value="near">Near only</option>
+                <option value="fresh-or-strict">Fresh or strict</option>
+              </select>
+            </label>
+            <label>
+              <span>Entry news</span>
+              <select id="lab-entry-news">
+                <option value="ignore">Ignore news</option>
+                <option value="active">Require active news</option>
+                <option value="accelerating">Require accelerating news</option>
+              </select>
+            </label>
+            <label>
+              <span>Exit rule</span>
+              <select id="lab-exit-rule">
+                <option value="signal-disappears">Signal disappears</option>
+                <option value="technical-deterioration">Technical deterioration</option>
+                <option value="hold-while-news-active">Hold while news active</option>
+                <option value="confirm-news-cooling">Confirm news cooling</option>
+                <option value="early-exit-on-news-cooling">Early exit on cooling news</option>
+                <option value="optimized-grid-winner">Optimized grid winner</option>
+              </select>
+            </label>
+            <label>
+              <span>Position size</span>
+              <input value="$1,000 fixed" disabled />
+            </label>
+            <button id="run-strategy-lab" class="primary" type="button">Run preview</button>
+          </div>
+          <p id="strategy-lab-status" class="muted"></p>
+          <div id="strategy-lab-result" class="hidden"></div>
+        </section>
+
+        <section class="card">
+          <div class="section-heading">
+            <div>
               <p class="eyebrow">Universe manager</p>
               <h2>Asset Universe & Benchmarks</h2>
             </div>

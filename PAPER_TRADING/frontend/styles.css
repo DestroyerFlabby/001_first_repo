@@ -221,6 +221,17 @@ input, select {
   margin-bottom: 10px;
 }
 .asset-form input, .asset-form select { min-width: 0; }
+.strategy-lab-controls {
+  align-items: end;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(5, minmax(120px, 1fr)) auto;
+  margin-bottom: 10px;
+}
+.strategy-lab-controls input,
+.strategy-lab-controls select {
+  width: 100%;
+}
 .asset-action-group {
   display: flex;
   gap: 6px;

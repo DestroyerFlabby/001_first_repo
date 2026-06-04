@@ -705,6 +705,82 @@ def hybrid_news_optimized_assets() -> list[tuple[str, str]]:
     return sorted(set(tracked_stock_assets()) | set(mass_change_assets()))
 
 
+STRATEGY_LAB_ENTRY_RULES = {
+    "any": None,
+    "fresh": {"fresh"},
+    "strict": {"strict"},
+    "near": {"near"},
+    "fresh-or-strict": {"fresh", "strict"},
+}
+STRATEGY_LAB_ENTRY_NEWS_RULES = {"ignore", "active", "accelerating"}
+STRATEGY_LAB_EXIT_RULES = {
+    "signal-disappears": {"more_signals_exit": False, "news_rule": None},
+    "technical-deterioration": {"more_signals_exit": True, "news_rule": None},
+    "hold-while-news-active": {"more_signals_exit": False, "news_rule": "hold-while-news-active"},
+    "confirm-news-cooling": {"more_signals_exit": False, "news_rule": "confirm-news-cooling"},
+    "early-exit-on-news-cooling": {"more_signals_exit": False, "news_rule": "early-exit-on-news-cooling"},
+    "optimized-grid-winner": {"more_signals_exit": False, "news_rule": "optimized-grid-winner"},
+}
+STRATEGY_LAB_UNIVERSES = {"tracked-stocks", "mass-change", "hybrid"}
+
+
+def strategy_lab_detail(
+    start: date,
+    end: date | None,
+    entry_signal_rule: str = "any",
+    entry_news_rule: str = "ignore",
+    exit_rule: str = "signal-disappears",
+    universe: str = "tracked-stocks",
+    apply_wealthsimple_fx_fees: bool = False,
+) -> dict[str, object]:
+    entry_signal_rule = entry_signal_rule.casefold()
+    entry_news_rule = entry_news_rule.casefold()
+    exit_rule = exit_rule.casefold()
+    universe = universe.casefold()
+    if entry_signal_rule not in STRATEGY_LAB_ENTRY_RULES:
+        raise ValueError(f"unknown entry_signal_rule: {entry_signal_rule}")
+    if entry_news_rule not in STRATEGY_LAB_ENTRY_NEWS_RULES:
+        raise ValueError(f"unknown entry_news_rule: {entry_news_rule}")
+    if exit_rule not in STRATEGY_LAB_EXIT_RULES:
+        raise ValueError(f"unknown exit_rule: {exit_rule}")
+    if universe not in STRATEGY_LAB_UNIVERSES:
+        raise ValueError(f"unknown universe: {universe}")
+
+    universe_assets = None
+    if universe == "mass-change":
+        universe_assets = mass_change_assets()
+    elif universe == "hybrid":
+        universe_assets = hybrid_news_optimized_assets()
+
+    exit_config = STRATEGY_LAB_EXIT_RULES[exit_rule]
+    detail = variable_strategy_detail(
+        start,
+        end,
+        strategy_name="strategy-lab-preview",
+        more_signals_exit=bool(exit_config["more_signals_exit"]),
+        news_rule=exit_config["news_rule"],
+        entry_categories=STRATEGY_LAB_ENTRY_RULES[entry_signal_rule],
+        entry_news_rule=entry_news_rule,
+        apply_wealthsimple_fx_fees=apply_wealthsimple_fx_fees,
+        universe_assets=universe_assets,
+        news_note=(
+            "Strategy Lab preview. This is an unsaved backtest using the selected "
+            "entry, news, exit, and universe settings."
+        ),
+    )
+    return {
+        **detail,
+        "lab_config": {
+            "entry_signal_rule": entry_signal_rule,
+            "entry_news_rule": entry_news_rule,
+            "exit_rule": exit_rule,
+            "universe": universe,
+            "position_size": as_float(VARIABLE_ENTRY_USD),
+            "saved": False,
+        },
+    }
+
+
 SIGNAL_HORIZONS = (
     ("3d", "3 days", 3, None, Decimal("5")),
     ("5d", "5 days", 5, None, Decimal("10")),

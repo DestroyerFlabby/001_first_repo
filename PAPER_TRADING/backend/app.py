@@ -22,6 +22,7 @@ from backend.dashboard_service import (  # noqa: E402
     asset_detail,
     latest_market_date,
     parse_date,
+    strategy_lab_detail,
     trader_detail,
 )
 from backend.dashboard_cache import (  # noqa: E402
@@ -206,6 +207,31 @@ def baskets(include_archived: bool = Query(default=False)) -> dict[str, object]:
 @app.get("/api/strategies")
 def strategies(include_retired: bool = Query(default=False)) -> dict[str, object]:
     return strategy_registry_response(include_retired=include_retired)
+
+
+@app.get("/api/strategy-lab/run")
+def run_strategy_lab(
+    from_date: str | None = Query(default=None),
+    to_date: str | None = Query(default=None),
+    wealthsimple_fx_fees: bool = Query(default=False),
+    entry_signal_rule: str = Query(default="any"),
+    entry_news_rule: str = Query(default="ignore"),
+    exit_rule: str = Query(default="signal-disappears"),
+    universe: str = Query(default="tracked-stocks"),
+) -> dict[str, object]:
+    start, end = window(from_date, to_date)
+    try:
+        return strategy_lab_detail(
+            start,
+            end,
+            entry_signal_rule=entry_signal_rule,
+            entry_news_rule=entry_news_rule,
+            exit_rule=exit_rule,
+            universe=universe,
+            apply_wealthsimple_fx_fees=wealthsimple_fx_fees,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.post("/api/notifications/daily-instructions")

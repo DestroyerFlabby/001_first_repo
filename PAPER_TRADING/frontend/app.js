@@ -321,6 +321,86 @@ function renderRecommendations() {
   enableSorting();
 }
 
+function strategyLabParams() {
+  const params = new URLSearchParams(query());
+  params.set("universe", $("#lab-universe").value);
+  params.set("entry_signal_rule", $("#lab-entry-signal").value);
+  params.set("entry_news_rule", $("#lab-entry-news").value);
+  params.set("exit_rule", $("#lab-exit-rule").value);
+  return params;
+}
+
+function renderStrategyLabResult(detail) {
+  const benchmark = detail.benchmark_comparison;
+  const config = detail.lab_config || {};
+  const categoryRows = (detail.category_stats || [])
+    .map((row) => `
+      <tr>
+        <td>${escapeHtml(row.category)}</td>
+        <td>${row.entries}</td>
+        <td>${row.closed_positions}</td>
+        <td>${row.open_positions}</td>
+        <td>${money(row.deployed_capital)}</td>
+        <td class="${tone(row.gain_loss)}">${money(row.gain_loss)}</td>
+        <td class="${tone(row.return_pct)}">${pct(row.return_pct)}</td>
+      </tr>`)
+    .join("");
+  const pendingRows = (detail.pending_next_close_orders || [])
+    .map((row) => `
+      <tr>
+        <td>${escapeHtml(row.action)}</td>
+        <td>${tickerLabel(row.ticker)}</td>
+        <td>${escapeHtml(row.entry_signal)}</td>
+        <td>${escapeHtml(row.signal_observed_date)}</td>
+        <td>${row.usd_amount === null ? "-" : money(row.usd_amount)}</td>
+      </tr>`)
+    .join("");
+  $("#strategy-lab-result").classList.remove("hidden");
+  $("#strategy-lab-result").innerHTML = `
+    <div class="detail-grid">
+      ${stat("Return", pct(detail.return_pct), tone(detail.return_pct))}
+      ${stat("Gain / loss", money(detail.gain_loss), tone(detail.gain_loss))}
+      ${stat("Current value", money(detail.current_value))}
+      ${stat("Open positions", number(detail.position_count))}
+      ${benchmark ? stat("Alpha vs SPY", pct(benchmark.alpha_pct), tone(benchmark.alpha_pct)) : ""}
+      ${benchmark ? stat("Max drawdown", pct(benchmark.max_drawdown_pct), tone(benchmark.max_drawdown_pct)) : ""}
+      ${stat("Trade cycles", number(detail.trade_cycles))}
+      ${stat("Position size", money(config.position_size || 1000))}
+    </div>
+    <p class="muted">Config: universe=${escapeHtml(config.universe || "-")}; entry=${escapeHtml(config.entry_signal_rule || "-")}; entry news=${escapeHtml(config.entry_news_rule || "-")}; exit=${escapeHtml(config.exit_rule || "-")}.</p>
+    <div class="chart">${drawdownPolyline(detail.series || [])}</div>
+    <div class="table-wrap">
+      <table data-sortable>
+        <thead><tr><th>Signal</th><th>Entries</th><th>Closed</th><th>Open</th><th>Deployed</th><th>Gain / loss</th><th>Return</th></tr></thead>
+        <tbody>${categoryRows || '<tr><td colspan="7">No category results for this preview.</td></tr>'}</tbody>
+      </table>
+    </div>
+    <h3>Pending next-close actions</h3>
+    <div class="table-wrap">
+      <table data-sortable>
+        <thead><tr><th>Action</th><th>Ticker</th><th>Signal</th><th>Observed</th><th>Amount</th></tr></thead>
+        <tbody>${pendingRows || '<tr><td colspan="5">No pending next-close actions for this preview.</td></tr>'}</tbody>
+      </table>
+    </div>`;
+  enableSorting();
+}
+
+async function runStrategyLab() {
+  const status = $("#strategy-lab-status");
+  const button = $("#run-strategy-lab");
+  try {
+    status.textContent = "Running strategy preview...";
+    button.disabled = true;
+    const detail = await fetchJson(`/api/strategy-lab/run?${strategyLabParams().toString()}`);
+    renderStrategyLabResult(detail);
+    status.textContent = `Preview complete: ${detail.from_date} to ${detail.to_date}. Unsaved strategy only.`;
+  } catch (error) {
+    status.textContent = `Strategy preview failed: ${error.message}`;
+  } finally {
+    button.disabled = false;
+  }
+}
+
 function classificationPill(classification, label = classification) {
   if (!classification || classification === "none") return '<span class="pill">none</span>';
   return `<span class="pill ${classification}">${label}</span>`;
@@ -1208,6 +1288,7 @@ async function init() {
     });
   }
   $("#apply-window").addEventListener("click", loadOverview);
+  $("#run-strategy-lab").addEventListener("click", runStrategyLab);
   $("#asset-form").addEventListener("submit", submitAssetForm);
   $("#stock-search").addEventListener("input", renderStocks);
   $("#signal-filter").addEventListener("change", renderStocks);

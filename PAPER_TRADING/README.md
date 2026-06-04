@@ -143,6 +143,10 @@ It does not submit trades or modify the ledger. It provides:
 - cached daily news snapshots with 24-hour article count, seven-day article
   count, prior-week comparison, news velocity, source diversity, and catalyst
   links
+- unsaved Strategy Lab previews for selected date windows, with configurable
+  universe, entry signal, entry-news rule, and exit rule; the first version
+  uses the existing `$1,000` EOD position-size convention and does not save or
+  alter portfolios
 - optional daily dashboard report email after the first successful refresh of
   each day, with a focused activity section for
   `watchlist-variable-news-optimized-experimental`

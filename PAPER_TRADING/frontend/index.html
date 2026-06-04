@@ -118,6 +118,41 @@
         <section class="card">
           <div class="section-heading">
             <div>
+              <p class="eyebrow">Sector breakdown</p>
+              <h2>Company Groups</h2>
+            </div>
+            <div class="section-actions">
+              <p class="muted">Grouped by sector/watchlist classification.</p>
+              <button id="export-sectors" class="secondary">Download Excel</button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table data-sortable>
+              <thead>
+                <tr>
+                  <th>Rank</th>
+                  <th>Sector</th>
+                  <th>Companies</th>
+                  <th>Win rate</th>
+                  <th>Avg return</th>
+                  <th>Median</th>
+                  <th>Daily</th>
+                  <th>5D</th>
+                  <th>Monthly</th>
+                  <th>Signals</th>
+                  <th>Top</th>
+                  <th>Worst</th>
+                  <th>Tickers</th>
+                </tr>
+              </thead>
+              <tbody id="sector-rows"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="section-heading">
+            <div>
               <p class="eyebrow">Portfolio performance</p>
               <h2>Traders</h2>
             </div>
@@ -170,6 +205,7 @@
                 <tr>
                   <th>Ticker</th>
                   <th>Type</th>
+                  <th>Sector</th>
                   <th>Owners</th>
                   <th>Start</th>
                   <th>Latest</th>

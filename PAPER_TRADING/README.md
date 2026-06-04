@@ -99,6 +99,8 @@ It does not submit trades or modify the ledger. It provides:
 - beginning-of-month, mid-month, and end-of-month shortcuts for both From and
   To from January 2026 onward
 - daily EOD portfolio movers and top stock movers versus the prior market close
+- sector-level company group breakdowns with average return, median return,
+  win rate, daily/5D/monthly changes, signal mix, and top/worst contributors
 - click-to-sort columns in the dashboard tables and trader holding drilldowns
 - chronological simulated trade ledgers in variable-strategy drilldowns,
   including the prior-close observation date, next-close execution date, and
@@ -107,6 +109,8 @@ It does not submit trades or modify the ledger. It provides:
   applying a `1.5%` FX fee to USD security transactions
 - ticker hover details with an estimated Wealthsimple eligibility status and
   a curated CAD-hedged CDR reference when one is known
+- stock rows include sector labels sourced from sector watchlists, the
+  mass-change candidate file, or the maintained ticker-sector map
 - 3-day, 5-day, 1-week, 1-month, and 3-month signal indicators calculated as
   of the selected To date
 - weighted composite signal score using the 3-day, 5-day, 1-week, and 1-month
@@ -118,8 +122,9 @@ It does not submit trades or modify the ledger. It provides:
 - cached daily news snapshots with 24-hour article count, seven-day article
   count, prior-week comparison, news velocity, source diversity, and catalyst
   links
-- optional daily-instructions email after each successful refresh for the
-  `watchlist-variable-news-optimized-experimental` strategy
+- optional daily dashboard report email after the first successful refresh of
+  each day, with a focused activity section for
+  `watchlist-variable-news-optimized-experimental`
 - `watchlist-variable`: derived daily-rebalanced signal portfolio that starts
   on January 31, 2026, holds only non-`none` stock signals, executes changes
   at the next available close, deploys `$1,000` per entry, and intentionally
@@ -158,8 +163,12 @@ It does not submit trades or modify the ledger. It provides:
   winner that opens only `fresh` signals with accelerating seven-day Alpaca
   news and exits after 20 missing-signal sessions, weak one-month momentum,
   and a zero-article week
-- every `watchlist-variable-news-*` strategy also has `-fresh-only`,
-  `-strict-only`, and `-near-only` companions for category-level comparison
+- `watchlist-variable-news-optimized-hybrid`: expanded-universe version of the
+  optimized news strategy that combines the existing tracked-stock universe
+  with the sector/news-driver mass-change candidate list
+- the base `watchlist-variable-news-*` strategy families also have
+  `-fresh-only`, `-strict-only`, and `-near-only` companions for category-level
+  comparison
 - Nisarg's security-only Wealthsimple summary with deposits and withdrawals
   excluded
 
@@ -168,11 +177,12 @@ news condition is observed only after a market close, and any resulting buy or
 sell executes at the next available market close. Intraday dashboard refreshes
 do not change simulated trade timing.
 
-### Refresh Email
+### Daily Report Email
 
-The dashboard can email daily instructions after a successful refresh. This is
-disabled unless SMTP settings are present, so local refreshes are safe by
-default.
+The dashboard can email a daily report on the first successful refresh of
+each calendar day. Later refreshes on the same day skip the email and keep the
+dashboard usable. This is disabled unless SMTP settings are present, so local
+refreshes are safe by default.
 
 Add these values to `.env` locally or to the Render service environment:
 
@@ -180,6 +190,7 @@ Add these values to `.env` locally or to the Render service environment:
 DAILY_INSTRUCTIONS_EMAIL_ENABLED=true
 DAILY_INSTRUCTIONS_RECIPIENT=nisargdave@hotmail.com
 DAILY_INSTRUCTIONS_STRATEGY=watchlist-variable-news-optimized-experimental
+DAILY_INSTRUCTIONS_TIMEZONE=America/Toronto
 SMTP_HOST=smtp.example.com
 SMTP_PORT=587
 SMTP_USERNAME=your-email@example.com
@@ -188,9 +199,13 @@ EMAIL_FROM=your-email@example.com
 SMTP_USE_TLS=true
 ```
 
-The email includes pending next-close orders, current holdings, recently
-realized positions, and portfolio summary stats. If any SMTP setting is
-missing, the dashboard still loads and shows that the email was skipped.
+The email includes the full dashboard snapshot, portfolio rankings, tracked
+instrument returns and signals, daily EOD movers, plus a focused activity
+section for the configured strategy. The focused section includes trades
+executed in the last five days, pending next-close orders needed today, current
+holdings ranked by five-day move, recently realized positions, and portfolio
+summary stats. If any SMTP setting is missing, the dashboard still loads and
+shows that the email was skipped.
 
 ### Free Public Deployment
 

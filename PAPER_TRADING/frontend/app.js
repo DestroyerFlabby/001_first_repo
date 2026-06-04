@@ -67,12 +67,12 @@ function setNotificationStatus(message, status = "") {
 function notificationMessage(result) {
   if (!result) return "";
   if (result.status === "sent") {
-    return `Daily instructions email sent to ${result.recipient} for ${result.strategy}: ${result.pending_orders} pending order(s), ${result.holdings} holding(s).`;
+    return `Daily dashboard report emailed to ${result.recipient} for ${result.strategy}: ${result.recent_trades || 0} recent trade(s), ${result.pending_orders} pending order(s), ${result.holdings} holding(s).`;
   }
   if (result.status === "skipped") {
-    return `Daily instructions email skipped: ${result.reason}.`;
+    return `Daily dashboard report email skipped: ${result.reason}.`;
   }
-  return `Daily instructions email failed: ${result.detail || "unknown error"}.`;
+  return `Daily dashboard report email failed: ${result.detail || "unknown error"}.`;
 }
 
 async function sendDailyInstructionsEmail() {
@@ -240,9 +240,11 @@ function renderCards() {
   const fresh = stocks.filter((row) => row.signal?.fresh_priority).length;
   const leader = traders[0];
   const wsAvailability = state.overview.wealthsimple_availability;
+  const topSector = state.overview.sector_breakdowns?.[0];
   $("#summary-cards").innerHTML = [
     ["Portfolios", traders.length, state.meta?.public_dashboard ? "Public paper ledgers" : "Paper ledgers plus imported account"],
     ["Tracked instruments", stocks.length, "Stocks, ETFs, and crypto"],
+    ["Leading sector", topSector?.sector || "-", topSector ? pct(topSector.average_return_pct) : "-"],
     ["Fresh signal matches", fresh, `${strict} strict technical matches`],
     ["Leading portfolio", leader.investor, pct(leader.return_pct)],
     ["Wealthsimple estimate", wsAvailability["likely-supported"], `${wsAvailability["verify-in-app"]} verify in app; ${wsAvailability["likely-unsupported"]} likely unsupported`],
@@ -391,13 +393,38 @@ function renderEod() {
   enableSorting();
 }
 
+function renderSectors() {
+  $("#sector-rows").innerHTML = (state.overview.sector_breakdowns || [])
+    .map((row) => {
+      const signals = row.signal_counts || {};
+      return `
+        <tr>
+          <td>${row.rank}</td>
+          <td><strong>${row.sector}</strong></td>
+          <td>${row.instrument_count}</td>
+          <td>${pct(row.win_rate_pct)}</td>
+          <td class="${tone(row.average_return_pct)}">${pct(row.average_return_pct)}</td>
+          <td class="${tone(row.median_return_pct)}">${pct(row.median_return_pct)}</td>
+          <td class="${toneOrEmpty(row.daily_change_pct)}">${pctOrDash(row.daily_change_pct)}</td>
+          <td class="${toneOrEmpty(row.five_day_change_pct)}">${pctOrDash(row.five_day_change_pct)}</td>
+          <td class="${toneOrEmpty(row.monthly_change_pct)}">${pctOrDash(row.monthly_change_pct)}</td>
+          <td>F ${signals.fresh || 0} / S ${signals.strict || 0} / N ${signals.near || 0} / none ${signals.none || 0}</td>
+          <td>${row.top_ticker} ${pct(row.top_return_pct)}</td>
+          <td>${row.bottom_ticker} ${pct(row.bottom_return_pct)}</td>
+          <td>${(row.tickers || []).join(", ")}</td>
+        </tr>`;
+    })
+    .join("");
+  enableSorting();
+}
+
 function filteredStocks() {
   const search = $("#stock-search").value.trim().toLowerCase();
   const filter = $("#signal-filter").value;
   return [...state.overview.stocks]
     .filter((row) => !row.warning)
     .filter((row) => {
-      const haystack = `${row.ticker} ${row.owners.join(" ")}`.toLowerCase();
+      const haystack = `${row.ticker} ${row.sector || ""} ${row.owners.join(" ")}`.toLowerCase();
       return !search || haystack.includes(search);
     })
     .filter((row) => {
@@ -415,6 +442,7 @@ function renderStocks() {
       <tr class="clickable" data-stock="${row.ticker}">
         <td>${tickerLabel(row.ticker, row.wealthsimple)}<br><span class="muted">${row.yahoo_symbol}</span></td>
         <td>${row.security_type}</td>
+        <td>${row.sector || "Unclassified"}<br><span class="muted">${row.sector_source || ""}</span></td>
         <td>${row.owners.join(", ")}</td>
         <td>${number(row.start_price)} ${row.currency}</td>
         <td>${number(row.end_price)} ${row.currency}</td>
@@ -753,13 +781,14 @@ async function loadOverview() {
     renderCards();
     renderDiagnostics();
     renderEod();
+    renderSectors();
     renderTraders();
     renderStocks();
     $("#window-label").textContent =
       `${state.overview.from_date} to ${state.overview.latest_available_date || "latest available close"}`
       + (state.overview.wealthsimple_fx_fees_enabled ? " | Wealthsimple CAD-account USD FX fees enabled" : "");
     $("#content").classList.remove("hidden");
-    updateLoading("Dashboard ready. Sending daily instructions email if configured...", 98);
+    updateLoading("Dashboard ready. Sending daily dashboard report email if configured...", 98);
     const notification = await sendDailyInstructionsEmail();
     setNotificationStatus(notificationMessage(notification), notification.status);
     updateLoading("Dashboard ready.", 100);
@@ -808,6 +837,9 @@ async function init() {
   });
   $("#export-traders").addEventListener("click", () => {
     downloadExcelTables("traders", "Portfolio Performance - Traders", [$("#trader-rows")?.closest("table")]);
+  });
+  $("#export-sectors").addEventListener("click", () => {
+    downloadExcelTables("sector-breakdown", "Sector Breakdown", [$("#sector-rows")?.closest("table")]);
   });
   $("#export-stocks").addEventListener("click", () => {
     downloadExcelTables("tracked-stocks", "Tracked Stocks", [$("#stock-rows")?.closest("table")]);

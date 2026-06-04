@@ -70,6 +70,7 @@ PUBLIC_DASHBOARD = os.environ.get("PUBLIC_DASHBOARD", "").casefold() in {
 }
 VARIABLE_STRATEGY_NAME = "watchlist-variable"
 MASS_CHANGE_STRATEGY_NAME = "watchlist-variable-mass-change"
+HYBRID_NEWS_OPTIMIZED_STRATEGY_NAME = "watchlist-variable-news-optimized-hybrid"
 VARIABLE_BUY_ONLY_NAME = "watchlist-variable-buy-only"
 VARIABLE_BUY_ONLY_STRATEGIES = {
     "watchlist-variable-buy-only-fresh-only": "fresh",
@@ -99,6 +100,114 @@ VARIABLE_TECHNICAL_STRATEGIES = {
         "entry_categories": {"near"},
         "more_signals_exit": True,
     },
+}
+SECTOR_OWNER_LABELS = {
+    "advanced-packaging": "Semiconductors - Advanced Packaging",
+    "chip_design": "Semiconductors - Chip Design",
+    "cmp-cleaning-metrology": "Semiconductors - CMP, Cleaning & Metrology",
+    "deposition-etch": "Semiconductors - Deposition & Etch",
+    "leading-edge-logic-foundry": "Semiconductors - Leading-Edge Foundry",
+    "lithography": "Semiconductors - Lithography",
+    "memory": "Semiconductors - Memory",
+    "photomasks-eda": "Semiconductors - Photomasks & EDA",
+    "raw-materials-specialty-gases": "Semiconductors - Materials & Gases",
+    "silicon-wafers": "Semiconductors - Silicon Wafers",
+    "short-term-watchlist": "Tactical Momentum",
+    "long-term-watchlist": "Long-Term Watchlist",
+    "insta_watchlist": "Creator / Social Watchlist",
+    "daily-watchlist-2026-06-01": "Daily Fresh Setups",
+    MASS_CHANGE_STRATEGY_NAME: "News-Driven Mass Change",
+    HYBRID_NEWS_OPTIMIZED_STRATEGY_NAME: "Hybrid News-Optimized",
+}
+TICKER_SECTOR_OVERRIDES = {
+    "AAOI": "Optical & Networking",
+    "AAPL": "Consumer Technology",
+    "ADBE": "Software",
+    "AIQ": "ETF / Thematic AI",
+    "AMD": "Semiconductors - Chip Design",
+    "AMZN": "Cloud & Internet Platforms",
+    "ANET": "Networking Infrastructure",
+    "ARM": "Semiconductors - Chip Design",
+    "ASML": "Semiconductors - Lithography",
+    "ASTS": "Space & Satellite Communications",
+    "ATD": "Consumer Staples / Retail",
+    "AXON": "Public Safety Technology",
+    "BNS": "Financials",
+    "BTCUSD": "Crypto",
+    "BTDR": "Crypto Infrastructure",
+    "CCO": "Uranium & Nuclear Fuel",
+    "CLSK": "Crypto Infrastructure",
+    "COST": "Consumer Staples / Retail",
+    "CP": "Industrials / Rail",
+    "CU": "Utilities",
+    "CUPR": "Materials",
+    "DUOL": "Software",
+    "ENB": "Energy Infrastructure",
+    "ETHUSD": "Crypto",
+    "FLNC": "Energy Storage",
+    "FNV": "Precious Metals",
+    "FTS": "Utilities",
+    "GME": "Consumer Discretionary",
+    "GOOG": "Cloud & Internet Platforms",
+    "HIMS": "Digital Health",
+    "IBIT": "Crypto ETF",
+    "IREN": "AI Data Centers & Crypto Infrastructure",
+    "ISRG": "Medical Technology",
+    "KITS": "Consumer Health",
+    "L": "Financials",
+    "LITE": "Optical & Networking",
+    "LMT": "Aerospace & Defense",
+    "LULU": "Consumer Discretionary",
+    "MCD": "Consumer Staples / Restaurants",
+    "MCHI": "ETF / China Equity",
+    "MELI": "E-commerce & Fintech",
+    "META": "Cloud & Internet Platforms",
+    "MFC": "Financials",
+    "MSFT": "Software",
+    "MU": "Semiconductors - Memory",
+    "NBIS": "AI Cloud Infrastructure",
+    "NFLX": "Media & Streaming",
+    "NVO": "Healthcare",
+    "NVDA": "Semiconductors - Chip Design",
+    "OUST": "Sensors & Robotics",
+    "PANW": "Cybersecurity",
+    "PAVE": "ETF / Infrastructure",
+    "POET": "Optical & Networking",
+    "PZA": "Consumer Staples / Restaurants",
+    "QQC.F": "ETF / Nasdaq",
+    "RBRK": "Cybersecurity",
+    "RKLB": "Space & Satellite Communications",
+    "RY": "Financials",
+    "SHLS": "Solar Infrastructure",
+    "SLV": "Precious Metals ETF",
+    "SNOW": "Software",
+    "SOBO": "Energy Infrastructure",
+    "SOFI": "Fintech",
+    "SPY": "ETF / US Equity",
+    "SYM": "Automation & Robotics",
+    "T": "Telecom",
+    "TD": "Financials",
+    "TOI": "Software",
+    "TRP": "Energy Infrastructure",
+    "TSM": "Semiconductors - Leading-Edge Foundry",
+    "USDCUSD": "Crypto",
+    "V": "Payments",
+    "VCN": "ETF / Canada Equity",
+    "VDY": "ETF / Canada Dividend",
+    "VFV": "ETF / US Equity",
+    "VGRO": "ETF / Balanced",
+    "VOO": "ETF / US Equity",
+    "VRT": "AI Data Centers & Power",
+    "VST": "Power & Utilities",
+    "XEC": "ETF / Emerging Markets",
+    "XEF": "ETF / Developed Markets",
+    "XIU": "ETF / Canada Equity",
+    "ZEQT": "ETF / Global Equity",
+    "ZETA": "Software",
+    "ZGLD": "Precious Metals ETF",
+    "ZMMK": "Money Market",
+    "ZQQ": "ETF / Nasdaq",
+    "ZSP": "ETF / US Equity",
 }
 VARIABLE_STRATEGY_START = date(2026, 1, 31)
 VARIABLE_ENTRY_USD = Decimal("1000")
@@ -428,6 +537,36 @@ def mass_change_assets() -> list[tuple[str, str]]:
     )
 
 
+def mass_change_sector_by_asset() -> dict[tuple[str, str], str]:
+    return {
+        (row["ticker"].strip().upper(), row["security_type"].strip().lower()): row["sector"].strip()
+        for row in read_mass_change_watchlist()
+        if row.get("ticker") and row.get("security_type") and row.get("sector")
+    }
+
+
+def sector_for_asset(
+    ticker: str,
+    security_type: str,
+    owners: list[str],
+) -> tuple[str, str]:
+    for owner in owners:
+        label = SECTOR_OWNER_LABELS.get(owner)
+        if label:
+            return label, f"owner:{owner}"
+    mass_sector = mass_change_sector_by_asset().get((ticker, security_type))
+    if mass_sector:
+        return mass_sector, "mass-change-watchlist"
+    override = TICKER_SECTOR_OVERRIDES.get(ticker)
+    if override:
+        return override, "ticker-map"
+    if security_type == "crypto":
+        return "Crypto", "security-type"
+    if security_type == "etf":
+        return "ETF / Other", "security-type"
+    return "Unclassified", "fallback"
+
+
 def tracked_stock_assets() -> list[tuple[str, str]]:
     return sorted(
         {
@@ -441,6 +580,10 @@ def tracked_stock_assets() -> list[tuple[str, str]]:
             if security_type == "stock"
         }
     )
+
+
+def hybrid_news_optimized_assets() -> list[tuple[str, str]]:
+    return sorted(set(tracked_stock_assets()) | set(mass_change_assets()))
 
 
 SIGNAL_HORIZONS = (
@@ -1036,6 +1179,28 @@ def variable_news_strategy_summary(
     } | {"warnings": []}
 
 
+def hybrid_news_optimized_strategy_summary(
+    start: date,
+    end: date | None,
+    apply_wealthsimple_fx_fees: bool = False,
+) -> dict[str, object]:
+    config = NEWS_STRATEGIES["watchlist-variable-news-optimized-experimental"]
+    detail = variable_strategy_detail(
+        start,
+        end,
+        strategy_name=HYBRID_NEWS_OPTIMIZED_STRATEGY_NAME,
+        news_rule=str(config["rule"]),
+        entry_categories=config.get("entry_categories"),
+        entry_news_rule=str(config.get("entry_news_rule", "ignore")),
+        universe_assets=hybrid_news_optimized_assets(),
+        apply_wealthsimple_fx_fees=apply_wealthsimple_fx_fees,
+    )
+    return {
+        key: detail[key]
+        for key in SUMMARY_KEYS
+    } | {"warnings": []}
+
+
 def variable_buy_only_detail(
     start: date,
     end: date | None,
@@ -1282,6 +1447,7 @@ def asset_summary(
 ) -> dict[str, object]:
     ticker, security_type = asset
     symbol = yahoo_symbol(ticker, security_type)
+    sector, sector_source = sector_for_asset(ticker, security_type, owners)
     try:
         currency, bars = fetch_chart(symbol)
         baseline = on_or_after(bars, start)
@@ -1294,6 +1460,8 @@ def asset_summary(
             "security_type": security_type,
             "yahoo_symbol": symbol,
             "owners": owners,
+            "sector": sector,
+            "sector_source": sector_source,
             "currency": currency,
             "start_date": baseline.day.isoformat(),
             "end_date": latest.day.isoformat(),
@@ -1311,6 +1479,8 @@ def asset_summary(
             "security_type": security_type,
             "yahoo_symbol": symbol,
             "owners": owners,
+            "sector": sector,
+            "sector_source": sector_source,
             "warning": str(exc),
             "signal": None,
             "wealthsimple": wealthsimple_metadata(ticker, security_type, symbol),
@@ -1443,6 +1613,71 @@ def business_dashboard_metrics(
     }
 
 
+def signal_classification(row: dict[str, object]) -> str:
+    signal = row.get("signal")
+    if not isinstance(signal, dict) or signal.get("classification") == "none":
+        return "none"
+    if signal.get("fresh_priority"):
+        return "fresh"
+    classification = str(signal.get("classification") or "none")
+    return classification if classification in {"strict", "near"} else "none"
+
+
+def average_decimal(values: list[Decimal]) -> Decimal:
+    return sum(values, Decimal("0")) / Decimal(len(values)) if values else Decimal("0")
+
+
+def sector_breakdowns(stocks: list[dict[str, object]]) -> list[dict[str, object]]:
+    grouped: dict[str, list[dict[str, object]]] = defaultdict(list)
+    for row in stocks:
+        if row.get("warning"):
+            continue
+        grouped[str(row.get("sector") or "Unclassified")].append(row)
+
+    breakdowns: list[dict[str, object]] = []
+    for sector, rows in grouped.items():
+        returns = [Decimal(str(row["return_pct"])) for row in rows]
+        daily = [Decimal(str(row["daily_change_pct"])) for row in rows]
+        five_day = [Decimal(str(row["five_day_change_pct"])) for row in rows]
+        monthly = [Decimal(str(row["monthly_change_pct"])) for row in rows]
+        signal_counts = {"fresh": 0, "strict": 0, "near": 0, "none": 0}
+        for row in rows:
+            signal_counts[signal_classification(row)] += 1
+        top = max(rows, key=lambda row: row["return_pct"])
+        bottom = min(rows, key=lambda row: row["return_pct"])
+        breakdowns.append(
+            {
+                "sector": sector,
+                "instrument_count": len(rows),
+                "win_rate_pct": as_float(
+                    Decimal(sum(value > 0 for value in returns))
+                    / Decimal(len(returns))
+                    * 100
+                )
+                if returns
+                else 0,
+                "average_return_pct": as_float(average_decimal(returns)),
+                "median_return_pct": as_float(median_decimal(returns)),
+                "daily_change_pct": as_float(average_decimal(daily)),
+                "five_day_change_pct": as_float(average_decimal(five_day)),
+                "monthly_change_pct": as_float(average_decimal(monthly)),
+                "signal_counts": signal_counts,
+                "top_ticker": top["ticker"],
+                "top_return_pct": top["return_pct"],
+                "bottom_ticker": bottom["ticker"],
+                "bottom_return_pct": bottom["return_pct"],
+                "tickers": sorted(str(row["ticker"]) for row in rows),
+            }
+        )
+    breakdowns.sort(
+        key=lambda row: (row["average_return_pct"], row["instrument_count"]),
+        reverse=True,
+    )
+    for rank, row in enumerate(breakdowns, start=1):
+        row["rank"] = rank
+    return breakdowns
+
+
 def build_overview(
     start: date,
     end: date | None,
@@ -1523,6 +1758,7 @@ def build_overview(
         traders.append(variable_technical_strategy_summary(strategy_name, start, end, apply_wealthsimple_fx_fees))
     for strategy_name in NEWS_STRATEGIES:
         traders.append(variable_news_strategy_summary(strategy_name, start, end, apply_wealthsimple_fx_fees))
+    traders.append(hybrid_news_optimized_strategy_summary(start, end, apply_wealthsimple_fx_fees))
     traders.sort(key=lambda row: row["return_pct"], reverse=True)
     for rank, trader in enumerate(traders, start=1):
         trader["rank"] = rank
@@ -1535,6 +1771,7 @@ def build_overview(
         ),
         "traders": traders,
         "stocks": stocks,
+        "sector_breakdowns": sector_breakdowns(stocks),
         "dashboard_metrics": business_dashboard_metrics(traders, stocks),
         "wealthsimple_fx_fees_enabled": apply_wealthsimple_fx_fees,
         "wealthsimple_fx_fee_rate": as_float(WEALTHSIMPLE_FX_FEE * 100),
@@ -1793,6 +2030,18 @@ def trader_detail(
             strategy_name=MASS_CHANGE_STRATEGY_NAME,
             more_signals_exit=True,
             universe_assets=mass_change_assets(),
+            apply_wealthsimple_fx_fees=apply_wealthsimple_fx_fees,
+        )
+    if investor.casefold() == HYBRID_NEWS_OPTIMIZED_STRATEGY_NAME:
+        config = NEWS_STRATEGIES["watchlist-variable-news-optimized-experimental"]
+        return variable_strategy_detail(
+            start,
+            end,
+            strategy_name=HYBRID_NEWS_OPTIMIZED_STRATEGY_NAME,
+            news_rule=str(config["rule"]),
+            entry_categories=config.get("entry_categories"),
+            entry_news_rule=str(config.get("entry_news_rule", "ignore")),
+            universe_assets=hybrid_news_optimized_assets(),
             apply_wealthsimple_fx_fees=apply_wealthsimple_fx_fees,
         )
     if investor.casefold() == VARIABLE_STRATEGY_NAME:

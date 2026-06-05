@@ -1296,6 +1296,9 @@ function portfolioDescription(row = {}) {
   if (source.includes("saved-strategy-registry")) {
     return "Saved Strategy Lab configuration replayed as a generated portfolio for comparison against live watchlists.";
   }
+  if (source.includes("derived-master-signal")) {
+    return "Master ranked portfolio: scores the hybrid stock universe with signals, relative strength, volume, news, and overextension checks, then holds only the top capped positions.";
+  }
   if (source.includes("derived-news-assisted")) {
     if (investor.includes("optimized")) {
       return "News-assisted variable watchlist using EOD signal timing and the optimized news/signal rules selected from backtests.";

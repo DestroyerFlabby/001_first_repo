@@ -1277,7 +1277,7 @@ function renderSectors() {
     .map((row) => {
       const signals = row.signal_counts || {};
       return `
-        <tr>
+        <tr class="clickable" data-sector="${escapeHtml(row.sector)}">
           <td>${row.rank}</td>
           <td><strong>${row.sector}</strong></td>
           <td>${row.instrument_count}</td>
@@ -1294,6 +1294,9 @@ function renderSectors() {
         </tr>`;
     })
     .join("");
+  document.querySelectorAll("[data-sector]").forEach((row) =>
+    row.addEventListener("click", () => openSector(row.dataset.sector))
+  );
   enableSorting();
 }
 
@@ -1583,6 +1586,50 @@ async function openBasket(basketId) {
   } catch (error) {
     openDrawer(`<p class="error">Basket performance failed: ${escapeHtml(error.message)}</p>`);
   }
+}
+
+function openSector(sectorName) {
+  const sector = (state.overview?.sector_breakdowns || []).find((row) => row.sector === sectorName);
+  if (!sector) return;
+  const stocks = (state.overview?.stocks || [])
+    .filter((row) => !row.warning && (row.sector || "Unclassified") === sectorName)
+    .sort((left, right) => Number(right.return_pct || 0) - Number(left.return_pct || 0));
+  const rows = stocks
+    .map((row) => `
+      <tr class="clickable" data-sector-stock="${escapeHtml(row.ticker)}">
+        <td>${tickerLabel(row.ticker, row.wealthsimple)}</td>
+        <td>${signalPill(row.signal)}</td>
+        <td class="${tone(row.return_pct)}">${pct(row.return_pct)}</td>
+        <td class="${toneOrEmpty(row.daily_change_pct)}">${pctOrDash(row.daily_change_pct)}</td>
+        <td class="${toneOrEmpty(row.five_day_change_pct)}">${pctOrDash(row.five_day_change_pct)}</td>
+        <td class="${toneOrEmpty(row.monthly_change_pct)}">${pctOrDash(row.monthly_change_pct)}</td>
+        <td>${escapeHtml((row.owners || []).join(", "))}</td>
+      </tr>`)
+    .join("");
+  openDrawer(`
+    <p class="eyebrow">Sector drilldown</p>
+    <h2>${escapeHtml(sectorName)}</h2>
+    ${relatedResearchHtml([sectorName, ...(sector.tickers || [])], ["sector", "news", "signals"])}
+    <div class="detail-grid">
+      ${stat("Instruments", number(sector.instrument_count))}
+      ${stat("Win rate", pct(sector.win_rate_pct), tone(sector.win_rate_pct - 50))}
+      ${stat("Average return", pct(sector.average_return_pct), tone(sector.average_return_pct))}
+      ${stat("Median return", pct(sector.median_return_pct), tone(sector.median_return_pct))}
+      ${stat("Daily", pctOrDash(sector.daily_change_pct), toneOrEmpty(sector.daily_change_pct))}
+      ${stat("5D", pctOrDash(sector.five_day_change_pct), toneOrEmpty(sector.five_day_change_pct))}
+      ${stat("Monthly", pctOrDash(sector.monthly_change_pct), toneOrEmpty(sector.monthly_change_pct))}
+      ${stat("Signals", `F ${sector.signal_counts?.fresh || 0} / S ${sector.signal_counts?.strict || 0} / N ${sector.signal_counts?.near || 0}`)}
+    </div>
+    <div class="table-wrap">
+      <table id="sector-member-table" data-sortable>
+        <thead><tr><th>Ticker</th><th>Signal</th><th>Return</th><th>Daily</th><th>5D</th><th>Monthly</th><th>Owners</th></tr></thead>
+        <tbody>${rows || '<tr><td colspan="7">No sector members for this window.</td></tr>'}</tbody>
+      </table>
+    </div>`);
+  enableSorting($("#drawer-content"));
+  document.querySelectorAll("[data-sector-stock]").forEach((row) =>
+    row.addEventListener("click", () => openStock(row.dataset.sectorStock))
+  );
 }
 
 async function openResearch(slug) {

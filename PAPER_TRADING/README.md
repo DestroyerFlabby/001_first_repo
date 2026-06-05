@@ -132,6 +132,8 @@ It does not submit trades or modify the ledger. It provides:
   `watchlist-variable-news-optimized-experimental`
 - sector-level company group breakdowns with average return, median return,
   win rate, daily/5D/monthly changes, signal mix, and top/worst contributors
+- sector rows open drilldowns with member tickers, signal mix, returns, and
+  related research links
 - click-to-sort columns in the dashboard tables and trader holding drilldowns
 - chronological simulated trade ledgers in variable-strategy drilldowns,
   including the prior-close observation date, next-close execution date, and
@@ -180,8 +182,8 @@ It does not submit trades or modify the ledger. It provides:
   basket, and strategy comparisons
 - dashboard research library that indexes existing Markdown notes and opens
   them in a safe read-only drilldown
-- stock, basket, strategy, and trader drilldowns surface related research
-  notes based on tickers, sectors, strategy terms, and research tags
+- stock, sector, basket, strategy, and trader drilldowns surface related
+  research notes based on tickers, sectors, strategy terms, and research tags
 - recommendation, asset-universe, and stock-drilldown actions support
   excluding/ignoring assets without deleting historical records
 - recommendation actions persist the recommendation reason into asset notes so

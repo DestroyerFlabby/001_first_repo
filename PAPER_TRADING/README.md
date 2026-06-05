@@ -148,8 +148,8 @@ It does not submit trades or modify the ledger. It provides:
   links
 - unsaved Strategy Lab previews for selected date windows, with configurable
   universe, entry signal, entry-news rule, and exit rule; the first version
-  uses the existing `$1,000` EOD position-size convention and does not save or
-  alter portfolios
+  uses the existing `$1,000` EOD position-size convention and can save
+  registry-only research entries without altering portfolios
 - clickable custom basket/index rows with member-level window returns,
   contribution, benchmark return, and alpha preview
 - dashboard research library that indexes existing Markdown notes and opens

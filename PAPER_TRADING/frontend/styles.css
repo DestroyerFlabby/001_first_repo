@@ -250,7 +250,7 @@ input, select {
   align-items: end;
   display: grid;
   gap: 10px;
-  grid-template-columns: repeat(5, minmax(120px, 1fr)) auto;
+  grid-template-columns: minmax(180px, 1.4fr) repeat(5, minmax(120px, 1fr)) auto auto;
   margin-bottom: 10px;
 }
 .strategy-lab-controls input,
@@ -415,6 +415,7 @@ tbody tr:hover { background: rgba(87, 211, 162, .07); }
   .controls-main { grid-template-columns: 1fr 1fr 1fr; }
   .control-copy, #apply-window { grid-column: span 3; }
   .command-center-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .strategy-lab-controls { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
 @media (max-width: 820px) {
@@ -431,5 +432,6 @@ tbody tr:hover { background: rgba(87, 211, 162, .07); }
   .stock-tools { width: 100%; }
   .stock-tools input { min-width: 0; width: 100%; }
   .asset-form { grid-template-columns: 1fr; }
+  .strategy-lab-controls { grid-template-columns: 1fr; }
   .drawer-section-heading { align-items: start; flex-direction: column; }
 }

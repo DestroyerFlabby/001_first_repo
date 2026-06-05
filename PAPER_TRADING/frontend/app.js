@@ -330,6 +330,63 @@ function strategyLabParams() {
   return params;
 }
 
+const labLabels = {
+  universe: {
+    "tracked-stocks": "tracked stocks",
+    "mass-change": "mass-change candidates",
+    hybrid: "tracked stocks plus mass-change candidates",
+  },
+  entry: {
+    any: "any non-none signal",
+    fresh: "fresh signal only",
+    strict: "strict signal only",
+    near: "near signal only",
+    "fresh-or-strict": "fresh or strict signal",
+  },
+  entryNews: {
+    ignore: "ignore",
+    active: "active",
+    accelerating: "accelerating",
+  },
+  exit: {
+    "signal-disappears": "sell when signal disappears",
+    "technical-deterioration": "sell after technical deterioration",
+    "hold-while-news-active": "hold while news remains active",
+    "confirm-news-cooling": "require news cooling before selling",
+    "early-exit-on-news-cooling": "sell earlier when news cools",
+    "optimized-grid-winner": "optimized grid winner exit",
+  },
+};
+
+function defaultLabStrategyName() {
+  return [
+    "lab",
+    $("#lab-universe").value,
+    $("#lab-entry-signal").value,
+    $("#lab-entry-news").value,
+    $("#lab-exit-rule").value,
+  ].join("-");
+}
+
+function strategyLabRegistryPayload() {
+  const universe = $("#lab-universe").value;
+  const entry = $("#lab-entry-signal").value;
+  const entryNews = $("#lab-entry-news").value;
+  const exit = $("#lab-exit-rule").value;
+  return {
+    strategy_name: $("#lab-strategy-name").value.trim() || defaultLabStrategyName(),
+    status: "research",
+    forward_test_start_date: $("#from-date").value || state.meta?.default_from_date || "",
+    entry_rule: labLabels.entry[entry] || entry,
+    exit_rule: labLabels.exit[exit] || exit,
+    news_rule: labLabels.entryNews[entryNews] || entryNews,
+    universe: labLabels.universe[universe] || universe,
+    benchmark: "SPY",
+    position_size: "1000",
+    notes: "Saved from the dashboard Strategy Lab. Registry-only entry; it does not create trades or generated portfolios yet.",
+  };
+}
+
 function renderStrategyLabResult(detail) {
   const benchmark = detail.benchmark_comparison;
   const config = detail.lab_config || {};
@@ -383,6 +440,22 @@ function renderStrategyLabResult(detail) {
       </table>
     </div>`;
   enableSorting();
+}
+
+async function saveStrategyLab() {
+  const status = $("#strategy-lab-status");
+  const button = $("#save-strategy-lab");
+  try {
+    status.textContent = "Saving Strategy Lab configuration...";
+    button.disabled = true;
+    const result = await fetchJson("/api/strategies", jsonRequest("POST", strategyLabRegistryPayload()));
+    await refreshUniverse();
+    status.textContent = `Saved ${result.strategy.strategy_name} to the strategy registry.`;
+  } catch (error) {
+    status.textContent = `Strategy save failed: ${error.message}`;
+  } finally {
+    button.disabled = false;
+  }
 }
 
 async function runStrategyLab() {
@@ -1431,6 +1504,7 @@ async function init() {
   }
   $("#apply-window").addEventListener("click", loadOverview);
   $("#run-strategy-lab").addEventListener("click", runStrategyLab);
+  $("#save-strategy-lab").addEventListener("click", saveStrategyLab);
   $("#asset-form").addEventListener("submit", submitAssetForm);
   $("#stock-search").addEventListener("input", renderStocks);
   $("#signal-filter").addEventListener("change", renderStocks);

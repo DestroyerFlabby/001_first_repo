@@ -119,9 +119,13 @@
               <p class="eyebrow">Strategy lab</p>
               <h2>Unsaved Backtest Preview</h2>
             </div>
-            <p class="muted">Runs a configurable EOD strategy preview without saving it or changing portfolios.</p>
+            <p class="muted">Runs a configurable EOD preview and can save registry-only research entries without changing portfolios.</p>
           </div>
           <div class="strategy-lab-controls">
+            <label>
+              <span>Strategy name</span>
+              <input id="lab-strategy-name" placeholder="My lab strategy" />
+            </label>
             <label>
               <span>Universe</span>
               <select id="lab-universe">
@@ -164,6 +168,7 @@
               <input value="$1,000 fixed" disabled />
             </label>
             <button id="run-strategy-lab" class="primary" type="button">Run preview</button>
+            <button id="save-strategy-lab" class="secondary" type="button">Save to registry</button>
           </div>
           <p id="strategy-lab-status" class="muted"></p>
           <div id="strategy-lab-result" class="hidden"></div>

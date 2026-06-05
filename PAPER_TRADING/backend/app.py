@@ -36,7 +36,7 @@ from backend.basket_service import basket_performance, custom_basket_response  #
 from backend.email_service import send_daily_instructions  # noqa: E402
 from backend.news_service import news_summary  # noqa: E402
 from backend.research_service import research_index_response, research_note_response  # noqa: E402
-from backend.strategy_registry_service import strategy_registry_response  # noqa: E402
+from backend.strategy_registry_service import strategy_registry_response, upsert_strategy  # noqa: E402
 from backend.universe_service import asset_universe_response, update_asset, upsert_asset  # noqa: E402
 
 
@@ -223,6 +223,15 @@ def basket_detail(
 @app.get("/api/strategies")
 def strategies(include_retired: bool = Query(default=False)) -> dict[str, object]:
     return strategy_registry_response(include_retired=include_retired)
+
+
+@app.post("/api/strategies")
+def create_or_update_strategy(payload: dict[str, object] = Body(...)) -> dict[str, object]:
+    ensure_private_write()
+    try:
+        return {"strategy": upsert_strategy(payload)}
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.get("/api/research")

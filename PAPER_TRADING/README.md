@@ -118,6 +118,8 @@ It does not submit trades or modify the ledger. It provides:
   30-day return charts
 - top contributor and top detractor sections in portfolio and strategy-preview
   drilldowns
+- capital-deployed, active-position, and buy/sell turnover charts for
+  strategy-style portfolios with simulated trade histories
 - stock, ETF, and crypto price-history drilldowns
 - explicit From and To date controls for every selected-window calculation
 - January 1, May 20, and May 29 key-date shortcuts for both From and To

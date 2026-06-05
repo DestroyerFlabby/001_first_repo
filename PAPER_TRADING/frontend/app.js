@@ -435,6 +435,7 @@ function strategyPreviewHtml(detail) {
     <h3>Drawdown</h3>
     <div class="chart">${drawdownPolyline(detail.series || [])}</div>
     ${contributorsHtml(detail)}
+    ${capitalDeploymentHtml(detail)}
     <div class="table-wrap">
       <table data-sortable>
         <thead><tr><th>Signal</th><th>Entries</th><th>Closed</th><th>Open</th><th>Deployed</th><th>Gain / loss</th><th>Return</th></tr></thead>
@@ -490,6 +491,81 @@ function contributorsHtml(detail) {
         </div>
       </div>
     </div>`;
+}
+
+function capitalDeploymentHtml(detail) {
+  const hasDeployment = (detail.series || []).some((row) => row.deployed_capital !== undefined || row.active_positions !== undefined);
+  const trades = detail.simulated_trades || [];
+  if (!hasDeployment && !trades.length) return "";
+  return `
+    <h3>Capital deployment</h3>
+    <div class="chart">${deploymentPolyline(detail.series || [])}</div>
+    <h3>Strategy turnover</h3>
+    <div class="chart">${tradeActivityPolyline(trades)}</div>`;
+}
+
+function deploymentPolyline(series) {
+  const points = series.filter((row) => row.deployed_capital !== undefined || row.active_positions !== undefined);
+  if (points.length < 2) return '<p class="chart-empty">Capital deployment history is not available for this view.</p>';
+  const deployedValues = points.map((row) => Number(row.deployed_capital || 0));
+  const positionValues = points.map((row) => Number(row.active_positions || 0));
+  const maxDeployed = Math.max(...deployedValues, 1);
+  const maxPositions = Math.max(...positionValues, 1);
+  const width = 680;
+  const height = 190;
+  const pathFor = (values, maxValue) => values
+    .map((value, index) => {
+      const x = (index / Math.max(values.length - 1, 1)) * width;
+      const y = height - (value / maxValue) * (height - 18) + 4;
+      return `${x.toFixed(2)},${y.toFixed(2)}`;
+    })
+    .join(" ");
+  return `
+    <svg viewBox="0 0 ${width} 235" preserveAspectRatio="none" role="img">
+      <line x1="0" y1="192" x2="${width}" y2="192" stroke="#213653" />
+      <polyline points="${pathFor(deployedValues, maxDeployed)}" fill="none" stroke="#57d3a2" stroke-width="3" vector-effect="non-scaling-stroke" />
+      <polyline points="${pathFor(positionValues, maxPositions)}" fill="none" stroke="#6fb7ff" stroke-width="2" vector-effect="non-scaling-stroke" />
+      <text x="4" y="18" fill="#57d3a2" font-size="12">${money(maxDeployed)} deployed</text>
+      <text x="4" y="36" fill="#6fb7ff" font-size="12">${number(maxPositions)} active positions</text>
+      <text x="4" y="215" fill="#91a4bd" font-size="12">${points[0].date}</text>
+      <text x="${width - 82}" y="215" fill="#91a4bd" font-size="12">${points.at(-1).date}</text>
+    </svg>`;
+}
+
+function tradeActivityPolyline(trades) {
+  if (!trades.length) return '<p class="chart-empty">Trade activity is not available for this view.</p>';
+  const counts = new Map();
+  for (const trade of trades) {
+    if (!trade.date || trade.date === "next available close") continue;
+    const row = counts.get(trade.date) || { date: trade.date, buy: 0, sell: 0 };
+    if (trade.action === "sell") row.sell += 1;
+    else row.buy += 1;
+    counts.set(trade.date, row);
+  }
+  const points = [...counts.values()].sort((left, right) => left.date.localeCompare(right.date));
+  if (points.length < 2) return '<p class="chart-empty">Trade activity needs at least two execution dates.</p>';
+  const totals = points.map((row) => row.buy + row.sell);
+  const maxTotal = Math.max(...totals, 1);
+  const width = 680;
+  const height = 190;
+  const pathFor = (key) => points
+    .map((row, index) => {
+      const x = (index / Math.max(points.length - 1, 1)) * width;
+      const y = height - (row[key] / maxTotal) * (height - 18) + 4;
+      return `${x.toFixed(2)},${y.toFixed(2)}`;
+    })
+    .join(" ");
+  return `
+    <svg viewBox="0 0 ${width} 235" preserveAspectRatio="none" role="img">
+      <line x1="0" y1="192" x2="${width}" y2="192" stroke="#213653" />
+      <polyline points="${pathFor("buy")}" fill="none" stroke="#57d3a2" stroke-width="3" vector-effect="non-scaling-stroke" />
+      <polyline points="${pathFor("sell")}" fill="none" stroke="#ff7b7b" stroke-width="2" vector-effect="non-scaling-stroke" />
+      <text x="4" y="18" fill="#91a4bd" font-size="12">Max ${number(maxTotal)} trades/day</text>
+      <text x="4" y="215" fill="#91a4bd" font-size="12">${points[0].date}</text>
+      <text x="${width - 82}" y="215" fill="#91a4bd" font-size="12">${points.at(-1).date}</text>
+      <text x="4" y="232" fill="#57d3a2" font-size="12">Buys</text>
+      <text x="52" y="232" fill="#ff7b7b" font-size="12">Sells</text>
+    </svg>`;
 }
 
 async function saveStrategyLab() {
@@ -1359,6 +1435,7 @@ async function openTrader(investor) {
       <h3>Daily portfolio value</h3>
       <div class="chart">${polyline(detail.series, "value")}</div>
       ${contributorsHtml(detail)}
+      ${capitalDeploymentHtml(detail)}
       <div class="drawer-section-heading">
         <h3>Holdings</h3>
         <button class="secondary small" data-export-table="#trader-holdings-table" data-export-name="holdings-${detail.investor}" data-export-title="${detail.investor} Holdings">Download holdings</button>

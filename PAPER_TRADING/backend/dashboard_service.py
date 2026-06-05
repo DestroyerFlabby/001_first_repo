@@ -1050,6 +1050,7 @@ def variable_strategy_detail(
     cycles: list[dict[str, object]] = []
     series: list[dict[str, object]] = []
     sector_exposure: list[dict[str, object]] = []
+    signal_mix: list[dict[str, object]] = []
     deployed = Decimal("0")
     realized = Decimal("0")
     previous_session = on_or_before(market_bars, VARIABLE_STRATEGY_START - timedelta(days=1))
@@ -1194,6 +1195,23 @@ def variable_strategy_detail(
                     }
                     for sector, value in sorted(sector_values.items())
                     if open_value
+                ],
+            }
+        )
+        signal_counts: defaultdict[str, int] = defaultdict(int)
+        for position in active.values():
+            signal_counts[str(position.get("entry_signal") or "unknown")] += 1
+        signal_mix.append(
+            {
+                "date": session.isoformat(),
+                "signals": [
+                    {
+                        "signal": signal,
+                        "positions": count,
+                        "weight_pct": as_float(Decimal(count) / Decimal(len(active)) * Decimal("100")),
+                    }
+                    for signal, count in sorted(signal_counts.items())
+                    if active
                 ],
             }
         )
@@ -1345,6 +1363,11 @@ def variable_strategy_detail(
         for row in sector_exposure
         if date.fromisoformat(str(row["date"])) >= selected_start
     ]
+    visible_signal_mix = [
+        row
+        for row in signal_mix
+        if date.fromisoformat(str(row["date"])) >= selected_start
+    ]
     detail = {
         "investor": strategy_name,
         "source": (
@@ -1372,6 +1395,7 @@ def variable_strategy_detail(
         "execution_convention": "Observe EOD signals and news after one close; execute at the next available EOD close.",
         "series": visible_series,
         "sector_exposure": visible_sector_exposure,
+        "signal_mix": visible_signal_mix,
         "benchmark_comparison": benchmark_comparison(visible_series),
         "category_stats": category_rows,
         "category_stats_scope": f"{VARIABLE_STRATEGY_START.isoformat()} to {latest_market.day.isoformat()}",
@@ -1551,6 +1575,7 @@ def variable_buy_only_detail(
     positions: dict[str, dict[str, object]] = {}
     series: list[dict[str, object]] = []
     sector_exposure: list[dict[str, object]] = []
+    signal_mix: list[dict[str, object]] = []
     previous_session = on_or_before(market_bars, VARIABLE_STRATEGY_START - timedelta(days=1))
     for session in sessions:
         if not previous_session:
@@ -1608,6 +1633,23 @@ def variable_buy_only_detail(
                     }
                     for sector, value in sorted(sector_values.items())
                     if current
+                ],
+            }
+        )
+        signal_counts: defaultdict[str, int] = defaultdict(int)
+        for position in positions.values():
+            signal_counts[str(position.get("entry_signal") or "unknown")] += 1
+        signal_mix.append(
+            {
+                "date": session.isoformat(),
+                "signals": [
+                    {
+                        "signal": signal,
+                        "positions": count,
+                        "weight_pct": as_float(Decimal(count) / Decimal(len(positions)) * Decimal("100")),
+                    }
+                    for signal, count in sorted(signal_counts.items())
+                    if positions
                 ],
             }
         )
@@ -1724,6 +1766,11 @@ def variable_buy_only_detail(
         for row in sector_exposure
         if date.fromisoformat(str(row["date"])) >= selected_start
     ]
+    visible_signal_mix = [
+        row
+        for row in signal_mix
+        if date.fromisoformat(str(row["date"])) >= selected_start
+    ]
     detail = {
         "investor": strategy_name,
         "source": "derived-buy-only-signal-strategy",
@@ -1742,6 +1789,7 @@ def variable_buy_only_detail(
         "execution_convention": "Observe EOD signals after one close; execute at the next available EOD close.",
         "series": visible_series,
         "sector_exposure": visible_sector_exposure,
+        "signal_mix": visible_signal_mix,
         "benchmark_comparison": benchmark_comparison(visible_series),
         "category_stats": category_rows,
         "category_stats_scope": f"{VARIABLE_STRATEGY_START.isoformat()} to {latest_market.day.isoformat()}",

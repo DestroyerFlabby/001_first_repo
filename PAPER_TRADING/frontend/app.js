@@ -438,6 +438,7 @@ function strategyPreviewHtml(detail) {
     <div class="chart">${drawdownPolyline(detail.series || [])}</div>
     ${contributorsHtml(detail)}
     ${sectorExposureHtml(detail)}
+    ${signalMixHtml(detail)}
     ${capitalDeploymentHtml(detail)}
     <div class="table-wrap">
       <table data-sortable>
@@ -548,6 +549,45 @@ function sectorExposurePolyline(rows) {
       <line x1="0" y1="192" x2="${width}" y2="192" stroke="#213653" />
       <text x="4" y="18" fill="#91a4bd" font-size="12">Top sector weights</text>
       ${sectors.map((sector, index) => `<polyline points="${pathFor(sector)}" fill="none" stroke="${colors[index % colors.length]}" stroke-width="3" vector-effect="non-scaling-stroke" />`).join("")}
+      <text x="4" y="215" fill="#91a4bd" font-size="12">${points[0].date}</text>
+      <text x="${width - 82}" y="215" fill="#91a4bd" font-size="12">${points.at(-1).date}</text>
+      ${legend}
+    </svg>`;
+}
+
+function signalMixHtml(detail) {
+  if (!(detail.signal_mix || []).some((row) => (row.signals || []).length)) return "";
+  return `
+    <h3>Signal mix over time</h3>
+    <div class="chart">${signalMixPolyline(detail.signal_mix || [])}</div>`;
+}
+
+function signalMixPolyline(rows) {
+  const points = (rows || []).filter((row) => Array.isArray(row.signals) && row.signals.length);
+  if (points.length < 2) return '<p class="chart-empty">Signal mix needs at least two daily observations.</p>';
+  const signals = ["fresh", "strict", "near", "unknown"].filter((signal) =>
+    points.some((row) => (row.signals || []).some((item) => item.signal === signal))
+  );
+  if (!signals.length) return '<p class="chart-empty">Signal mix is not available for this view.</p>';
+  const width = 680;
+  const height = 190;
+  const colors = { fresh: "#57d3a2", strict: "#6fb7ff", near: "#ffd166", unknown: "#91a4bd" };
+  const weightFor = (row, signalName) => Number((row.signals || []).find((item) => item.signal === signalName)?.weight_pct || 0);
+  const pathFor = (signalName) => points
+    .map((row, index) => {
+      const x = (index / Math.max(points.length - 1, 1)) * width;
+      const y = height - (weightFor(row, signalName) / 100) * (height - 18) + 4;
+      return `${x.toFixed(2)},${y.toFixed(2)}`;
+    })
+    .join(" ");
+  const legend = signals
+    .map((signal, index) => `<text x="${4 + index * 92}" y="232" fill="${colors[signal] || "#91a4bd"}" font-size="12">${escapeHtml(signal)}</text>`)
+    .join("");
+  return `
+    <svg viewBox="0 0 ${width} 240" preserveAspectRatio="none" role="img">
+      <line x1="0" y1="192" x2="${width}" y2="192" stroke="#213653" />
+      <text x="4" y="18" fill="#91a4bd" font-size="12">Active positions by entry signal</text>
+      ${signals.map((signal) => `<polyline points="${pathFor(signal)}" fill="none" stroke="${colors[signal] || "#91a4bd"}" stroke-width="3" vector-effect="non-scaling-stroke" />`).join("")}
       <text x="4" y="215" fill="#91a4bd" font-size="12">${points[0].date}</text>
       <text x="${width - 82}" y="215" fill="#91a4bd" font-size="12">${points.at(-1).date}</text>
       ${legend}
@@ -1514,6 +1554,7 @@ async function openTrader(investor) {
       <div class="chart">${polyline(detail.series, "value")}</div>
       ${contributorsHtml(detail)}
       ${sectorExposureHtml(detail)}
+      ${signalMixHtml(detail)}
       ${capitalDeploymentHtml(detail)}
       <div class="drawer-section-heading">
         <h3>Holdings</h3>

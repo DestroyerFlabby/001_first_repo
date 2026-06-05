@@ -156,6 +156,8 @@ It does not submit trades or modify the ledger. It provides:
   daily article counts exist for that ticker
 - variable-strategy drilldowns include sector exposure over time based on
   daily close-valued open positions
+- variable-strategy drilldowns include signal mix over time so fresh, strict,
+  and near exposure can be compared across the selected window
 - unsaved Strategy Lab previews for selected date windows, with configurable
   universe, entry signal, entry-news rule, and exit rule; the first version
   uses the existing `$1,000` EOD position-size convention and can save

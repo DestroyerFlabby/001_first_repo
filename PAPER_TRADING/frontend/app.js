@@ -434,6 +434,7 @@ function strategyPreviewHtml(detail) {
     <div class="chart">${rollingReturnPolyline(detail.series || [])}</div>
     <h3>Drawdown</h3>
     <div class="chart">${drawdownPolyline(detail.series || [])}</div>
+    ${contributorsHtml(detail)}
     <div class="table-wrap">
       <table data-sortable>
         <thead><tr><th>Signal</th><th>Entries</th><th>Closed</th><th>Open</th><th>Deployed</th><th>Gain / loss</th><th>Return</th></tr></thead>
@@ -446,6 +447,48 @@ function strategyPreviewHtml(detail) {
         <thead><tr><th>Action</th><th>Ticker</th><th>Signal</th><th>Observed</th><th>Amount</th></tr></thead>
         <tbody>${pendingRows || '<tr><td colspan="5">No pending next-close actions for this preview.</td></tr>'}</tbody>
       </table>
+    </div>`;
+}
+
+function contributorsHtml(detail) {
+  const rows = [
+    ...(detail.positions || []).map((row) => ({ ...row, status: "open" })),
+    ...(detail.realized_positions || []).map((row) => ({ ...row, status: "realized" })),
+  ].filter((row) => row.gain_loss !== undefined && row.gain_loss !== null);
+  if (!rows.length) return "";
+  const byGain = [...rows].sort((left, right) => Number(right.gain_loss || 0) - Number(left.gain_loss || 0));
+  const contributors = byGain.slice(0, 5);
+  const detractors = byGain.slice(-5).reverse();
+  const positionValue = (row) => {
+    if (row.current_value !== undefined) return money(row.current_value);
+    if (row.ending_value !== undefined) return money(row.ending_value);
+    return "-";
+  };
+  const renderRows = (items) => items
+    .map((row) => `
+      <tr>
+        <td>${tickerLabel(row.ticker)}</td>
+        <td>${escapeHtml(row.status)}</td>
+        <td>${row.entry_signal ? escapeHtml(row.entry_signal) : "-"}</td>
+        <td>${positionValue(row)}</td>
+        <td class="${tone(row.gain_loss)}">${money(row.gain_loss)}</td>
+        <td class="${tone(row.return_pct || 0)}">${pct(row.return_pct || 0)}</td>
+      </tr>`)
+    .join("");
+  return `
+    <div class="eod-grid">
+      <div>
+        <h3>Top contributors</h3>
+        <div class="table-wrap">
+          <table data-sortable><thead><tr><th>Ticker</th><th>Status</th><th>Signal</th><th>Value</th><th>Gain / loss</th><th>Return</th></tr></thead><tbody>${renderRows(contributors)}</tbody></table>
+        </div>
+      </div>
+      <div>
+        <h3>Top detractors</h3>
+        <div class="table-wrap">
+          <table data-sortable><thead><tr><th>Ticker</th><th>Status</th><th>Signal</th><th>Value</th><th>Gain / loss</th><th>Return</th></tr></thead><tbody>${renderRows(detractors)}</tbody></table>
+        </div>
+      </div>
     </div>`;
 }
 
@@ -1315,6 +1358,7 @@ async function openTrader(investor) {
       <div class="chart">${rollingReturnPolyline(detail.series)}</div>
       <h3>Daily portfolio value</h3>
       <div class="chart">${polyline(detail.series, "value")}</div>
+      ${contributorsHtml(detail)}
       <div class="drawer-section-heading">
         <h3>Holdings</h3>
         <button class="secondary small" data-export-table="#trader-holdings-table" data-export-name="holdings-${detail.investor}" data-export-title="${detail.investor} Holdings">Download holdings</button>

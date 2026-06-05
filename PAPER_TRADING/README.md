@@ -116,6 +116,8 @@ It does not submit trades or modify the ledger. It provides:
 - daily paper-portfolio value charts
 - trader and strategy-preview drilldowns with drawdown plus rolling 7-day and
   30-day return charts
+- top contributor and top detractor sections in portfolio and strategy-preview
+  drilldowns
 - stock, ETF, and crypto price-history drilldowns
 - explicit From and To date controls for every selected-window calculation
 - January 1, May 20, and May 29 key-date shortcuts for both From and To

@@ -1420,12 +1420,50 @@ function stat(label, value, className = "") {
   return `<div class="detail-stat"><p>${label}</p><p class="${className}">${value}</p></div>`;
 }
 
+function relatedResearchNotes(terms = [], tags = []) {
+  const normalizedTerms = terms
+    .filter(Boolean)
+    .flatMap((term) => String(term).split(/[,|]/))
+    .map((term) => term.trim().toLowerCase())
+    .filter((term) => term.length > 1);
+  const wantedTags = new Set(tags.filter(Boolean).map((tag) => String(tag).toLowerCase()));
+  return (state.research?.notes || [])
+    .map((note) => {
+      const haystack = `${note.slug} ${note.title} ${note.filename} ${(note.tags || []).join(" ")}`.toLowerCase();
+      const score = normalizedTerms.reduce((total, term) => total + (haystack.includes(term) ? 2 : 0), 0)
+        + (note.tags || []).reduce((total, tag) => total + (wantedTags.has(String(tag).toLowerCase()) ? 1 : 0), 0);
+      return { ...note, score };
+    })
+    .filter((note) => note.score > 0)
+    .sort((left, right) => right.score - left.score || left.title.localeCompare(right.title))
+    .slice(0, 5);
+}
+
+function relatedResearchHtml(terms = [], tags = []) {
+  const notes = relatedResearchNotes(terms, tags);
+  if (!notes.length) return "";
+  return `
+    <div class="asset-action-panel">
+      <h3>Related research</h3>
+      <div class="asset-action-group left">
+        ${notes.map((note) => `<button class="asset-action" data-related-research="${escapeHtml(note.slug)}">${escapeHtml(note.title)}</button>`).join("")}
+      </div>
+    </div>`;
+}
+
+function bindRelatedResearchLinks(root = document) {
+  root.querySelectorAll("[data-related-research]").forEach((button) =>
+    button.addEventListener("click", () => openResearch(button.dataset.relatedResearch))
+  );
+}
+
 function openDrawer(html) {
   $("#drawer-content").innerHTML = html;
   $("#drawer").classList.add("open");
   $("#drawer").setAttribute("aria-hidden", "false");
   $("#backdrop").classList.remove("hidden");
   $("#export-drawer").classList.toggle("hidden", !$("#drawer-content table"));
+  bindRelatedResearchLinks($("#drawer-content"));
 }
 
 function closeDrawer() {
@@ -1465,6 +1503,7 @@ async function openBasket(basketId) {
         ${stat("Rebalance", escapeHtml(basket.rebalance_frequency))}
       </div>
       <p class="muted">${escapeHtml(detail.note || "")}</p>
+      ${relatedResearchHtml([basket.basket_id, basket.basket_name, ...(basket.members || []).map((member) => member.ticker)], ["sector", "watchlist"])}
       <h3>Daily basket simulation</h3>
       <div class="chart">${polyline(detail.series || [], "value")}</div>
       <div class="table-wrap">
@@ -1502,6 +1541,7 @@ async function openSavedStrategy(strategyId) {
       <p class="eyebrow">Saved strategy preview</p>
       <h2>${escapeHtml(detail.investor)}</h2>
       <p class="muted">${escapeHtml(strategy.status || "-")} | ${escapeHtml(detail.note || "")}</p>
+      ${relatedResearchHtml([detail.investor, strategy.entry_rule, strategy.exit_rule, strategy.news_rule, strategy.universe], ["strategy", "signals", "news"])}
       ${strategyPreviewHtml(detail)}`);
     enableSorting();
   } catch (error) {
@@ -1588,6 +1628,7 @@ async function openTrader(investor) {
     openDrawer(`
       <p class="eyebrow">${detail.source}</p>
       <h2>${detail.investor}</h2>
+      ${relatedResearchHtml([detail.investor, detail.source, ...(detail.positions || []).map((position) => position.ticker)], ["strategy", "signals", "watchlist"])}
       <div class="detail-grid">
         ${stat("Starting value", money(detail.initial_value))}
         ${stat("Current value", money(detail.current_value))}
@@ -1727,6 +1768,7 @@ async function openStock(ticker) {
       <p class="eyebrow">${detail.security_type} | ${detail.currency}</p>
       <h2>${tickerLabel(detail.ticker, detail.wealthsimple)}</h2>
       <p class="muted">${detail.owners.join(", ")}</p>
+      ${relatedResearchHtml([detail.ticker, detail.sector, detail.owners.join(", "), detail.security_type], ["sector", "signals", "news"])}
       <div class="asset-action-panel">
         <p class="muted">Universe actions update tracking metadata only. They do not create trades.</p>
         <div class="asset-action-group left">

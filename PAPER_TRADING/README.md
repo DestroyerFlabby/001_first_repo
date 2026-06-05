@@ -176,6 +176,8 @@ It does not submit trades or modify the ledger. It provides:
   CSV registries without creating trades or portfolio holdings
 - dashboard research library that indexes existing Markdown notes and opens
   them in a safe read-only drilldown
+- stock, basket, strategy, and trader drilldowns surface related research
+  notes based on tickers, sectors, strategy terms, and research tags
 - recommendation, asset-universe, and stock-drilldown actions support
   excluding/ignoring assets without deleting historical records
 - recommendation actions persist the recommendation reason into asset notes so

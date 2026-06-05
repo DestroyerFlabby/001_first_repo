@@ -150,6 +150,9 @@ It does not submit trades or modify the ledger. It provides:
   universe, entry signal, entry-news rule, and exit rule; the first version
   uses the existing `$1,000` EOD position-size convention and can save
   registry-only research entries without altering portfolios
+- saved strategy-registry rows can be clicked to run a Strategy Lab preview
+  when their entry, news, exit, and universe rules map to supported lab
+  settings
 - clickable custom basket/index rows with member-level window returns,
   contribution, benchmark return, and alpha preview
 - dashboard research library that indexes existing Markdown notes and opens

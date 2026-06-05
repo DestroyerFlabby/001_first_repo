@@ -781,6 +781,90 @@ def strategy_lab_detail(
     }
 
 
+def registry_strategy_config(row: dict[str, object]) -> dict[str, str]:
+    entry_rule = str(row.get("entry_rule") or "").casefold()
+    exit_rule = str(row.get("exit_rule") or "").casefold()
+    news_rule = str(row.get("news_rule") or "").casefold()
+    universe_rule = str(row.get("universe") or "").casefold()
+
+    if "fresh or strict" in entry_rule:
+        entry_signal_rule = "fresh-or-strict"
+    elif "fresh" in entry_rule:
+        entry_signal_rule = "fresh"
+    elif "strict" in entry_rule:
+        entry_signal_rule = "strict"
+    elif "near" in entry_rule:
+        entry_signal_rule = "near"
+    elif "non-none" in entry_rule or "mass-change universe technical signal" in entry_rule:
+        entry_signal_rule = "any"
+    else:
+        raise ValueError("strategy entry rule is not runnable by Strategy Lab yet")
+
+    if "accelerating" in news_rule or "accelerating" in entry_rule:
+        entry_news_rule = "accelerating"
+    elif "active" in news_rule or "active news" in entry_rule:
+        entry_news_rule = "active"
+    else:
+        entry_news_rule = "ignore"
+
+    if "twenty" in exit_rule or "zero-article" in exit_rule or "optimized" in exit_rule:
+        exit_rule_name = "optimized-grid-winner"
+    elif "cooling" in exit_rule and "earlier" in exit_rule:
+        exit_rule_name = "early-exit-on-news-cooling"
+    elif "cooling" in exit_rule:
+        exit_rule_name = "confirm-news-cooling"
+    elif "news remains active" in exit_rule or "hold while news" in exit_rule:
+        exit_rule_name = "hold-while-news-active"
+    elif "ten" in exit_rule or "technical deterioration" in exit_rule or "longer technical" in exit_rule:
+        exit_rule_name = "technical-deterioration"
+    elif "signal becomes none" in exit_rule or "signal disappears" in exit_rule or "never sell" in exit_rule:
+        exit_rule_name = "signal-disappears"
+    else:
+        raise ValueError("strategy exit rule is not runnable by Strategy Lab yet")
+
+    if "mass-change" in universe_rule and "tracked" in universe_rule:
+        universe = "hybrid"
+    elif "mass-change" in universe_rule:
+        universe = "mass-change"
+    elif "tracked" in universe_rule:
+        universe = "tracked-stocks"
+    else:
+        universe = "tracked-stocks"
+
+    return {
+        "entry_signal_rule": entry_signal_rule,
+        "entry_news_rule": entry_news_rule,
+        "exit_rule": exit_rule_name,
+        "universe": universe,
+    }
+
+
+def saved_strategy_preview_detail(
+    strategy: dict[str, object],
+    start: date,
+    end: date | None,
+    apply_wealthsimple_fx_fees: bool = False,
+) -> dict[str, object]:
+    config = registry_strategy_config(strategy)
+    detail = strategy_lab_detail(
+        start,
+        end,
+        apply_wealthsimple_fx_fees=apply_wealthsimple_fx_fees,
+        **config,
+    )
+    return {
+        **detail,
+        "investor": str(strategy["strategy_name"]),
+        "source": "saved-strategy-registry-preview",
+        "registry_strategy": strategy,
+        "note": (
+            "Saved strategy registry preview. The row is interpreted through "
+            "the current Strategy Lab rule mapper and does not create trades "
+            "or add a generated portfolio to the main ranking yet."
+        ),
+    }
+
+
 SIGNAL_HORIZONS = (
     ("3d", "3 days", 3, None, Decimal("5")),
     ("5d", "5 days", 5, None, Decimal("10")),

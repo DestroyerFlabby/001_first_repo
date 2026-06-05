@@ -22,6 +22,7 @@ from backend.dashboard_service import (  # noqa: E402
     asset_detail,
     latest_market_date,
     parse_date,
+    saved_strategy_preview_detail,
     strategy_lab_detail,
     trader_detail,
 )
@@ -36,7 +37,7 @@ from backend.basket_service import basket_performance, custom_basket_response  #
 from backend.email_service import send_daily_instructions  # noqa: E402
 from backend.news_service import news_summary  # noqa: E402
 from backend.research_service import research_index_response, research_note_response  # noqa: E402
-from backend.strategy_registry_service import strategy_registry_response, upsert_strategy  # noqa: E402
+from backend.strategy_registry_service import read_strategies, strategy_registry_response, upsert_strategy  # noqa: E402
 from backend.universe_service import asset_universe_response, update_asset, upsert_asset  # noqa: E402
 
 
@@ -230,6 +231,30 @@ def create_or_update_strategy(payload: dict[str, object] = Body(...)) -> dict[st
     ensure_private_write()
     try:
         return {"strategy": upsert_strategy(payload)}
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/api/strategies/{strategy_id}/preview")
+def strategy_preview(
+    strategy_id: str,
+    from_date: str | None = Query(default=None),
+    to_date: str | None = Query(default=None),
+    wealthsimple_fx_fees: bool = Query(default=False),
+) -> dict[str, object]:
+    start, end = window(from_date, to_date)
+    strategy = next(
+        (
+            row
+            for row in read_strategies(include_retired=True)
+            if str(row["strategy_id"]) == strategy_id.casefold()
+        ),
+        None,
+    )
+    if not strategy:
+        raise HTTPException(status_code=404, detail=f"unknown strategy: {strategy_id}")
+    try:
+        return saved_strategy_preview_detail(strategy, start, end, wealthsimple_fx_fees)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

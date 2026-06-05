@@ -388,6 +388,12 @@ function strategyLabRegistryPayload() {
 }
 
 function renderStrategyLabResult(detail) {
+  $("#strategy-lab-result").classList.remove("hidden");
+  $("#strategy-lab-result").innerHTML = strategyPreviewHtml(detail);
+  enableSorting();
+}
+
+function strategyPreviewHtml(detail) {
   const benchmark = detail.benchmark_comparison;
   const config = detail.lab_config || {};
   const categoryRows = (detail.category_stats || [])
@@ -412,8 +418,7 @@ function renderStrategyLabResult(detail) {
         <td>${row.usd_amount === null ? "-" : money(row.usd_amount)}</td>
       </tr>`)
     .join("");
-  $("#strategy-lab-result").classList.remove("hidden");
-  $("#strategy-lab-result").innerHTML = `
+  return `
     <div class="detail-grid">
       ${stat("Return", pct(detail.return_pct), tone(detail.return_pct))}
       ${stat("Gain / loss", money(detail.gain_loss), tone(detail.gain_loss))}
@@ -439,7 +444,6 @@ function renderStrategyLabResult(detail) {
         <tbody>${pendingRows || '<tr><td colspan="5">No pending next-close actions for this preview.</td></tr>'}</tbody>
       </table>
     </div>`;
-  enableSorting();
 }
 
 async function saveStrategyLab() {
@@ -695,7 +699,7 @@ function renderUniverse() {
   $("#strategy-registry-rows").innerHTML = state.strategies.strategies
     .map(
       (row) => `
-        <tr>
+        <tr class="clickable" data-strategy-preview="${escapeHtml(row.strategy_id)}">
           <td><strong>${escapeHtml(row.strategy_name)}</strong></td>
           <td>${escapeHtml(row.status)}</td>
           <td>${escapeHtml(row.forward_test_start_date || "-")}</td>
@@ -740,6 +744,9 @@ function renderUniverse() {
   );
   document.querySelectorAll("[data-basket]").forEach((row) =>
     row.addEventListener("click", () => openBasket(row.dataset.basket))
+  );
+  document.querySelectorAll("[data-strategy-preview]").forEach((row) =>
+    row.addEventListener("click", () => openSavedStrategy(row.dataset.strategyPreview))
   );
   document.querySelectorAll("[data-research]").forEach((row) =>
     row.addEventListener("click", () => openResearch(row.dataset.research))
@@ -1136,6 +1143,22 @@ async function openResearch(slug) {
       <pre class="research-note">${escapeHtml(note.content)}</pre>`);
   } catch (error) {
     openDrawer(`<p class="error">Research note failed: ${escapeHtml(error.message)}</p>`);
+  }
+}
+
+async function openSavedStrategy(strategyId) {
+  openDrawer(loadingPanel(`Loading ${strategyId} saved strategy preview...`));
+  try {
+    const detail = await fetchJson(`/api/strategies/${encodeURIComponent(strategyId)}/preview?${query()}`);
+    const strategy = detail.registry_strategy || {};
+    openDrawer(`
+      <p class="eyebrow">Saved strategy preview</p>
+      <h2>${escapeHtml(detail.investor)}</h2>
+      <p class="muted">${escapeHtml(strategy.status || "-")} | ${escapeHtml(detail.note || "")}</p>
+      ${strategyPreviewHtml(detail)}`);
+    enableSorting();
+  } catch (error) {
+    openDrawer(`<p class="error">Saved strategy preview failed: ${escapeHtml(error.message)}</p>`);
   }
 }
 

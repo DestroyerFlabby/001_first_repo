@@ -699,6 +699,19 @@ async function saveStrategyLab() {
   }
 }
 
+async function updateStrategyStatus(strategyId, statusValue) {
+  const row = (state.strategies?.strategies || []).find((strategy) => strategy.strategy_id === strategyId);
+  if (!row) return;
+  const payload = { ...row, status: statusValue };
+  try {
+    await fetchJson("/api/strategies", jsonRequest("POST", payload));
+    await refreshUniverse();
+    $("#universe-status").textContent = `Updated ${row.strategy_name} to ${statusValue}.`;
+  } catch (error) {
+    $("#universe-status").textContent = `Strategy update failed: ${error.message}`;
+  }
+}
+
 async function runStrategyLab() {
   const status = $("#strategy-lab-status");
   const button = $("#run-strategy-lab");
@@ -959,6 +972,14 @@ function renderUniverse() {
           <td>${escapeHtml(row.exit_rule || "-")}</td>
           <td>${escapeHtml(row.news_rule || "-")}</td>
           <td>${escapeHtml(row.notes || "-")}</td>
+          <td>
+            <div class="asset-action-group">
+              <button class="asset-action" data-strategy-status="research" data-strategy-id="${escapeHtml(row.strategy_id)}">Research</button>
+              <button class="asset-action" data-strategy-status="forward_testing" data-strategy-id="${escapeHtml(row.strategy_id)}">Forward</button>
+              <button class="asset-action" data-strategy-status="active" data-strategy-id="${escapeHtml(row.strategy_id)}">Active</button>
+              <button class="asset-action" data-strategy-status="retired" data-strategy-id="${escapeHtml(row.strategy_id)}">Retire</button>
+            </div>
+          </td>
         </tr>`
     )
     .join("");
@@ -996,6 +1017,12 @@ function renderUniverse() {
   );
   document.querySelectorAll("[data-strategy-preview]").forEach((row) =>
     row.addEventListener("click", () => openSavedStrategy(row.dataset.strategyPreview))
+  );
+  document.querySelectorAll("[data-strategy-status]").forEach((button) =>
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      updateStrategyStatus(button.dataset.strategyId, button.dataset.strategyStatus);
+    })
   );
   document.querySelectorAll("[data-research]").forEach((row) =>
     row.addEventListener("click", () => openResearch(row.dataset.research))

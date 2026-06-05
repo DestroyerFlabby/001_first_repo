@@ -168,6 +168,8 @@ It does not submit trades or modify the ledger. It provides:
   settings
 - supported saved strategy-registry rows also flow into the main portfolio
   ranking as generated dashboard portfolios
+- strategy-registry rows can be moved between research, forward-testing,
+  active, and retired states from the dashboard
 - Strategy Lab preview tables can be downloaded to Excel after a preview runs
 - clickable custom basket/index rows with member-level window returns,
   contribution, benchmark return, alpha preview, daily synthetic value, and

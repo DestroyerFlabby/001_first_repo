@@ -161,6 +161,7 @@ It does not submit trades or modify the ledger. It provides:
 - saved strategy-registry rows can be clicked to run a Strategy Lab preview
   when their entry, news, exit, and universe rules map to supported lab
   settings
+- Strategy Lab preview tables can be downloaded to Excel after a preview runs
 - clickable custom basket/index rows with member-level window returns,
   contribution, benchmark return, and alpha preview
 - dashboard research library that indexes existing Markdown notes and opens

@@ -391,6 +391,7 @@ function strategyLabRegistryPayload() {
 function renderStrategyLabResult(detail) {
   $("#strategy-lab-result").classList.remove("hidden");
   $("#strategy-lab-result").innerHTML = strategyPreviewHtml(detail);
+  $("#export-strategy-lab").classList.remove("hidden");
   enableSorting();
 }
 
@@ -612,14 +613,17 @@ async function saveStrategyLab() {
 async function runStrategyLab() {
   const status = $("#strategy-lab-status");
   const button = $("#run-strategy-lab");
+  const exportButton = $("#export-strategy-lab");
   try {
     status.textContent = "Running strategy preview...";
     button.disabled = true;
+    exportButton.classList.add("hidden");
     const detail = await fetchJson(`/api/strategy-lab/run?${strategyLabParams().toString()}`);
     renderStrategyLabResult(detail);
     status.textContent = `Preview complete: ${detail.from_date} to ${detail.to_date}. Unsaved strategy only.`;
   } catch (error) {
     status.textContent = `Strategy preview failed: ${error.message}`;
+    exportButton.classList.add("hidden");
   } finally {
     button.disabled = false;
   }
@@ -1730,6 +1734,13 @@ async function init() {
   $("#apply-window").addEventListener("click", loadOverview);
   $("#run-strategy-lab").addEventListener("click", runStrategyLab);
   $("#save-strategy-lab").addEventListener("click", saveStrategyLab);
+  $("#export-strategy-lab").addEventListener("click", () => {
+    downloadExcelTables(
+      "strategy-lab-preview",
+      "Strategy Lab Preview",
+      [...document.querySelectorAll("#strategy-lab-result table")]
+    );
+  });
   $("#asset-form").addEventListener("submit", submitAssetForm);
   $("#stock-search").addEventListener("input", renderStocks);
   $("#signal-filter").addEventListener("change", renderStocks);

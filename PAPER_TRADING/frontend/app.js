@@ -1452,6 +1452,8 @@ async function openBasket(basketId) {
         ${stat("Rebalance", escapeHtml(basket.rebalance_frequency))}
       </div>
       <p class="muted">${escapeHtml(detail.note || "")}</p>
+      <h3>Daily basket simulation</h3>
+      <div class="chart">${polyline(detail.series || [], "value")}</div>
       <div class="table-wrap">
         <table id="basket-member-performance-table" data-sortable>
           <thead><tr><th>Ticker</th><th>Type</th><th>Weight</th><th>Start</th><th>End</th><th>Return</th><th>Contribution</th><th>Warning</th></tr></thead>

@@ -228,6 +228,74 @@ def member_weight(member: dict[str, object], fallback_weight: Decimal) -> Decima
     return Decimal(value)
 
 
+def should_rebalance(previous_day: date, current_day: date, frequency: str) -> bool:
+    if frequency == "monthly":
+        return (previous_day.year, previous_day.month) != (current_day.year, current_day.month)
+    if frequency == "quarterly":
+        previous_quarter = (previous_day.month - 1) // 3
+        current_quarter = (current_day.month - 1) // 3
+        return (previous_day.year, previous_quarter) != (current_day.year, current_quarter)
+    return False
+
+
+def basket_return_series(
+    components: list[dict[str, object]],
+    start: date,
+    end: date | None,
+    rebalance_frequency: str,
+) -> list[dict[str, object]]:
+    if not components:
+        return []
+    sessions = sorted(
+        {
+            bar.day
+            for component in components
+            for bar in component["bars"]
+            if bar.day >= start and (end is None or bar.day <= end)
+        }
+    )
+    if not sessions:
+        return []
+    portfolio_value = Decimal("1")
+    shares: dict[tuple[str, str], Decimal] = {}
+
+    def price_for(component: dict[str, object], day: date) -> Decimal | None:
+        bar = on_or_before(component["bars"], day)
+        return bar.close if bar else None
+
+    def rebalance(day: date) -> None:
+        shares.clear()
+        for component in components:
+            price = price_for(component, day)
+            if not price:
+                continue
+            key = (str(component["ticker"]), str(component["asset_type"]))
+            shares[key] = portfolio_value * Decimal(str(component["weight"])) / price
+
+    rebalance(sessions[0])
+    series: list[dict[str, object]] = []
+    previous_day = sessions[0]
+    for session in sessions:
+        current_value = Decimal("0")
+        for component in components:
+            key = (str(component["ticker"]), str(component["asset_type"]))
+            price = price_for(component, session)
+            if price and key in shares:
+                current_value += shares[key] * price
+        portfolio_value = current_value
+        series.append(
+            {
+                "date": session.isoformat(),
+                "value": as_float(portfolio_value),
+                "return_pct": as_float((portfolio_value - Decimal("1")) * Decimal("100")),
+            }
+        )
+        if should_rebalance(previous_day, session, rebalance_frequency):
+            rebalance(session)
+        previous_day = session
+    return series
+
+
 def basket_performance(
     basket_id: str,
     start: date,
@@ -257,6 +325,7 @@ def basket_performance(
     weights = [weight / total_weight for weight in raw_weights] if total_weight else [fallback_weight for _ in members]
 
     member_rows: list[dict[str, object]] = []
+    components: list[dict[str, object]] = []
     basket_return = Decimal("0")
     effective_end: date | None = None
     for member, weight in zip(members, weights):
@@ -293,6 +362,14 @@ def basket_performance(
         member_return = pct_change(end_bar.close, start_bar.close)
         contribution = member_return * weight
         basket_return += contribution
+        components.append(
+            {
+                "ticker": ticker,
+                "asset_type": asset_type,
+                "weight": weight,
+                "bars": bars,
+            }
+        )
         member_rows.append(
             {
                 **member,
@@ -319,6 +396,16 @@ def basket_performance(
         except Exception:
             benchmark_return = None
 
+    series = basket_return_series(
+        components,
+        start,
+        end,
+        str(basket.get("rebalance_frequency") or "none"),
+    )
+    if series:
+        basket_return = Decimal(str(series[-1]["return_pct"]))
+        effective_end = date.fromisoformat(str(series[-1]["date"]))
+
     return {
         "basket": basket,
         "from_date": start.isoformat(),
@@ -326,10 +413,11 @@ def basket_performance(
         "return_pct": as_float(basket_return),
         "benchmark_return_pct": as_float(benchmark_return) if benchmark_return is not None else None,
         "alpha_pct": as_float(basket_return - benchmark_return) if benchmark_return is not None else None,
+        "series": series,
         "members": sorted(
             member_rows,
             key=lambda row: Decimal(str(row["contribution_pct"] if row["contribution_pct"] is not None else "-999999")),
             reverse=True,
         ),
-        "note": "Window-return preview. Rebalance frequency is stored as metadata; this preview does not yet simulate monthly or quarterly rebalances.",
+        "note": "Daily close preview. Equal/custom weights are simulated from the selected start date, with monthly or quarterly rebalancing applied at the first available close of each new period.",
     }

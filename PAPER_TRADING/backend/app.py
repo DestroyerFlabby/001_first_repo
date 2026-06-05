@@ -55,6 +55,11 @@ app = FastAPI(title="Paper Trading Dashboard", version="1.0.0")
 FRONTEND = ROOT / "frontend"
 OVERVIEW_JOBS: dict[str, dict[str, Any]] = {}
 OVERVIEW_JOB_LOCK = threading.Lock()
+PRELOAD_JOB: dict[str, Any] = {
+    "status": "idle",
+    "message": "Preload cache is ready to rebuild.",
+}
+PRELOAD_JOB_LOCK = threading.Lock()
 
 
 def env_bool(name: str, default: bool = False) -> bool:
@@ -240,6 +245,86 @@ def start_or_get_overview_job(start: date, end: date | None, apply_fees: bool) -
         return job_id, dict(OVERVIEW_JOBS[job_id])
 
 
+def preload_job_response(job: dict[str, Any]) -> dict[str, Any]:
+    response = {
+        "status": job.get("status", "idle"),
+        "message": job.get("message", ""),
+        "started_at": job.get("started_at"),
+        "completed_at": job.get("completed_at"),
+        "from_date": job.get("from_date"),
+        "to_date": job.get("to_date"),
+        "rows": job.get("rows", []),
+    }
+    if "detail" in job:
+        response["detail"] = job["detail"]
+    return response
+
+
+def rebuild_preload_cache_job() -> None:
+    try:
+        start, end = configured_preload_window()
+        with PRELOAD_JOB_LOCK:
+            PRELOAD_JOB.update(
+                {
+                    "status": "running",
+                    "message": f"Rebuilding preload cache for {start.isoformat()} to {end.isoformat()}.",
+                    "from_date": start.isoformat(),
+                    "to_date": end.isoformat(),
+                }
+            )
+        rows = preload_dashboard_cache(
+            start,
+            end,
+            include_fx=env_bool("PRELOAD_DASHBOARD_CACHE_INCLUDE_FX"),
+            force=True,
+        )
+    except Exception as exc:
+        with PRELOAD_JOB_LOCK:
+            PRELOAD_JOB.update(
+                {
+                    "status": "error",
+                    "message": "Preload cache rebuild failed.",
+                    "detail": str(exc),
+                    "completed_at": time.time(),
+                }
+            )
+        return
+
+    with PRELOAD_JOB_LOCK:
+        PRELOAD_JOB.update(
+            {
+                "status": "complete",
+                "message": "Preload cache rebuilt.",
+                "rows": rows,
+                "completed_at": time.time(),
+            }
+        )
+
+
+def start_or_get_preload_rebuild() -> dict[str, Any]:
+    with PRELOAD_JOB_LOCK:
+        if PRELOAD_JOB.get("status") == "running":
+            return dict(PRELOAD_JOB)
+        PRELOAD_JOB.clear()
+        PRELOAD_JOB.update(
+            {
+                "status": "running",
+                "message": "Starting preload cache rebuild.",
+                "started_at": time.time(),
+                "completed_at": None,
+                "rows": [],
+            }
+        )
+
+    threading.Thread(
+        target=rebuild_preload_cache_job,
+        name="preload-cache-rebuild",
+        daemon=True,
+    ).start()
+    with PRELOAD_JOB_LOCK:
+        return dict(PRELOAD_JOB)
+
+
 @app.get("/api/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
@@ -297,6 +382,19 @@ def get_overview_job(job_id: str) -> dict[str, object]:
             raise HTTPException(status_code=404, detail="overview job not found")
         snapshot = dict(job)
     return overview_job_response(job_id, snapshot, include_payload=snapshot.get("status") == "complete")
+
+
+@app.post("/api/preload-cache/rebuild")
+def rebuild_preload_cache() -> dict[str, object]:
+    job = start_or_get_preload_rebuild()
+    return preload_job_response(job)
+
+
+@app.get("/api/preload-cache/rebuild")
+def get_preload_cache_rebuild() -> dict[str, object]:
+    with PRELOAD_JOB_LOCK:
+        snapshot = dict(PRELOAD_JOB)
+    return preload_job_response(snapshot)
 
 
 @app.get("/api/eod")

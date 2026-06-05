@@ -90,6 +90,32 @@ async function fetchOverviewWithJob() {
   }
 }
 
+async function waitForPreloadRebuild() {
+  const started = Date.now();
+  const initial = await fetchJson("/api/preload-cache/rebuild", { method: "POST" });
+  if (initial.status === "complete") {
+    return initial;
+  }
+
+  let delay = 2500;
+  while (true) {
+    await sleep(delay);
+    const elapsed = Math.floor((Date.now() - started) / 1000);
+    updateLoading(
+      `Recalculating preloaded cache for latest prices... ${elapsed}s elapsed.`,
+      Math.min(80, 10 + Math.floor(elapsed / 4))
+    );
+    const status = await fetchJson("/api/preload-cache/rebuild");
+    if (status.status === "complete") {
+      return status;
+    }
+    if (status.status === "error") {
+      throw new Error(status.detail || "Preload cache rebuild failed.");
+    }
+    delay = Math.min(8000, delay + 500);
+  }
+}
+
 function setNotificationStatus(message, status = "") {
   const element = $("#notification-status");
   element.textContent = message;
@@ -2092,6 +2118,55 @@ async function openStock(ticker) {
   }
 }
 
+function applyPreloadPreset(preloadPreset) {
+  if (!preloadPreset) return;
+  $("#from-date").value = preloadPreset.from_date;
+  $("#to-date").value = preloadPreset.to_date;
+  $("#from-quick-date").value = preloadPreset.from_date;
+  $("#to-quick-date").value = preloadPreset.to_date;
+  $("#wealthsimple-fx-fees").checked = Boolean(preloadPreset.includes_wealthsimple_fx_fees);
+}
+
+function renderPreloadPresetControl(preloadPreset) {
+  if (!preloadPreset) return;
+  $("#preload-preset").textContent = preloadPreset.includes_wealthsimple_fx_fees
+    ? `${preloadPreset.label} + fees`
+    : preloadPreset.label;
+}
+
+async function refreshMeta() {
+  state.meta = await fetchJson("/api/meta");
+  renderPreloadPresetControl(state.meta.preload_preset);
+  return state.meta;
+}
+
+async function rebuildPreloadAndLoad() {
+  $("#content").classList.add("hidden");
+  $("#error").classList.add("hidden");
+  setNotificationStatus("");
+  $("#rebuild-preload").disabled = true;
+  $("#apply-window").disabled = true;
+  $("#rebuild-preload").textContent = "Recalculating...";
+  setLoading("Starting preload cache recalculation...", 5);
+  try {
+    await waitForPreloadRebuild();
+    updateLoading("Preload rebuilt. Refreshing dashboard metadata...", 85);
+    const meta = await refreshMeta();
+    applyPreloadPreset(meta.preload_preset);
+    updateLoading("Preload rebuilt. Loading refreshed dashboard...", 92);
+    clearLoading();
+    await loadOverview();
+  } catch (error) {
+    $("#error").textContent = error.message;
+    $("#error").classList.remove("hidden");
+  } finally {
+    clearLoading();
+    $("#rebuild-preload").disabled = false;
+    $("#apply-window").disabled = false;
+    $("#rebuild-preload").textContent = "Recalculate preload";
+  }
+}
+
 async function loadOverview() {
   if (!$("#from-date").value || !$("#to-date").value) {
     $("#error").textContent = "Select both a From date and a To date before refreshing.";
@@ -2162,18 +2237,13 @@ async function init() {
     $("#to-quick-date").value = $("#to-date").value;
   });
   if (preloadPreset) {
-    $("#preload-preset").textContent = preloadPreset.includes_wealthsimple_fx_fees
-      ? `${preloadPreset.label} + fees`
-      : preloadPreset.label;
+    renderPreloadPresetControl(preloadPreset);
     $("#preload-preset").addEventListener("click", () => {
-      $("#from-date").value = preloadPreset.from_date;
-      $("#to-date").value = preloadPreset.to_date;
-      $("#from-quick-date").value = preloadPreset.from_date;
-      $("#to-quick-date").value = preloadPreset.to_date;
-      $("#wealthsimple-fx-fees").checked = Boolean(preloadPreset.includes_wealthsimple_fx_fees);
+      applyPreloadPreset(state.meta.preload_preset);
     });
   }
   $("#apply-window").addEventListener("click", loadOverview);
+  $("#rebuild-preload").addEventListener("click", rebuildPreloadAndLoad);
   document.querySelectorAll("[data-tab-target]").forEach((button) => {
     button.addEventListener("click", () => setActiveDashboardTab(button.dataset.tabTarget));
   });

@@ -430,6 +430,9 @@ function strategyPreviewHtml(detail) {
       ${stat("Position size", money(config.position_size || 1000))}
     </div>
     <p class="muted">Config: universe=${escapeHtml(config.universe || "-")}; entry=${escapeHtml(config.entry_signal_rule || "-")}; entry news=${escapeHtml(config.entry_news_rule || "-")}; exit=${escapeHtml(config.exit_rule || "-")}.</p>
+    <h3>Rolling returns</h3>
+    <div class="chart">${rollingReturnPolyline(detail.series || [])}</div>
+    <h3>Drawdown</h3>
     <div class="chart">${drawdownPolyline(detail.series || [])}</div>
     <div class="table-wrap">
       <table data-sortable>
@@ -1071,6 +1074,53 @@ function drawdownPolyline(series) {
     </svg>`;
 }
 
+function rollingReturnPolyline(series) {
+  if (series.length < 8) return '<p class="chart-empty">Rolling returns need at least eight daily values.</p>';
+  const points = [];
+  for (let index = 0; index < series.length; index += 1) {
+    const current = Number(series[index].value);
+    const weekStart = series[Math.max(0, index - 7)];
+    const monthStart = series[Math.max(0, index - 30)];
+    if (index < 7 || !weekStart || !monthStart) continue;
+    const weekBase = Number(weekStart.value);
+    const monthBase = Number(monthStart.value);
+    points.push({
+      date: series[index].date,
+      sevenDay: weekBase ? ((current / weekBase) - 1) * 100 : null,
+      thirtyDay: index >= 30 && monthBase ? ((current / monthBase) - 1) * 100 : null,
+    });
+  }
+  const plottable = points.filter((row) => row.sevenDay !== null || row.thirtyDay !== null);
+  if (plottable.length < 2) return '<p class="chart-empty">Rolling returns need more aligned daily values.</p>';
+  const values = plottable.flatMap((row) => [row.sevenDay, row.thirtyDay]).filter((value) => value !== null);
+  const min = Math.min(...values, 0);
+  const max = Math.max(...values, 0);
+  const spread = max - min || 1;
+  const width = 680;
+  const height = 190;
+  const pathFor = (key) => plottable
+    .filter((row) => row[key] !== null)
+    .map((row, index, rows) => {
+      const x = (index / Math.max(rows.length - 1, 1)) * width;
+      const y = height - ((row[key] - min) / spread) * (height - 18) + 4;
+      return `${x.toFixed(2)},${y.toFixed(2)}`;
+    })
+    .join(" ");
+  const zeroY = height - ((0 - min) / spread) * (height - 18) + 4;
+  return `
+    <svg viewBox="0 0 ${width} 235" preserveAspectRatio="none" role="img">
+      <line x1="0" y1="${zeroY.toFixed(2)}" x2="${width}" y2="${zeroY.toFixed(2)}" stroke="#213653" />
+      <polyline points="${pathFor("sevenDay")}" fill="none" stroke="#57d3a2" stroke-width="3" vector-effect="non-scaling-stroke" />
+      <polyline points="${pathFor("thirtyDay")}" fill="none" stroke="#f9c74f" stroke-width="2" vector-effect="non-scaling-stroke" />
+      <text x="4" y="18" fill="#91a4bd" font-size="12">${pct(max)}</text>
+      <text x="4" y="${height - 6}" fill="#91a4bd" font-size="12">${pct(min)}</text>
+      <text x="4" y="215" fill="#91a4bd" font-size="12">${plottable[0].date}</text>
+      <text x="${width - 82}" y="215" fill="#91a4bd" font-size="12">${plottable.at(-1).date}</text>
+      <text x="4" y="232" fill="#57d3a2" font-size="12">7D</text>
+      <text x="42" y="232" fill="#f9c74f" font-size="12">30D</text>
+    </svg>`;
+}
+
 function stat(label, value, className = "") {
   return `<div class="detail-stat"><p>${label}</p><p class="${className}">${value}</p></div>`;
 }
@@ -1261,6 +1311,8 @@ async function openTrader(investor) {
         <div class="chart">${comparisonPolyline(detail.series, benchmark.benchmark_series)}</div>` : ""}
       <h3>Drawdown</h3>
       <div class="chart">${drawdownPolyline(detail.series)}</div>
+      <h3>Rolling returns</h3>
+      <div class="chart">${rollingReturnPolyline(detail.series)}</div>
       <h3>Daily portfolio value</h3>
       <div class="chart">${polyline(detail.series, "value")}</div>
       <div class="drawer-section-heading">

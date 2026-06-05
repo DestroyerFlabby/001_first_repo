@@ -2,10 +2,13 @@ from __future__ import annotations
 
 import sys
 import os
+import hashlib
 import threading
+import time
 from calendar import monthrange
 from datetime import date
 from pathlib import Path
+from typing import Any
 
 from fastapi import Body, FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse
@@ -32,6 +35,7 @@ from backend.dashboard_cache import (  # noqa: E402
     default_preload_window,
     latest_cached_overview_window,
     preload_dashboard_cache,
+    read_cache,
 )
 from backend.benchmark_service import benchmark_registry_response, upsert_benchmark  # noqa: E402
 from backend.basket_service import (  # noqa: E402
@@ -49,6 +53,8 @@ from backend.universe_service import asset_universe_response, update_asset, upse
 
 app = FastAPI(title="Paper Trading Dashboard", version="1.0.0")
 FRONTEND = ROOT / "frontend"
+OVERVIEW_JOBS: dict[str, dict[str, Any]] = {}
+OVERVIEW_JOB_LOCK = threading.Lock()
 
 
 def env_bool(name: str, default: bool = False) -> bool:
@@ -140,6 +146,100 @@ def window(from_date: str | None, to_date: str | None) -> tuple[date, date | Non
     return start, end
 
 
+def overview_job_id(start: date, end: date | None, apply_fees: bool) -> str:
+    token = f"{start.isoformat()}|{end.isoformat() if end else 'latest'}|fx={int(apply_fees)}"
+    return hashlib.sha1(token.encode("utf-8")).hexdigest()[:16]
+
+
+def overview_job_response(job_id: str, job: dict[str, Any], include_payload: bool = False) -> dict[str, Any]:
+    response: dict[str, Any] = {
+        "job_id": job_id,
+        "status": job.get("status", "unknown"),
+        "message": job.get("message", ""),
+        "from_date": job.get("from_date"),
+        "to_date": job.get("to_date"),
+        "wealthsimple_fx_fees": job.get("wealthsimple_fx_fees", False),
+        "started_at": job.get("started_at"),
+        "completed_at": job.get("completed_at"),
+    }
+    if "detail" in job:
+        response["detail"] = job["detail"]
+    if include_payload and job.get("status") == "complete":
+        response["payload"] = job.get("payload")
+    return response
+
+
+def build_overview_job(job_id: str, start: date, end: date | None, apply_fees: bool) -> None:
+    try:
+        payload = cached_or_build_overview(start, end, apply_fees)
+    except Exception as exc:
+        with OVERVIEW_JOB_LOCK:
+            job = OVERVIEW_JOBS.setdefault(job_id, {})
+            job.update(
+                {
+                    "status": "error",
+                    "message": "Overview build failed.",
+                    "detail": str(exc),
+                    "completed_at": time.time(),
+                }
+            )
+        return
+
+    with OVERVIEW_JOB_LOCK:
+        job = OVERVIEW_JOBS.setdefault(job_id, {})
+        job.update(
+            {
+                "status": "complete",
+                "message": "Overview ready.",
+                "payload": payload,
+                "completed_at": time.time(),
+            }
+        )
+
+
+def start_or_get_overview_job(start: date, end: date | None, apply_fees: bool) -> tuple[str, dict[str, Any]]:
+    job_id = overview_job_id(start, end, apply_fees)
+    if end is not None:
+        cached = read_cache("overview", start, end, apply_fees)
+        if cached is not None:
+            with OVERVIEW_JOB_LOCK:
+                OVERVIEW_JOBS[job_id] = {
+                    "status": "complete",
+                    "message": "Overview loaded from dashboard cache.",
+                    "from_date": start.isoformat(),
+                    "to_date": end.isoformat(),
+                    "wealthsimple_fx_fees": apply_fees,
+                    "started_at": time.time(),
+                    "completed_at": time.time(),
+                    "payload": cached,
+                }
+                return job_id, dict(OVERVIEW_JOBS[job_id])
+
+    with OVERVIEW_JOB_LOCK:
+        existing = OVERVIEW_JOBS.get(job_id)
+        if existing and existing.get("status") in {"running", "complete"}:
+            return job_id, dict(existing)
+
+        OVERVIEW_JOBS[job_id] = {
+            "status": "running",
+            "message": "Building overview cache on the server.",
+            "from_date": start.isoformat(),
+            "to_date": end.isoformat() if end else None,
+            "wealthsimple_fx_fees": apply_fees,
+            "started_at": time.time(),
+            "completed_at": None,
+        }
+
+    threading.Thread(
+        target=build_overview_job,
+        args=(job_id, start, end, apply_fees),
+        name=f"overview-job-{job_id}",
+        daemon=True,
+    ).start()
+    with OVERVIEW_JOB_LOCK:
+        return job_id, dict(OVERVIEW_JOBS[job_id])
+
+
 @app.get("/api/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
@@ -176,6 +276,27 @@ def overview(
 ) -> dict[str, object]:
     start, end = window(from_date, to_date)
     return cached_or_build_overview(start, end, wealthsimple_fx_fees)
+
+
+@app.post("/api/overview-jobs")
+def create_overview_job(
+    from_date: str | None = Query(default=None),
+    to_date: str | None = Query(default=None),
+    wealthsimple_fx_fees: bool = Query(default=False),
+) -> dict[str, object]:
+    start, end = window(from_date, to_date)
+    job_id, job = start_or_get_overview_job(start, end, wealthsimple_fx_fees)
+    return overview_job_response(job_id, job, include_payload=job.get("status") == "complete")
+
+
+@app.get("/api/overview-jobs/{job_id}")
+def get_overview_job(job_id: str) -> dict[str, object]:
+    with OVERVIEW_JOB_LOCK:
+        job = OVERVIEW_JOBS.get(job_id)
+        if not job:
+            raise HTTPException(status_code=404, detail="overview job not found")
+        snapshot = dict(job)
+    return overview_job_response(job_id, snapshot, include_payload=snapshot.get("status") == "complete")
 
 
 @app.get("/api/eod")

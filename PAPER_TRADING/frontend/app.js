@@ -62,6 +62,33 @@ const jsonRequest = (method, body) => ({
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify(body),
 });
+const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+
+async function fetchOverviewWithJob() {
+  const started = Date.now();
+  const initial = await fetchJson(`/api/overview-jobs?${query()}`, { method: "POST" });
+  if (initial.status === "complete" && initial.payload) {
+    return initial.payload;
+  }
+
+  let delay = 2500;
+  while (true) {
+    await sleep(delay);
+    const elapsed = Math.floor((Date.now() - started) / 1000);
+    updateLoading(
+      `Building dashboard cache on the server... ${elapsed}s elapsed. First uncached ranges can take a few minutes on Render.`,
+      Math.min(70, 10 + Math.floor(elapsed / 4))
+    );
+    const status = await fetchJson(`/api/overview-jobs/${encodeURIComponent(initial.job_id)}`);
+    if (status.status === "complete" && status.payload) {
+      return status.payload;
+    }
+    if (status.status === "error") {
+      throw new Error(status.detail || "Overview build failed.");
+    }
+    delay = Math.min(8000, delay + 500);
+  }
+}
 
 function setNotificationStatus(message, status = "") {
   const element = $("#notification-status");
@@ -2078,7 +2105,7 @@ async function loadOverview() {
   $("#apply-window").textContent = "Refreshing...";
   setLoading("Refreshing portfolio rankings and tracked instruments...", 5);
   try {
-    state.overview = await fetchJson(`/api/overview?${query()}`);
+    state.overview = await fetchOverviewWithJob();
     updateLoading("Portfolio rankings and tracked instruments loaded. Loading prior-close movers...", 75);
     state.eod = await fetchJson(`/api/eod${wealthsimpleQuery()}`);
     updateLoading("Prior-close movers loaded. Loading universe registries...", 88);

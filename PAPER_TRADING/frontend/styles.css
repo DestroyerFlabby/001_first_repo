@@ -181,6 +181,40 @@ input, select {
   padding: 16px;
 }
 .summary-card .value { font-size: 1.65rem; font-weight: 800; letter-spacing: -.05em; margin-top: 6px; }
+.dashboard-tabs {
+  background: rgba(8, 19, 33, .82);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+  padding: 8px;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+.tab-button {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: var(--muted);
+  font-size: .82rem;
+  font-weight: 800;
+  min-height: 36px;
+  padding: 0 13px;
+}
+.tab-button:hover {
+  border-color: var(--line);
+  color: var(--text);
+}
+.tab-button.active {
+  background: rgba(87, 211, 162, .12);
+  border-color: rgba(87, 211, 162, .38);
+  color: var(--accent);
+}
+.dashboard-tab-panel { display: none; }
+.dashboard-tab-panel.active { display: block; }
 .diagnostic-grid {
   display: grid;
   gap: 12px;

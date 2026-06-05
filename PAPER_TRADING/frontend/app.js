@@ -165,6 +165,25 @@ function enableSorting(root = document) {
   });
 }
 
+function activeDashboardTab() {
+  const requested = window.location.hash.replace("#", "");
+  return document.querySelector(`[data-dashboard-tab="${requested}"]`) ? requested : "home";
+}
+
+function setActiveDashboardTab(tabName, updateHash = true) {
+  const nextTab = document.querySelector(`[data-dashboard-tab="${tabName}"]`) ? tabName : "home";
+  document.querySelectorAll("[data-tab-target]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.tabTarget === nextTab);
+    button.setAttribute("aria-selected", button.dataset.tabTarget === nextTab ? "true" : "false");
+  });
+  document.querySelectorAll("[data-dashboard-tab]").forEach((panel) => {
+    panel.classList.toggle("active", panel.dataset.dashboardTab === nextTab);
+  });
+  if (updateHash && window.location.hash.replace("#", "") !== nextTab) {
+    history.replaceState(null, "", `#${nextTab}`);
+  }
+}
+
 function exportRangeSuffix() {
   const from = $("#from-date").value || "from";
   const to = $("#to-date").value || "to";
@@ -2038,6 +2057,11 @@ async function init() {
     });
   }
   $("#apply-window").addEventListener("click", loadOverview);
+  document.querySelectorAll("[data-tab-target]").forEach((button) => {
+    button.addEventListener("click", () => setActiveDashboardTab(button.dataset.tabTarget));
+  });
+  window.addEventListener("hashchange", () => setActiveDashboardTab(activeDashboardTab(), false));
+  setActiveDashboardTab(activeDashboardTab(), false);
   $("#run-strategy-lab").addEventListener("click", runStrategyLab);
   $("#save-strategy-lab").addEventListener("click", saveStrategyLab);
   $("#export-strategy-lab").addEventListener("click", () => {

@@ -304,6 +304,7 @@ function renderRecommendations() {
             <button class="asset-action" data-recommendation-action="${escapeHtml(action)}" data-recommendation-ticker="${escapeHtml(stock.ticker)}" data-recommendation-type="${escapeHtml(stock.security_type)}">Approve</button>
             <button class="asset-action" data-recommendation-action="candidate" data-recommendation-ticker="${escapeHtml(stock.ticker)}" data-recommendation-type="${escapeHtml(stock.security_type)}">Watch</button>
             <button class="asset-action" data-recommendation-action="archived" data-recommendation-ticker="${escapeHtml(stock.ticker)}" data-recommendation-type="${escapeHtml(stock.security_type)}">Archive</button>
+            <button class="asset-action" data-recommendation-action="excluded" data-recommendation-ticker="${escapeHtml(stock.ticker)}" data-recommendation-type="${escapeHtml(stock.security_type)}">Ignore</button>
           </div>
         </td>
       </tr>`)
@@ -821,6 +822,7 @@ function renderUniverse() {
               <button class="asset-action" data-asset-action="active" data-asset-ticker="${escapeHtml(row.ticker)}" data-asset-type="${escapeHtml(row.asset_type)}">Active</button>
               <button class="asset-action" data-asset-action="strategy_eligible" data-asset-ticker="${escapeHtml(row.ticker)}" data-asset-type="${escapeHtml(row.asset_type)}">Strategy</button>
               <button class="asset-action" data-asset-action="archived" data-asset-ticker="${escapeHtml(row.ticker)}" data-asset-type="${escapeHtml(row.asset_type)}">Archive</button>
+              <button class="asset-action" data-asset-action="excluded" data-asset-ticker="${escapeHtml(row.ticker)}" data-asset-type="${escapeHtml(row.asset_type)}">Exclude</button>
             </div>
           </td>
         </tr>`
@@ -1578,6 +1580,7 @@ async function openStock(ticker) {
           <button class="asset-action" data-stock-universe-action="active" data-stock-ticker="${escapeHtml(detail.ticker)}" data-stock-type="${escapeHtml(detail.security_type)}">Active</button>
           <button class="asset-action" data-stock-universe-action="strategy_eligible" data-stock-ticker="${escapeHtml(detail.ticker)}" data-stock-type="${escapeHtml(detail.security_type)}">Strategy eligible</button>
           <button class="asset-action" data-stock-universe-action="archived" data-stock-ticker="${escapeHtml(detail.ticker)}" data-stock-type="${escapeHtml(detail.security_type)}">Archive</button>
+          <button class="asset-action" data-stock-universe-action="excluded" data-stock-ticker="${escapeHtml(detail.ticker)}" data-stock-type="${escapeHtml(detail.security_type)}">Exclude</button>
         </div>
         <p id="stock-universe-action-status" class="muted"></p>
       </div>

@@ -9,6 +9,8 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode, urlparse
 from urllib.request import Request, urlopen
 
+from backend.news_strategy import load_daily_news_counts
+
 
 ROOT = Path(__file__).resolve().parents[1]
 ENV_FILE = ROOT.parent / ".env"
@@ -314,12 +316,30 @@ def summarize_articles(
     }
 
 
+def historical_daily_counts(ticker: str) -> list[dict[str, object]]:
+    payload = load_daily_news_counts()
+    tickers = payload.get("tickers", {})
+    if not isinstance(tickers, dict):
+        return []
+    counts = tickers.get(ticker.upper(), {})
+    if not isinstance(counts, dict):
+        return []
+    rows: list[dict[str, object]] = []
+    for day, value in sorted(counts.items()):
+        try:
+            count = int(value)
+        except (TypeError, ValueError):
+            continue
+        rows.append({"date": day, "articles": count})
+    return rows
+
+
 def news_summary(ticker: str) -> dict[str, object]:
     normalized = ticker.upper()
     now = utc_now()
     cached = cached_snapshot(normalized, now)
     if cached:
-        return cached
+        return {**cached, "daily_counts": historical_daily_counts(normalized)}
 
     articles: list[dict[str, str]] = []
     videos: list[dict[str, str]] = []
@@ -348,4 +368,4 @@ def news_summary(ticker: str) -> dict[str, object]:
         write_snapshot(normalized, summary)
     except OSError:
         pass
-    return summary
+    return {**summary, "daily_counts": historical_daily_counts(normalized)}

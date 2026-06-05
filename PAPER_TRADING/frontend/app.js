@@ -568,6 +568,30 @@ function tradeActivityPolyline(trades) {
     </svg>`;
 }
 
+function newsActivityPolyline(rows) {
+  const points = (rows || []).filter((row) => row.articles !== undefined);
+  if (points.length < 2) return '<p class="chart-empty">Historical news activity is not available for this ticker.</p>';
+  const values = points.map((row) => Number(row.articles || 0));
+  const maxValue = Math.max(...values, 1);
+  const width = 680;
+  const height = 190;
+  const path = values
+    .map((value, index) => {
+      const x = (index / Math.max(values.length - 1, 1)) * width;
+      const y = height - (value / maxValue) * (height - 18) + 4;
+      return `${x.toFixed(2)},${y.toFixed(2)}`;
+    })
+    .join(" ");
+  return `
+    <svg viewBox="0 0 ${width} 235" preserveAspectRatio="none" role="img">
+      <line x1="0" y1="192" x2="${width}" y2="192" stroke="#213653" />
+      <polyline points="${path}" fill="none" stroke="#f9c74f" stroke-width="3" vector-effect="non-scaling-stroke" />
+      <text x="4" y="18" fill="#f9c74f" font-size="12">Max ${number(maxValue)} articles/day</text>
+      <text x="4" y="215" fill="#91a4bd" font-size="12">${points[0].date}</text>
+      <text x="${width - 82}" y="215" fill="#91a4bd" font-size="12">${points.at(-1).date}</text>
+    </svg>`;
+}
+
 async function saveStrategyLab() {
   const status = $("#strategy-lab-status");
   const button = $("#save-strategy-lab");
@@ -1591,6 +1615,8 @@ async function openStock(ticker) {
         ${stat("Source diversity, 7d", number(news.source_diversity_7d))}
         ${stat("Snapshot", escapeHtml(news.snapshot_date))}
       </div>
+      <h3>News activity trend</h3>
+      <div class="chart">${newsActivityPolyline(news.daily_counts || [])}</div>
       <p class="muted">${escapeHtml(news.note)}</p>
       <p class="source-status">${sourceRows}</p>
       <ul class="news-list">${newsRows}</ul>

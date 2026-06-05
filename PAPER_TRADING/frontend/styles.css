@@ -348,6 +348,14 @@ table[data-sortable] th.sort-desc::after { color: var(--accent); content: "v"; }
 th:nth-child(2), td:nth-child(2), th:first-child, td:first-child { text-align: left; }
 tbody tr { transition: background .16s ease; }
 tbody tr:hover { background: rgba(87, 211, 162, .07); }
+.pending-row {
+  background: rgba(249, 199, 79, .08);
+}
+.pending-row td:first-child,
+.pending-row td:nth-child(3) {
+  color: var(--accent-2);
+  font-weight: 800;
+}
 .clickable { cursor: pointer; }
 .positive { color: var(--accent); }
 .negative { color: var(--danger); }

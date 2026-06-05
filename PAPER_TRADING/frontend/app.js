@@ -1803,10 +1803,25 @@ async function openTrader(investor) {
       ...(detail.pending_next_close_orders || []),
     ];
     const benchmark = detail.benchmark_comparison;
+    const pendingActionRows = (detail.pending_next_close_orders || [])
+      .map(
+        (row) => `
+        <tr class="pending-row">
+          <td>${row.date}</td>
+          <td>${row.signal_observed_date}</td>
+          <td>${row.action}</td>
+          <td>${tickerLabel(row.ticker)}</td>
+          <td>${row.entry_signal}</td>
+          <td>${row.execution_price === null ? "-" : money(row.execution_price)}</td>
+          <td>${row.quantity === null ? "-" : number(row.quantity)}</td>
+          <td>${row.usd_amount === null ? "-" : money(row.usd_amount)}</td>
+        </tr>`
+      )
+      .join("");
     const tradeRows = ledgerRows
       .map(
         (row) => `
-        <tr>
+        <tr class="${row.status === "pending" ? "pending-row" : ""}">
           <td>${row.status}</td>
           <td>${row.date}</td>
           <td>${row.signal_observed_date}</td>
@@ -1883,6 +1898,18 @@ async function openTrader(investor) {
           <table id="trader-category-table" data-sortable>
             <thead><tr><th>Category</th><th>Entries</th><th>Closed</th><th>Open</th><th>Deployed</th><th>Gain / loss</th><th>Return</th></tr></thead>
             <tbody>${categoryRows}</tbody>
+          </table>
+        </div>` : ""}
+      ${pendingActionRows ? `
+        <div class="drawer-section-heading">
+          <h3>Upcoming next-close actions</h3>
+          <button class="secondary small" data-export-table="#trader-pending-table" data-export-name="pending-actions-${detail.investor}" data-export-title="${detail.investor} Pending Actions">Download pending</button>
+        </div>
+        <p class="muted">These are trades observed after the selected To-date close. They should be executed at the next available close under the current EOD convention.</p>
+        <div class="table-wrap">
+          <table id="trader-pending-table" data-sortable>
+            <thead><tr><th>Execution date</th><th>Observed after close</th><th>Action</th><th>Ticker</th><th>Entry signal</th><th>Execution price</th><th>Quantity</th><th>USD amount</th></tr></thead>
+            <tbody>${pendingActionRows}</tbody>
           </table>
         </div>` : ""}
       ${detail.simulated_trades ? `

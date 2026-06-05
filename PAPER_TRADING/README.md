@@ -178,6 +178,8 @@ It does not submit trades or modify the ledger. It provides:
   them in a safe read-only drilldown
 - recommendation, asset-universe, and stock-drilldown actions support
   excluding/ignoring assets without deleting historical records
+- recommendation actions persist the recommendation reason into asset notes so
+  promote/watch/archive/ignore decisions are auditable
 - optional daily dashboard report email after the first successful refresh of
   each day, with a focused activity section for
   `watchlist-variable-news-optimized-experimental`

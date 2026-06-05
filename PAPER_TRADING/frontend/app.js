@@ -301,10 +301,10 @@ function renderRecommendations() {
         <td>${escapeHtml(asset?.status || "untracked")}</td>
         <td>
           <div class="asset-action-group">
-            <button class="asset-action" data-recommendation-action="${escapeHtml(action)}" data-recommendation-ticker="${escapeHtml(stock.ticker)}" data-recommendation-type="${escapeHtml(stock.security_type)}">Approve</button>
-            <button class="asset-action" data-recommendation-action="candidate" data-recommendation-ticker="${escapeHtml(stock.ticker)}" data-recommendation-type="${escapeHtml(stock.security_type)}">Watch</button>
-            <button class="asset-action" data-recommendation-action="archived" data-recommendation-ticker="${escapeHtml(stock.ticker)}" data-recommendation-type="${escapeHtml(stock.security_type)}">Archive</button>
-            <button class="asset-action" data-recommendation-action="excluded" data-recommendation-ticker="${escapeHtml(stock.ticker)}" data-recommendation-type="${escapeHtml(stock.security_type)}">Ignore</button>
+            <button class="asset-action" data-recommendation-action="${escapeHtml(action)}" data-recommendation-ticker="${escapeHtml(stock.ticker)}" data-recommendation-type="${escapeHtml(stock.security_type)}" data-recommendation-reason="${escapeHtml(reason)}">Approve</button>
+            <button class="asset-action" data-recommendation-action="candidate" data-recommendation-ticker="${escapeHtml(stock.ticker)}" data-recommendation-type="${escapeHtml(stock.security_type)}" data-recommendation-reason="${escapeHtml(reason)}">Watch</button>
+            <button class="asset-action" data-recommendation-action="archived" data-recommendation-ticker="${escapeHtml(stock.ticker)}" data-recommendation-type="${escapeHtml(stock.security_type)}" data-recommendation-reason="${escapeHtml(reason)}">Archive</button>
+            <button class="asset-action" data-recommendation-action="excluded" data-recommendation-ticker="${escapeHtml(stock.ticker)}" data-recommendation-type="${escapeHtml(stock.security_type)}" data-recommendation-reason="${escapeHtml(reason)}">Ignore</button>
           </div>
         </td>
       </tr>`)
@@ -315,7 +315,8 @@ function renderRecommendations() {
       saveStockUniverseAction(
         button.dataset.recommendationTicker,
         button.dataset.recommendationType,
-        button.dataset.recommendationAction
+        button.dataset.recommendationAction,
+        button.dataset.recommendationReason
       )
     )
   );
@@ -1106,12 +1107,16 @@ async function updateAssetStatus(button) {
   }
 }
 
-async function saveStockUniverseAction(ticker, assetType, action) {
+async function saveStockUniverseAction(ticker, assetType, action, reason = "") {
   const statusNode = $("#stock-universe-action-status") || $("#recommendation-action-status");
+  const existing = universeByTicker().get(String(ticker).toUpperCase());
+  const recommendationNote = reason ? `Recommendation ${action}: ${reason}` : "";
+  const notes = [existing?.notes, recommendationNote].filter(Boolean).join(" | ");
   const basePayload = {
     ticker,
     asset_type: assetType,
-    source: "stock-drilldown-ui",
+    source: reason ? "recommendation-engine-ui" : "stock-drilldown-ui",
+    notes: notes || undefined,
   };
   const payload = action === "strategy_eligible"
     ? { ...basePayload, status: "active", strategy_eligible: true, watchlist_eligible: true }

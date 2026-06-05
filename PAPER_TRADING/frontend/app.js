@@ -1234,13 +1234,75 @@ function dateOptions(meta, includeLatest = false) {
     .join("") + (group ? "</optgroup>" : "");
 }
 
+function portfolioDescription(row = {}) {
+  const investor = String(row.investor || "").toLowerCase();
+  const source = String(row.source || "").toLowerCase();
+  if (source.includes("wealthsimple")) {
+    return "Imported Wealthsimple account history for Nisarg; deposits and withdrawals are ignored in return calculations where possible.";
+  }
+  if (source.includes("saved-strategy-registry")) {
+    return "Saved Strategy Lab configuration replayed as a generated portfolio for comparison against live watchlists.";
+  }
+  if (source.includes("derived-news-assisted")) {
+    if (investor.includes("optimized")) {
+      return "News-assisted variable watchlist using EOD signal timing and the optimized news/signal rules selected from backtests.";
+    }
+    if (investor.includes("active")) {
+      return "News-assisted variable watchlist that holds or filters positions while related news remains active.";
+    }
+    if (investor.includes("cooling")) {
+      return "News-assisted variable watchlist variant that uses cooling news behavior as part of sell decisions.";
+    }
+    if (investor.includes("required-entry")) {
+      return "Variable watchlist variant that requires news support before entering positions.";
+    }
+    return "Derived variable watchlist that combines technical signals with free news activity and next-close execution.";
+  }
+  if (source.includes("derived-buy-only")) {
+    return "Buy-only signal portfolio: buys qualifying signals and keeps positions instead of selling when signals fade.";
+  }
+  if (source.includes("derived-daily-signal")) {
+    return "Variable signal portfolio: replays daily EOD signal changes from the selected start date with next-close execution assumptions.";
+  }
+  if (source.includes("derived-multi-signal")) {
+    return "Variable strategy using multiple signal horizons and exit rules to test whether technical deterioration improves selling.";
+  }
+  if (investor.includes("mass-change")) {
+    return "Candidate discovery portfolio for sector-led volume/news movers; used to collect ideas before promotion to other watchlists.";
+  }
+  if (investor.includes("long-term-watchlist")) {
+    return "Long-term idea basket for stocks selected from research themes and watchlist expansion work.";
+  }
+  if (investor.includes("short-term-watchlist")) {
+    return "Short-term technical setup basket focused on high-momentum and volume-driven candidates.";
+  }
+  if (investor.includes("insta_watchlist")) {
+    return "Creator/social watchlist basket sourced from Instagram-style idea flow and related market themes.";
+  }
+  if (source.includes("paper-ledger")) {
+    return "Manually entered paper-trading ledger using the configured position sizing assumptions for stocks, ETFs, and crypto.";
+  }
+  return "Tracked dashboard portfolio. Click through for holdings, realized positions, benchmark comparison, signal mix, and trade ledger details.";
+}
+
+function portfolioNameCell(row) {
+  const description = portfolioDescription(row);
+  return `
+    <span class="portfolio-tip">
+      <strong>${escapeHtml(row.investor)}</strong>
+      <span class="info-dot" aria-label="Portfolio description">i</span>
+      <span class="portfolio-tip-text">${escapeHtml(description)}</span>
+    </span>
+    <br><span class="muted">${escapeHtml(row.source || "")}</span>`;
+}
+
 function renderTraders() {
   $("#trader-rows").innerHTML = state.overview.traders
     .map(
       (row) => `
-      <tr class="clickable" data-trader="${row.investor}">
+      <tr class="clickable" data-trader="${escapeHtml(row.investor)}" title="${escapeHtml(portfolioDescription(row))}">
         <td>${row.rank}</td>
-        <td><strong>${row.investor}</strong><br><span class="muted">${row.source}</span></td>
+        <td>${portfolioNameCell(row)}</td>
         <td>${row.position_count}</td>
         <td>${money(row.initial_value)}</td>
         <td>${money(row.current_value)}</td>
@@ -1263,8 +1325,8 @@ function renderEod() {
   $("#eod-trader-rows").innerHTML = state.eod.traders
     .map(
       (row) => `
-      <tr class="clickable" data-eod-trader="${row.investor}">
-        <td><strong>${row.investor}</strong></td>
+      <tr class="clickable" data-eod-trader="${escapeHtml(row.investor)}" title="${escapeHtml(portfolioDescription(row))}">
+        <td>${portfolioNameCell(row)}</td>
         <td class="${tone(row.return_pct)}">${pct(row.return_pct)}</td>
         <td class="${tone(row.gain_loss)}">${money(row.gain_loss)}</td>
       </tr>`
@@ -1761,6 +1823,7 @@ async function openTrader(investor) {
     openDrawer(`
       <p class="eyebrow">${detail.source}</p>
       <h2>${detail.investor}</h2>
+      <p class="portfolio-description">${escapeHtml(portfolioDescription(detail))}</p>
       ${relatedResearchHtml([detail.investor, detail.source, ...(detail.positions || []).map((position) => position.ticker)], ["strategy", "signals", "watchlist"])}
       <div class="detail-grid">
         ${stat("Starting value", money(detail.initial_value))}

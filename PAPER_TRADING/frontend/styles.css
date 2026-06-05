@@ -387,6 +387,54 @@ tbody tr:hover { background: rgba(87, 211, 162, .07); }
   z-index: 3;
 }
 .ticker-tip:hover .ticker-tip-text { display: block; }
+.portfolio-tip {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  position: relative;
+}
+.info-dot {
+  align-items: center;
+  background: rgba(111, 183, 255, .12);
+  border: 1px solid rgba(111, 183, 255, .36);
+  border-radius: 50%;
+  color: var(--blue);
+  display: inline-flex;
+  font-size: .65rem;
+  font-weight: 900;
+  height: 16px;
+  justify-content: center;
+  line-height: 1;
+  width: 16px;
+}
+.portfolio-tip-text {
+  background: #162940;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  bottom: calc(100% + 7px);
+  color: var(--text);
+  display: none;
+  font-size: .72rem;
+  font-weight: 400;
+  left: 0;
+  line-height: 1.35;
+  padding: 8px;
+  position: absolute;
+  text-align: left;
+  white-space: normal;
+  width: 320px;
+  z-index: 3;
+}
+.portfolio-tip:hover .portfolio-tip-text { display: block; }
+.portfolio-description {
+  background: rgba(111, 183, 255, .08);
+  border-left: 3px solid var(--blue);
+  color: var(--muted);
+  font-size: .88rem;
+  line-height: 1.45;
+  margin-top: 8px;
+  padding: 9px 11px;
+}
 .signal-matrix { margin-top: 12px; }
 .signal-matrix td:first-child { font-weight: 800; }
 .drawer {

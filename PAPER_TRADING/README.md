@@ -128,7 +128,8 @@ It does not submit trades or modify the ledger. It provides:
 - daily EOD portfolio movers and top stock movers versus the prior market close
 - Daily Command Center summary for fresh signals, sector heat,
   benchmark-relative movers, derived-strategy 5D momentum, and universe
-  suggestions
+  suggestions, plus pending next-close actions for
+  `watchlist-variable-news-optimized-experimental`
 - sector-level company group breakdowns with average return, median return,
   win rate, daily/5D/monthly changes, signal mix, and top/worst contributors
 - click-to-sort columns in the dashboard tables and trader holding drilldowns

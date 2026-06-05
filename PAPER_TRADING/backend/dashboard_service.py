@@ -1540,10 +1540,14 @@ def variable_news_strategy_summary(
         apply_wealthsimple_fx_fees=apply_wealthsimple_fx_fees,
         news_note=str(config["note"]),
     )
-    return {
+    summary = {
         key: detail[key]
         for key in SUMMARY_KEYS
     } | {"warnings": []}
+    if strategy_name == "watchlist-variable-news-optimized-experimental":
+        summary["pending_next_close_orders"] = detail.get("pending_next_close_orders", [])
+        summary["execution_convention"] = detail.get("execution_convention")
+    return summary
 
 
 def hybrid_news_optimized_strategy_summary(

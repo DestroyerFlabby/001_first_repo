@@ -780,8 +780,16 @@ function renderCommandCenter() {
     .filter((row) => String(row.source || "").startsWith("derived"))
     .sort((left, right) => Number(right.five_day_change_pct || 0) - Number(left.five_day_change_pct || 0))
     .slice(0, 5);
+  const focusedStrategy = traders.find((row) => row.investor === "watchlist-variable-news-optimized-experimental");
+  const pendingActions = focusedStrategy?.pending_next_close_orders || [];
   const suggestionRows = recommendations.slice(0, 5);
   $("#command-center-grid").innerHTML = [
+    commandCenterPanel(
+      "Pending Strategy Actions",
+      pendingActions,
+      (row) => `<strong>${escapeHtml(row.action)}</strong> ${tickerLabel(row.ticker)} ${escapeHtml(row.entry_signal || "-")} observed ${escapeHtml(row.signal_observed_date || "-")}`,
+      "No pending next-close actions for watchlist-variable-news-optimized-experimental."
+    ),
     commandCenterPanel(
       "New Fresh Signals",
       freshSignals,

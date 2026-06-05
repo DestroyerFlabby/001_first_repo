@@ -377,7 +377,7 @@ function strategyLabRegistryPayload() {
   const exit = $("#lab-exit-rule").value;
   return {
     strategy_name: $("#lab-strategy-name").value.trim() || defaultLabStrategyName(),
-    status: "research",
+    status: "forward_testing",
     forward_test_start_date: $("#from-date").value || state.meta?.default_from_date || "",
     entry_rule: labLabels.entry[entry] || entry,
     exit_rule: labLabels.exit[exit] || exit,
@@ -385,7 +385,7 @@ function strategyLabRegistryPayload() {
     universe: labLabels.universe[universe] || universe,
     benchmark: "SPY",
     position_size: "1000",
-    notes: "Saved from the dashboard Strategy Lab. Registry-only entry; it does not create trades or generated portfolios yet.",
+    notes: "Saved from the dashboard Strategy Lab. Supported rule sets flow into the dashboard ranking as generated portfolios; no broker trades are created.",
   };
 }
 

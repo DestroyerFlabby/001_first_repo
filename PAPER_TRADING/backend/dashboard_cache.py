@@ -61,6 +61,35 @@ def cache_created_on(kind: str, start: date | None, end: date | None, apply_fees
         return None
 
 
+def latest_cached_overview_window(start: date, apply_fees: bool = False) -> tuple[date, date] | None:
+    if not CACHE_DIR.exists():
+        return None
+    latest_end: date | None = None
+    for path in CACHE_DIR.glob("overview__*.json"):
+        try:
+            wrapped = json.loads(path.read_text(encoding="utf-8"))
+            metadata = wrapped.get("cache", {})
+            from_date = metadata.get("from_date")
+            to_date = metadata.get("to_date")
+        except (AttributeError, json.JSONDecodeError, OSError):
+            continue
+        if (
+            metadata.get("version") != CACHE_VERSION
+            or metadata.get("kind") != "overview"
+            or metadata.get("wealthsimple_fx_fees") != apply_fees
+            or from_date != start.isoformat()
+            or not to_date
+        ):
+            continue
+        try:
+            parsed_end = date.fromisoformat(str(to_date))
+        except ValueError:
+            continue
+        if latest_end is None or parsed_end > latest_end:
+            latest_end = parsed_end
+    return (start, latest_end) if latest_end else None
+
+
 def write_cache(
     kind: str,
     start: date | None,

@@ -30,6 +30,7 @@ from backend.dashboard_cache import (  # noqa: E402
     cached_or_build_eod,
     cached_or_build_overview,
     default_preload_window,
+    latest_cached_overview_window,
     preload_dashboard_cache,
 )
 from backend.benchmark_service import benchmark_registry_response, upsert_benchmark  # noqa: E402
@@ -63,6 +64,21 @@ def configured_preload_window() -> tuple[date, date]:
     start = date.fromisoformat(from_value) if from_value else None
     end = date.fromisoformat(to_value) if to_value else None
     return default_preload_window(start, end)
+
+
+def configured_preload_preset_window() -> tuple[date, date]:
+    from_value = os.environ.get("PRELOAD_DASHBOARD_CACHE_FROM_DATE", "").strip()
+    to_value = os.environ.get("PRELOAD_DASHBOARD_CACHE_TO_DATE", "").strip()
+    start = date.fromisoformat(from_value) if from_value else None
+    if to_value:
+        end = date.fromisoformat(to_value)
+        return default_preload_window(start, end)
+    preload_start, preload_target_end = default_preload_window(start, None)
+    cached_window = latest_cached_overview_window(
+        preload_start,
+        apply_fees=env_bool("PRELOAD_DASHBOARD_CACHE_INCLUDE_FX"),
+    )
+    return cached_window or (preload_start, preload_target_end)
 
 
 def warm_dashboard_cache_in_background() -> None:
@@ -131,7 +147,7 @@ def health() -> dict[str, str]:
 
 @app.get("/api/meta")
 def meta() -> dict[str, object]:
-    preload_start, preload_end = configured_preload_window()
+    preload_start, preload_end = configured_preload_preset_window()
     return {
         "default_from_date": DEFAULT_START.isoformat(),
         "default_to_date": latest_market_date().isoformat(),

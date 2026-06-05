@@ -221,6 +221,27 @@
             </table>
           </div>
           <h3>Benchmark Registry</h3>
+          <form id="benchmark-form" class="benchmark-form">
+            <input id="benchmark-id" name="benchmark_id" placeholder="Benchmark id (optional)" />
+            <input id="benchmark-ticker" name="ticker" placeholder="Ticker" required />
+            <input id="benchmark-name" name="name" placeholder="Name" />
+            <select id="benchmark-type" name="asset_type">
+              <option value="etf">ETF</option>
+              <option value="stock">Stock</option>
+              <option value="crypto">Crypto</option>
+              <option value="index">Index</option>
+            </select>
+            <input id="benchmark-exchange" name="exchange" placeholder="Exchange" />
+            <input id="benchmark-currency" name="currency" placeholder="Currency" value="USD" />
+            <input id="benchmark-category" name="category" placeholder="Category" />
+            <input id="benchmark-default-for" name="default_for" placeholder="Default for" />
+            <select id="benchmark-active" name="active">
+              <option value="true">Active</option>
+              <option value="false">Inactive</option>
+            </select>
+            <input id="benchmark-notes" name="notes" placeholder="Notes" />
+            <button class="secondary" type="submit">Save benchmark</button>
+          </form>
           <div class="table-wrap">
             <table data-sortable>
               <thead>

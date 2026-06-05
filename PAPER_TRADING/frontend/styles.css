@@ -256,6 +256,13 @@ input, select {
   grid-template-columns: 170px 120px 105px 170px 1fr auto;
 }
 .basket-form input, .basket-form select { min-width: 0; }
+.benchmark-form {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 150px 100px 1.2fr 100px 110px 90px 1fr 1fr 100px 1.2fr auto;
+  margin: 10px 0;
+}
+.benchmark-form input, .benchmark-form select { min-width: 0; }
 .strategy-lab-controls {
   align-items: end;
   display: grid;
@@ -443,7 +450,8 @@ tbody tr:hover { background: rgba(87, 211, 162, .07); }
   .stock-tools input { min-width: 0; width: 100%; }
   .asset-form,
   .basket-form,
-  .basket-form.compact { grid-template-columns: 1fr; }
+  .basket-form.compact,
+  .benchmark-form { grid-template-columns: 1fr; }
   .strategy-lab-controls { grid-template-columns: 1fr; }
   .drawer-section-heading { align-items: start; flex-direction: column; }
 }

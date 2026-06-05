@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import re
 from pathlib import Path
 
 
@@ -65,6 +66,45 @@ def read_benchmarks(include_inactive: bool = False) -> list[dict[str, object]]:
     if not include_inactive:
         rows = [row for row in rows if row["active"]]
     return sorted(rows, key=lambda row: str(row["benchmark_id"]))
+
+
+def write_benchmarks(rows: list[dict[str, object]]) -> None:
+    BENCHMARK_REGISTRY_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with BENCHMARK_REGISTRY_FILE.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=BENCHMARK_COLUMNS, quoting=csv.QUOTE_ALL)
+        writer.writeheader()
+        for row in rows:
+            writer.writerow({column: row.get(column, "") for column in BENCHMARK_COLUMNS})
+
+
+def benchmark_slug(value: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", value.strip().casefold()).strip("-")
+    return slug or "custom-benchmark"
+
+
+def upsert_benchmark(payload: dict[str, object]) -> dict[str, object]:
+    ticker = str(payload.get("ticker") or "").strip().upper()
+    benchmark_id = benchmark_slug(str(payload.get("benchmark_id") or ticker))
+    row = normalize_row(
+        {
+            "benchmark_id": benchmark_id,
+            "ticker": ticker,
+            "name": str(payload.get("name") or ticker).strip(),
+            "asset_type": str(payload.get("asset_type") or "etf").strip(),
+            "exchange": str(payload.get("exchange") or "").strip(),
+            "currency": str(payload.get("currency") or "USD").strip().upper(),
+            "category": str(payload.get("category") or "").strip(),
+            "default_for": str(payload.get("default_for") or "").strip(),
+            "active": str(payload.get("active") if payload.get("active") is not None else "true"),
+            "notes": str(payload.get("notes") or "").strip(),
+        },
+        0,
+    )
+    rows = read_benchmarks(include_inactive=True)
+    by_id = {str(existing["benchmark_id"]): existing for existing in rows}
+    by_id[str(row["benchmark_id"])] = row
+    write_benchmarks(sorted(by_id.values(), key=lambda item: str(item["benchmark_id"])))
+    return row
 
 
 def benchmark_registry_response(include_inactive: bool = False) -> dict[str, object]:

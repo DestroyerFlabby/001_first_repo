@@ -32,7 +32,7 @@ from backend.dashboard_cache import (  # noqa: E402
     default_preload_window,
     preload_dashboard_cache,
 )
-from backend.benchmark_service import benchmark_registry_response  # noqa: E402
+from backend.benchmark_service import benchmark_registry_response, upsert_benchmark  # noqa: E402
 from backend.basket_service import (  # noqa: E402
     basket_performance,
     custom_basket_response,
@@ -204,6 +204,15 @@ def patch_universe_asset(
 @app.get("/api/benchmarks")
 def benchmarks(include_inactive: bool = Query(default=False)) -> dict[str, object]:
     return benchmark_registry_response(include_inactive=include_inactive)
+
+
+@app.post("/api/benchmarks")
+def create_or_update_benchmark(payload: dict[str, object] = Body(...)) -> dict[str, object]:
+    ensure_private_write()
+    try:
+        return {"benchmark": upsert_benchmark(payload)}
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.get("/api/baskets")

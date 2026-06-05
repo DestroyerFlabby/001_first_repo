@@ -174,6 +174,8 @@ It does not submit trades or modify the ledger. It provides:
   stored monthly or quarterly rebalance simulation
 - dashboard forms can create/update custom basket metadata and members in the
   CSV registries without creating trades or portfolio holdings
+- dashboard forms can create/update benchmark registry rows used for portfolio,
+  basket, and strategy comparisons
 - dashboard research library that indexes existing Markdown notes and opens
   them in a safe read-only drilldown
 - stock, basket, strategy, and trader drilldowns surface related research

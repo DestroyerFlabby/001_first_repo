@@ -1087,6 +1087,31 @@ async function submitBasketMemberForm(event) {
   }
 }
 
+async function submitBenchmarkForm(event) {
+  event.preventDefault();
+  const payload = {
+    benchmark_id: $("#benchmark-id").value.trim(),
+    ticker: $("#benchmark-ticker").value.trim(),
+    name: $("#benchmark-name").value.trim(),
+    asset_type: $("#benchmark-type").value,
+    exchange: $("#benchmark-exchange").value.trim(),
+    currency: $("#benchmark-currency").value.trim() || "USD",
+    category: $("#benchmark-category").value.trim(),
+    default_for: $("#benchmark-default-for").value.trim(),
+    active: $("#benchmark-active").value === "true",
+    notes: $("#benchmark-notes").value.trim(),
+  };
+  try {
+    const result = await fetchJson("/api/benchmarks", jsonRequest("POST", payload));
+    $("#benchmark-form").reset();
+    $("#benchmark-currency").value = "USD";
+    await refreshUniverse();
+    $("#universe-status").textContent = `Saved benchmark ${result.benchmark.benchmark_id}. ${universeStatusText()}`;
+  } catch (error) {
+    $("#universe-status").textContent = `Benchmark save failed: ${error.message}`;
+  }
+}
+
 async function updateAssetStatus(button) {
   const ticker = button.dataset.assetTicker;
   const assetType = button.dataset.assetType;
@@ -1934,6 +1959,7 @@ async function init() {
     );
   });
   $("#asset-form").addEventListener("submit", submitAssetForm);
+  $("#benchmark-form").addEventListener("submit", submitBenchmarkForm);
   $("#basket-form").addEventListener("submit", submitBasketForm);
   $("#basket-member-form").addEventListener("submit", submitBasketMemberForm);
   $("#stock-search").addEventListener("input", renderStocks);

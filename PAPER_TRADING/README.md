@@ -168,6 +168,8 @@ It does not submit trades or modify the ledger. It provides:
 - Strategy Lab preview tables can be downloaded to Excel after a preview runs
 - clickable custom basket/index rows with member-level window returns,
   contribution, benchmark return, and alpha preview
+- dashboard forms can create/update custom basket metadata and members in the
+  CSV registries without creating trades or portfolio holdings
 - dashboard research library that indexes existing Markdown notes and opens
   them in a safe read-only drilldown
 - recommendation, asset-universe, and stock-drilldown actions support

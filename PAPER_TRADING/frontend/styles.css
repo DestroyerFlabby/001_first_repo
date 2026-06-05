@@ -246,6 +246,16 @@ input, select {
   margin-bottom: 10px;
 }
 .asset-form input, .asset-form select { min-width: 0; }
+.basket-form {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 150px 1.2fr 110px 140px 130px 100px 1.4fr auto;
+  margin: 10px 0;
+}
+.basket-form.compact {
+  grid-template-columns: 170px 120px 105px 170px 1fr auto;
+}
+.basket-form input, .basket-form select { min-width: 0; }
 .strategy-lab-controls {
   align-items: end;
   display: grid;
@@ -431,7 +441,9 @@ tbody tr:hover { background: rgba(87, 211, 162, .07); }
   .stock-heading { align-items: start; flex-direction: column; gap: 12px; }
   .stock-tools { width: 100%; }
   .stock-tools input { min-width: 0; width: 100%; }
-  .asset-form { grid-template-columns: 1fr; }
+  .asset-form,
+  .basket-form,
+  .basket-form.compact { grid-template-columns: 1fr; }
   .strategy-lab-controls { grid-template-columns: 1fr; }
   .drawer-section-heading { align-items: start; flex-direction: column; }
 }

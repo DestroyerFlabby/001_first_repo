@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import re
 from datetime import date
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
@@ -90,6 +91,83 @@ def read_csv(path: Path, fields: list[str]) -> list[dict[str, str]]:
         if reader.fieldnames != fields:
             raise ValueError(f"{path.name} has unexpected columns")
         return list(reader)
+
+
+def write_csv(path: Path, fields: list[str], rows: list[dict[str, object]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fields, quoting=csv.QUOTE_ALL)
+        writer.writeheader()
+        for row in rows:
+            writer.writerow({field: row.get(field, "") for field in fields})
+
+
+def basket_slug(value: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", value.strip().casefold()).strip("-")
+    return slug or "custom-basket"
+
+
+def upsert_basket(payload: dict[str, object]) -> dict[str, object]:
+    raw_name = str(payload.get("basket_name") or "").strip()
+    basket_id = basket_slug(str(payload.get("basket_id") or raw_name))
+    row = normalize_basket(
+        {
+            "basket_id": basket_id,
+            "basket_name": raw_name,
+            "status": str(payload.get("status") or "research"),
+            "weighting_method": str(payload.get("weighting_method") or "equal_weight"),
+            "rebalance_frequency": str(payload.get("rebalance_frequency") or "monthly"),
+            "benchmark": str(payload.get("benchmark") or "SPY").strip().upper(),
+            "created_at": str(payload.get("created_at") or date.today().isoformat()),
+            "notes": str(payload.get("notes") or "").strip(),
+        },
+        0,
+    )
+    rows = read_csv(BASKET_FILE, BASKET_FIELDS)
+    updated = False
+    for index, existing in enumerate(rows):
+        if str(existing.get("basket_id") or "").casefold() == basket_id:
+            rows[index] = {field: str(row.get(field, "")) for field in BASKET_FIELDS}
+            updated = True
+            break
+    if not updated:
+        rows.append({field: str(row.get(field, "")) for field in BASKET_FIELDS})
+    write_csv(BASKET_FILE, BASKET_FIELDS, rows)
+    return row
+
+
+def upsert_basket_member(basket_id: str, payload: dict[str, object]) -> dict[str, object]:
+    basket_id = basket_slug(basket_id)
+    baskets = custom_basket_response(include_archived=True)["baskets"]
+    if not any(str(row["basket_id"]) == basket_id for row in baskets):
+        raise KeyError(basket_id)
+    row = normalize_member(
+        {
+            "basket_id": basket_id,
+            "ticker": str(payload.get("ticker") or ""),
+            "asset_type": str(payload.get("asset_type") or "stock"),
+            "target_weight": str(payload.get("target_weight") or "").strip(),
+            "source": str(payload.get("source") or "dashboard").strip(),
+            "added_at": str(payload.get("added_at") or date.today().isoformat()),
+            "notes": str(payload.get("notes") or "").strip(),
+        },
+        0,
+    )
+    rows = read_csv(BASKET_MEMBER_FILE, MEMBER_FIELDS)
+    updated = False
+    for index, existing in enumerate(rows):
+        if (
+            str(existing.get("basket_id") or "").casefold() == basket_id
+            and str(existing.get("ticker") or "").upper() == str(row["ticker"])
+            and str(existing.get("asset_type") or "").casefold() == str(row["asset_type"])
+        ):
+            rows[index] = {field: str(row.get(field, "")) for field in MEMBER_FIELDS}
+            updated = True
+            break
+    if not updated:
+        rows.append({field: str(row.get(field, "")) for field in MEMBER_FIELDS})
+    write_csv(BASKET_MEMBER_FILE, MEMBER_FIELDS, rows)
+    return row
 
 
 def custom_basket_response(include_archived: bool = False) -> dict[str, object]:

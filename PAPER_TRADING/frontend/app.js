@@ -1033,6 +1033,51 @@ async function submitAssetForm(event) {
   }
 }
 
+async function submitBasketForm(event) {
+  event.preventDefault();
+  const payload = {
+    basket_id: $("#basket-id").value.trim(),
+    basket_name: $("#basket-name").value.trim(),
+    status: $("#basket-status-field").value,
+    weighting_method: $("#basket-weighting").value,
+    rebalance_frequency: $("#basket-rebalance").value,
+    benchmark: $("#basket-benchmark").value.trim() || "SPY",
+    notes: $("#basket-notes").value.trim(),
+  };
+  try {
+    const result = await fetchJson("/api/baskets", jsonRequest("POST", payload));
+    $("#basket-form").reset();
+    $("#basket-benchmark").value = "SPY";
+    await refreshUniverse();
+    $("#basket-status").textContent = `Saved basket ${result.basket.basket_id}.`;
+  } catch (error) {
+    $("#basket-status").textContent = `Basket save failed: ${error.message}`;
+  }
+}
+
+async function submitBasketMemberForm(event) {
+  event.preventDefault();
+  const basketId = $("#basket-member-basket-id").value.trim();
+  const payload = {
+    ticker: $("#basket-member-ticker").value.trim(),
+    asset_type: $("#basket-member-type").value,
+    target_weight: $("#basket-member-weight").value.trim(),
+    notes: $("#basket-member-notes").value.trim(),
+  };
+  try {
+    const result = await fetchJson(
+      `/api/baskets/${encodeURIComponent(basketId)}/members`,
+      jsonRequest("POST", payload)
+    );
+    $("#basket-member-form").reset();
+    $("#basket-member-basket-id").value = result.member.basket_id;
+    await refreshUniverse();
+    $("#basket-status").textContent = `Saved ${result.member.ticker} in ${result.member.basket_id}.`;
+  } catch (error) {
+    $("#basket-status").textContent = `Basket member save failed: ${error.message}`;
+  }
+}
+
 async function updateAssetStatus(button) {
   const ticker = button.dataset.assetTicker;
   const assetType = button.dataset.assetType;
@@ -1832,6 +1877,8 @@ async function init() {
     );
   });
   $("#asset-form").addEventListener("submit", submitAssetForm);
+  $("#basket-form").addEventListener("submit", submitBasketForm);
+  $("#basket-member-form").addEventListener("submit", submitBasketMemberForm);
   $("#stock-search").addEventListener("input", renderStocks);
   $("#signal-filter").addEventListener("change", renderStocks);
   $("#export-eod").addEventListener("click", () => {

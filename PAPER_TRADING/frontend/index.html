@@ -262,6 +262,40 @@
           </div>
           <h3>Custom Baskets</h3>
           <p class="muted">Thesis baskets can later be used as portfolio benchmarks without replacing existing traders or strategies.</p>
+          <p id="basket-status" class="muted"></p>
+          <form id="basket-form" class="basket-form">
+            <input id="basket-id" name="basket_id" placeholder="Basket id (optional)" />
+            <input id="basket-name" name="basket_name" placeholder="Basket name" required />
+            <select id="basket-status-field" name="status">
+              <option value="research">Research</option>
+              <option value="active">Active</option>
+              <option value="archived">Archived</option>
+            </select>
+            <select id="basket-weighting" name="weighting_method">
+              <option value="equal_weight">Equal weight</option>
+              <option value="custom_weight">Custom weight</option>
+            </select>
+            <select id="basket-rebalance" name="rebalance_frequency">
+              <option value="monthly">Monthly</option>
+              <option value="quarterly">Quarterly</option>
+              <option value="none">None</option>
+            </select>
+            <input id="basket-benchmark" name="benchmark" placeholder="Benchmark" value="SPY" />
+            <input id="basket-notes" name="notes" placeholder="Notes" />
+            <button class="primary" type="submit">Save basket</button>
+          </form>
+          <form id="basket-member-form" class="basket-form compact">
+            <input id="basket-member-basket-id" name="basket_id" placeholder="Basket id" required />
+            <input id="basket-member-ticker" name="ticker" placeholder="Ticker" required />
+            <select id="basket-member-type" name="asset_type">
+              <option value="stock">Stock</option>
+              <option value="etf">ETF</option>
+              <option value="crypto">Crypto</option>
+            </select>
+            <input id="basket-member-weight" name="target_weight" placeholder="Target weight (optional)" />
+            <input id="basket-member-notes" name="notes" placeholder="Member notes" />
+            <button class="secondary" type="submit">Add / update member</button>
+          </form>
           <div class="table-wrap">
             <table data-sortable>
               <thead>

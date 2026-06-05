@@ -33,7 +33,12 @@ from backend.dashboard_cache import (  # noqa: E402
     preload_dashboard_cache,
 )
 from backend.benchmark_service import benchmark_registry_response  # noqa: E402
-from backend.basket_service import basket_performance, custom_basket_response  # noqa: E402
+from backend.basket_service import (  # noqa: E402
+    basket_performance,
+    custom_basket_response,
+    upsert_basket,
+    upsert_basket_member,
+)
 from backend.email_service import send_daily_instructions  # noqa: E402
 from backend.news_service import news_summary  # noqa: E402
 from backend.research_service import research_index_response, research_note_response  # noqa: E402
@@ -204,6 +209,29 @@ def benchmarks(include_inactive: bool = Query(default=False)) -> dict[str, objec
 @app.get("/api/baskets")
 def baskets(include_archived: bool = Query(default=False)) -> dict[str, object]:
     return custom_basket_response(include_archived=include_archived)
+
+
+@app.post("/api/baskets")
+def create_or_update_basket(payload: dict[str, object] = Body(...)) -> dict[str, object]:
+    ensure_private_write()
+    try:
+        return {"basket": upsert_basket(payload)}
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/baskets/{basket_id}/members")
+def create_or_update_basket_member(
+    basket_id: str,
+    payload: dict[str, object] = Body(...),
+) -> dict[str, object]:
+    ensure_private_write()
+    try:
+        return {"member": upsert_basket_member(basket_id, payload)}
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"unknown basket: {basket_id}") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.get("/api/baskets/{basket_id}/performance")

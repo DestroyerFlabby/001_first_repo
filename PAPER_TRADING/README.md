@@ -186,6 +186,9 @@ It does not submit trades or modify the ledger. It provides:
   excluding/ignoring assets without deleting historical records
 - recommendation actions persist the recommendation reason into asset notes so
   promote/watch/archive/ignore decisions are auditable
+- asset universe add/update/status changes are appended to
+  `data/asset_universe_events.csv` and shown in the dashboard recent-change
+  table
 - optional daily dashboard report email after the first successful refresh of
   each day, with a focused activity section for
   `watchlist-variable-news-optimized-experimental`
@@ -503,6 +506,8 @@ API is not a broad public stock-mention feed.
 - `data/strategy_registry.csv`: strategy status registry used to distinguish
   research, backtested, forward-testing, active, and retired strategy logic
   without changing the existing strategy scripts.
+- `data/asset_universe_events.csv`: append-only audit log for asset universe
+  add/update/status changes
 - `data/custom_baskets.csv` and `data/custom_basket_members.csv`: thesis
   basket/index registry for future equal-weight, custom-weight, monthly,
   quarterly, or no-rebalance benchmark construction.

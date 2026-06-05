@@ -9,6 +9,7 @@ from threading import Lock
 
 ROOT = Path(__file__).resolve().parents[1]
 ASSET_UNIVERSE_FILE = ROOT / "data" / "asset_universe.csv"
+ASSET_UNIVERSE_EVENT_FILE = ROOT / "data" / "asset_universe_events.csv"
 WRITE_LOCK = Lock()
 ASSET_UNIVERSE_COLUMNS = (
     "ticker",
@@ -25,6 +26,16 @@ ASSET_UNIVERSE_COLUMNS = (
     "wealthsimple_supported_status",
     "added_at",
     "archived_at",
+    "notes",
+)
+ASSET_UNIVERSE_EVENT_COLUMNS = (
+    "event_date",
+    "ticker",
+    "asset_type",
+    "action",
+    "previous_status",
+    "new_status",
+    "source",
     "notes",
 )
 ALLOWED_STATUSES = {
@@ -146,6 +157,44 @@ def write_asset_universe(rows: list[dict[str, object]]) -> None:
         writer.writerows(serialized)
 
 
+def read_asset_events(limit: int = 50) -> list[dict[str, str]]:
+    if not ASSET_UNIVERSE_EVENT_FILE.exists():
+        return []
+    with ASSET_UNIVERSE_EVENT_FILE.open(newline="", encoding="utf-8-sig") as handle:
+        reader = csv.DictReader(handle)
+        if tuple(reader.fieldnames or ()) != ASSET_UNIVERSE_EVENT_COLUMNS:
+            raise ValueError("asset_universe_events.csv has unexpected columns")
+        rows = list(reader)
+    return list(reversed(rows[-limit:]))
+
+
+def append_asset_event(
+    ticker: str,
+    asset_type: str,
+    action: str,
+    previous: dict[str, object] | None,
+    current: dict[str, object],
+) -> None:
+    ASSET_UNIVERSE_EVENT_FILE.parent.mkdir(parents=True, exist_ok=True)
+    exists = ASSET_UNIVERSE_EVENT_FILE.exists()
+    with ASSET_UNIVERSE_EVENT_FILE.open("a", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=ASSET_UNIVERSE_EVENT_COLUMNS, quoting=csv.QUOTE_ALL)
+        if not exists:
+            writer.writeheader()
+        writer.writerow(
+            {
+                "event_date": date.today().isoformat(),
+                "ticker": ticker,
+                "asset_type": asset_type,
+                "action": action,
+                "previous_status": "" if previous is None else previous.get("status", ""),
+                "new_status": current.get("status", ""),
+                "source": current.get("source", ""),
+                "notes": current.get("notes", ""),
+            }
+        )
+
+
 def resolve_asset(
     rows: list[dict[str, object]],
     ticker: str,
@@ -195,9 +244,12 @@ def upsert_asset(payload: dict[str, object]) -> dict[str, object]:
         raise ValueError("asset_type is required")
     with WRITE_LOCK:
         rows = read_asset_universe()
+        existing: dict[str, object] | None = None
+        action = "add"
         try:
             index, existing = resolve_asset(rows, ticker, asset_type)
             rows[index] = apply_updates(existing, payload)
+            action = "status_change" if rows[index].get("status") != existing.get("status") else "update"
         except KeyError:
             status = str(payload.get("status") or "candidate").strip().lower()
             if status not in ALLOWED_STATUSES:
@@ -222,6 +274,7 @@ def upsert_asset(payload: dict[str, object]) -> dict[str, object]:
             rows.append(apply_updates(row, payload))
         write_asset_universe(rows)
         _, saved = resolve_asset(read_asset_universe(), ticker, asset_type)
+        append_asset_event(ticker, asset_type, action, existing, saved)
         return saved
 
 
@@ -234,8 +287,10 @@ def update_asset(
         rows = read_asset_universe()
         index, existing = resolve_asset(rows, ticker, asset_type)
         rows[index] = apply_updates(existing, payload)
+        action = "status_change" if rows[index].get("status") != existing.get("status") else "update"
         write_asset_universe(rows)
         _, saved = resolve_asset(read_asset_universe(), ticker, asset_type or str(existing["asset_type"]))
+        append_asset_event(str(saved["ticker"]), str(saved["asset_type"]), action, existing, saved)
         return saved
 
 
@@ -248,5 +303,6 @@ def asset_universe_response() -> dict[str, object]:
         "statuses": sorted(ALLOWED_STATUSES),
         "status_counts": dict(sorted(status_counts.items())),
         "asset_type_counts": dict(sorted(type_counts.items())),
+        "recent_events": read_asset_events(),
         "total": len(assets),
     }

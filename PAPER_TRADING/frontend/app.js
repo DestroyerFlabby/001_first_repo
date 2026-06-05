@@ -942,6 +942,21 @@ function renderUniverse() {
         </tr>`
     )
     .join("");
+  $("#asset-event-rows").innerHTML = (state.universe.recent_events || [])
+    .map(
+      (row) => `
+        <tr>
+          <td>${escapeHtml(row.event_date)}</td>
+          <td><strong>${escapeHtml(row.ticker)}</strong></td>
+          <td>${escapeHtml(row.asset_type)}</td>
+          <td>${escapeHtml(row.action)}</td>
+          <td>${escapeHtml(row.previous_status || "-")}</td>
+          <td>${escapeHtml(row.new_status || "-")}</td>
+          <td>${escapeHtml(row.source || "-")}</td>
+          <td>${escapeHtml(row.notes || "-")}</td>
+        </tr>`
+    )
+    .join("");
   $("#benchmark-rows").innerHTML = state.benchmarks.benchmarks
     .map(
       (row) => `
@@ -2008,7 +2023,7 @@ async function init() {
     downloadExcelTables(
       "asset-universe",
       "Asset Universe and Benchmarks",
-      [$("#asset-universe-rows")?.closest("table"), $("#benchmark-rows")?.closest("table")]
+      [$("#asset-universe-rows")?.closest("table"), $("#asset-event-rows")?.closest("table"), $("#benchmark-rows")?.closest("table")]
     );
   });
   $("#export-stocks").addEventListener("click", () => {

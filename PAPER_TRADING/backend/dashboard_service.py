@@ -1035,6 +1035,7 @@ def variable_strategy_detail(
         raise ValueError("missing strategy market sessions")
 
     charts: dict[str, tuple[Bar, ...]] = {}
+    asset_types: dict[str, str] = {}
     for ticker, security_type in (universe_assets if universe_assets is not None else tracked_stock_assets()):
         symbol = yahoo_symbol(ticker, security_type)
         try:
@@ -1043,10 +1044,12 @@ def variable_strategy_detail(
             continue
         if bars:
             charts[ticker] = bars
+            asset_types[ticker] = security_type
 
     active: dict[str, dict[str, object]] = {}
     cycles: list[dict[str, object]] = []
     series: list[dict[str, object]] = []
+    sector_exposure: list[dict[str, object]] = []
     deployed = Decimal("0")
     realized = Decimal("0")
     previous_session = on_or_before(market_bars, VARIABLE_STRATEGY_START - timedelta(days=1))
@@ -1159,10 +1162,18 @@ def variable_strategy_detail(
             }
 
         open_value = Decimal("0")
+        sector_values: defaultdict[str, Decimal] = defaultdict(lambda: Decimal("0"))
         for ticker, position in active.items():
             price_bar = on_or_before(charts[ticker], session)
             if price_bar:
-                open_value += Decimal(str(position["shares"])) * price_bar.close
+                position_value = Decimal(str(position["shares"])) * price_bar.close
+                open_value += position_value
+                sector, _ = sector_for_asset(
+                    ticker,
+                    asset_types.get(ticker, "stock"),
+                    [strategy_name],
+                )
+                sector_values[sector] += position_value
         series.append(
             {
                 "date": session.isoformat(),
@@ -1170,6 +1181,20 @@ def variable_strategy_detail(
                 "gain_loss": as_float(realized + open_value - VARIABLE_ENTRY_USD * len(active)),
                 "deployed_capital": as_float(deployed),
                 "active_positions": len(active),
+            }
+        )
+        sector_exposure.append(
+            {
+                "date": session.isoformat(),
+                "sectors": [
+                    {
+                        "sector": sector,
+                        "value": as_float(value),
+                        "weight_pct": as_float(value / open_value * Decimal("100")),
+                    }
+                    for sector, value in sorted(sector_values.items())
+                    if open_value
+                ],
             }
         )
         previous_session = on_or_before(market_bars, session)
@@ -1315,6 +1340,11 @@ def variable_strategy_detail(
         for row in series
         if date.fromisoformat(str(row["date"])) >= selected_start
     ]
+    visible_sector_exposure = [
+        row
+        for row in sector_exposure
+        if date.fromisoformat(str(row["date"])) >= selected_start
+    ]
     detail = {
         "investor": strategy_name,
         "source": (
@@ -1341,6 +1371,7 @@ def variable_strategy_detail(
         "pending_next_close_orders": pending_next_close_orders,
         "execution_convention": "Observe EOD signals and news after one close; execute at the next available EOD close.",
         "series": visible_series,
+        "sector_exposure": visible_sector_exposure,
         "benchmark_comparison": benchmark_comparison(visible_series),
         "category_stats": category_rows,
         "category_stats_scope": f"{VARIABLE_STRATEGY_START.isoformat()} to {latest_market.day.isoformat()}",
@@ -1506,6 +1537,7 @@ def variable_buy_only_detail(
         raise ValueError("missing strategy market sessions")
 
     charts: dict[str, tuple[Bar, ...]] = {}
+    asset_types: dict[str, str] = {}
     for ticker, security_type in tracked_stock_assets():
         symbol = yahoo_symbol(ticker, security_type)
         try:
@@ -1514,9 +1546,11 @@ def variable_buy_only_detail(
             continue
         if bars:
             charts[ticker] = bars
+            asset_types[ticker] = security_type
 
     positions: dict[str, dict[str, object]] = {}
     series: list[dict[str, object]] = []
+    sector_exposure: list[dict[str, object]] = []
     previous_session = on_or_before(market_bars, VARIABLE_STRATEGY_START - timedelta(days=1))
     for session in sessions:
         if not previous_session:
@@ -1542,10 +1576,18 @@ def variable_buy_only_detail(
             }
         deployed = VARIABLE_ENTRY_USD * len(positions)
         current = Decimal("0")
+        sector_values: defaultdict[str, Decimal] = defaultdict(lambda: Decimal("0"))
         for ticker, position in positions.items():
             price_bar = on_or_before(charts[ticker], session)
             if price_bar:
-                current += Decimal(str(position["shares"])) * price_bar.close
+                position_value = Decimal(str(position["shares"])) * price_bar.close
+                current += position_value
+                sector, _ = sector_for_asset(
+                    ticker,
+                    asset_types.get(ticker, "stock"),
+                    [strategy_name],
+                )
+                sector_values[sector] += position_value
         series.append(
             {
                 "date": session.isoformat(),
@@ -1553,6 +1595,20 @@ def variable_buy_only_detail(
                 "gain_loss": as_float(current - deployed),
                 "deployed_capital": as_float(deployed),
                 "active_positions": len(positions),
+            }
+        )
+        sector_exposure.append(
+            {
+                "date": session.isoformat(),
+                "sectors": [
+                    {
+                        "sector": sector,
+                        "value": as_float(value),
+                        "weight_pct": as_float(value / current * Decimal("100")),
+                    }
+                    for sector, value in sorted(sector_values.items())
+                    if current
+                ],
             }
         )
         previous_session = on_or_before(market_bars, session)
@@ -1663,6 +1719,11 @@ def variable_buy_only_detail(
         for row in series
         if date.fromisoformat(str(row["date"])) >= selected_start
     ]
+    visible_sector_exposure = [
+        row
+        for row in sector_exposure
+        if date.fromisoformat(str(row["date"])) >= selected_start
+    ]
     detail = {
         "investor": strategy_name,
         "source": "derived-buy-only-signal-strategy",
@@ -1680,6 +1741,7 @@ def variable_buy_only_detail(
         "pending_next_close_orders": pending_next_close_orders,
         "execution_convention": "Observe EOD signals after one close; execute at the next available EOD close.",
         "series": visible_series,
+        "sector_exposure": visible_sector_exposure,
         "benchmark_comparison": benchmark_comparison(visible_series),
         "category_stats": category_rows,
         "category_stats_scope": f"{VARIABLE_STRATEGY_START.isoformat()} to {latest_market.day.isoformat()}",

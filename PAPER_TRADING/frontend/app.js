@@ -437,6 +437,7 @@ function strategyPreviewHtml(detail) {
     <h3>Drawdown</h3>
     <div class="chart">${drawdownPolyline(detail.series || [])}</div>
     ${contributorsHtml(detail)}
+    ${sectorExposureHtml(detail)}
     ${capitalDeploymentHtml(detail)}
     <div class="table-wrap">
       <table data-sortable>
@@ -504,6 +505,53 @@ function capitalDeploymentHtml(detail) {
     <div class="chart">${deploymentPolyline(detail.series || [])}</div>
     <h3>Strategy turnover</h3>
     <div class="chart">${tradeActivityPolyline(trades)}</div>`;
+}
+
+function sectorExposureHtml(detail) {
+  if (!(detail.sector_exposure || []).some((row) => (row.sectors || []).length)) return "";
+  return `
+    <h3>Sector exposure over time</h3>
+    <div class="chart">${sectorExposurePolyline(detail.sector_exposure || [])}</div>`;
+}
+
+function sectorExposurePolyline(rows) {
+  const points = (rows || []).filter((row) => Array.isArray(row.sectors) && row.sectors.length);
+  if (points.length < 2) return '<p class="chart-empty">Sector exposure needs at least two daily observations.</p>';
+  const sectorMax = new Map();
+  for (const row of points) {
+    for (const sector of row.sectors) {
+      const name = sector.sector || "Unclassified";
+      sectorMax.set(name, Math.max(sectorMax.get(name) || 0, Number(sector.weight_pct || 0)));
+    }
+  }
+  const sectors = [...sectorMax.entries()]
+    .sort((left, right) => right[1] - left[1])
+    .slice(0, 5)
+    .map(([sector]) => sector);
+  if (!sectors.length) return '<p class="chart-empty">Sector exposure is not available for this view.</p>';
+  const width = 680;
+  const height = 190;
+  const colors = ["#57d3a2", "#6fb7ff", "#ffd166", "#c084fc", "#ff7b7b"];
+  const weightFor = (row, sectorName) => Number((row.sectors || []).find((sector) => sector.sector === sectorName)?.weight_pct || 0);
+  const pathFor = (sectorName) => points
+    .map((row, index) => {
+      const x = (index / Math.max(points.length - 1, 1)) * width;
+      const y = height - (weightFor(row, sectorName) / 100) * (height - 18) + 4;
+      return `${x.toFixed(2)},${y.toFixed(2)}`;
+    })
+    .join(" ");
+  const legend = sectors
+    .map((sector, index) => `<text x="${4 + index * 132}" y="232" fill="${colors[index % colors.length]}" font-size="12">${escapeHtml(sector).slice(0, 18)}</text>`)
+    .join("");
+  return `
+    <svg viewBox="0 0 ${width} 240" preserveAspectRatio="none" role="img">
+      <line x1="0" y1="192" x2="${width}" y2="192" stroke="#213653" />
+      <text x="4" y="18" fill="#91a4bd" font-size="12">Top sector weights</text>
+      ${sectors.map((sector, index) => `<polyline points="${pathFor(sector)}" fill="none" stroke="${colors[index % colors.length]}" stroke-width="3" vector-effect="non-scaling-stroke" />`).join("")}
+      <text x="4" y="215" fill="#91a4bd" font-size="12">${points[0].date}</text>
+      <text x="${width - 82}" y="215" fill="#91a4bd" font-size="12">${points.at(-1).date}</text>
+      ${legend}
+    </svg>`;
 }
 
 function deploymentPolyline(series) {
@@ -1465,6 +1513,7 @@ async function openTrader(investor) {
       <h3>Daily portfolio value</h3>
       <div class="chart">${polyline(detail.series, "value")}</div>
       ${contributorsHtml(detail)}
+      ${sectorExposureHtml(detail)}
       ${capitalDeploymentHtml(detail)}
       <div class="drawer-section-heading">
         <h3>Holdings</h3>

@@ -154,6 +154,8 @@ It does not submit trades or modify the ledger. It provides:
   links
 - stock drilldowns include a historical news-activity trend chart when cached
   daily article counts exist for that ticker
+- variable-strategy drilldowns include sector exposure over time based on
+  daily close-valued open positions
 - unsaved Strategy Lab previews for selected date windows, with configurable
   universe, entry signal, entry-news rule, and exit rule; the first version
   uses the existing `$1,000` EOD position-size convention and can save

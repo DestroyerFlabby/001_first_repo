@@ -859,10 +859,39 @@ def saved_strategy_preview_detail(
         "registry_strategy": strategy,
         "note": (
             "Saved strategy registry preview. The row is interpreted through "
-            "the current Strategy Lab rule mapper and does not create trades "
-            "or add a generated portfolio to the main ranking yet."
+            "the current Strategy Lab rule mapper and appears in the main "
+            "portfolio ranking when the rule set is supported."
         ),
     }
+
+
+def saved_strategy_dashboard_summaries(
+    start: date,
+    end: date | None,
+    apply_wealthsimple_fx_fees: bool = False,
+) -> list[dict[str, object]]:
+    from backend.strategy_registry_service import read_strategies
+
+    summaries: list[dict[str, object]] = []
+    for strategy in read_strategies(include_retired=False):
+        try:
+            detail = saved_strategy_preview_detail(
+                strategy,
+                start,
+                end,
+                apply_wealthsimple_fx_fees=apply_wealthsimple_fx_fees,
+            )
+        except ValueError:
+            continue
+        detail = {**detail, "source": "saved-strategy-registry-preview"}
+        summaries.append(
+            {
+                key: detail[key]
+                for key in SUMMARY_KEYS
+            }
+            | {"warnings": []}
+        )
+    return summaries
 
 
 SIGNAL_HORIZONS = (
@@ -2155,6 +2184,7 @@ def build_overview(
     for strategy_name in NEWS_STRATEGIES:
         traders.append(variable_news_strategy_summary(strategy_name, start, end, apply_wealthsimple_fx_fees))
     traders.append(hybrid_news_optimized_strategy_summary(start, end, apply_wealthsimple_fx_fees))
+    traders.extend(saved_strategy_dashboard_summaries(start, end, apply_wealthsimple_fx_fees))
     traders.sort(key=lambda row: row["return_pct"], reverse=True)
     for rank, trader in enumerate(traders, start=1):
         trader["rank"] = rank
@@ -2449,4 +2479,25 @@ def trader_detail(
         if PUBLIC_DASHBOARD:
             raise KeyError(investor)
         return nisarg_detail(start, end)
+    from backend.strategy_registry_service import read_strategies
+
+    saved_strategy = next(
+        (
+            strategy
+            for strategy in read_strategies(include_retired=False)
+            if str(strategy["strategy_name"]).casefold() == investor.casefold()
+            or str(strategy["strategy_id"]).casefold() == investor.casefold()
+        ),
+        None,
+    )
+    if saved_strategy:
+        try:
+            return saved_strategy_preview_detail(
+                saved_strategy,
+                start,
+                end,
+                apply_wealthsimple_fx_fees=apply_wealthsimple_fx_fees,
+            )
+        except ValueError as exc:
+            raise KeyError(investor) from exc
     return paper_trader_detail(investor, start, end, apply_wealthsimple_fx_fees)

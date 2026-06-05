@@ -1,0 +1,10 @@
+{
+  "name": "Paper Trading Dashboard",
+  "short_name": "Stock Tracking",
+  "description": "Portfolio, watchlist, signal, and market-mover tracking dashboard.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#08111e",
+  "theme_color": "#08111e",
+  "orientation": "any"
+}

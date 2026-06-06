@@ -12,7 +12,7 @@ from backend.dashboard_service import build_eod_snapshot, build_overview, fetch_
 
 ROOT = Path(__file__).resolve().parents[1]
 CACHE_DIR = ROOT / "data" / "dashboard_cache"
-CACHE_VERSION = 2
+CACHE_VERSION = 3
 DEFAULT_PRELOAD_START = date(2026, 1, 31)
 
 

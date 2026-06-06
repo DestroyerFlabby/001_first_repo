@@ -1335,6 +1335,9 @@ function portfolioDescription(row = {}) {
   if (investor.includes("insta_watchlist")) {
     return "Creator/social watchlist basket sourced from Instagram-style idea flow and related market themes.";
   }
+  if (investor.startsWith("analyst-")) {
+    return "Free analyst-pick basket built from visible Buy-rated stocks on public analyst-ranking pages. This is not a disclosed personal portfolio.";
+  }
   if (source.includes("paper-ledger")) {
     return "Manually entered paper-trading ledger using the configured position sizing assumptions for stocks, ETFs, and crypto.";
   }

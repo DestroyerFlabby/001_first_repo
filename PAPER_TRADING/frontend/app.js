@@ -52,7 +52,7 @@ async function fetchJson(url, options = {}) {
   const response = await fetch(url, options);
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
-    throw new Error(body.detail || `Request failed: ${response.status}`);
+    throw new Error(`${body.detail || `Request failed: ${response.status}`} (${url})`);
   }
   return response.json();
 }

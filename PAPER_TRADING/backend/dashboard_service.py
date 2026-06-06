@@ -2850,6 +2850,42 @@ def paper_trader_detail(
     }
 
 
+def paper_ledger_summaries(
+    start: date,
+    end: date | None,
+    apply_wealthsimple_fx_fees: bool = False,
+) -> list[dict[str, object]]:
+    summaries: list[dict[str, object]] = []
+    for investor in allocations():
+        detail = paper_trader_detail(
+            investor,
+            start,
+            end,
+            apply_wealthsimple_fx_fees=apply_wealthsimple_fx_fees,
+        )
+        positions = list(detail.get("positions") or [])
+        summaries.append(
+            {
+                key: detail[key]
+                for key in SUMMARY_KEYS
+                if key in detail
+            }
+            | {
+                "position_count": len(positions),
+                "source": "paper-ledger",
+                "warnings": [
+                    f"{row['ticker']}: {row['warning']}"
+                    for row in positions
+                    if row.get("warning")
+                ],
+            }
+        )
+    summaries.sort(key=lambda row: row["return_pct"], reverse=True)
+    for rank, row in enumerate(summaries, start=1):
+        row["rank"] = rank
+    return summaries
+
+
 def nisarg_detail(start: date, end: date | None) -> dict[str, object]:
     from nisarg_window_return import calculate_window
 

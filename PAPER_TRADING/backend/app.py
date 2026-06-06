@@ -24,6 +24,7 @@ from backend.dashboard_service import (  # noqa: E402
     PUBLIC_DASHBOARD,
     asset_detail,
     latest_market_date,
+    paper_ledger_summaries,
     parse_date,
     saved_strategy_preview_detail,
     strategy_lab_detail,
@@ -361,6 +362,20 @@ def overview(
 ) -> dict[str, object]:
     start, end = window(from_date, to_date)
     return cached_or_build_overview(start, end, wealthsimple_fx_fees)
+
+
+@app.get("/api/paper-ledger-portfolios")
+def paper_ledger_portfolios(
+    from_date: str | None = Query(default=None),
+    to_date: str | None = Query(default=None),
+    wealthsimple_fx_fees: bool = Query(default=False),
+) -> dict[str, object]:
+    start, end = window(from_date, to_date)
+    return {
+        "from_date": start.isoformat(),
+        "to_date": end.isoformat() if end else None,
+        "traders": paper_ledger_summaries(start, end, wealthsimple_fx_fees),
+    }
 
 
 @app.post("/api/overview-jobs")

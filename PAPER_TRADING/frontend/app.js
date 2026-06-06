@@ -2124,6 +2124,30 @@ async function openStock(ticker) {
   }
 }
 
+function rankTraders() {
+  state.overview.traders.sort((left, right) => Number(right.return_pct || 0) - Number(left.return_pct || 0));
+  state.overview.traders.forEach((row, index) => {
+    row.rank = index + 1;
+  });
+}
+
+function mergePortfolioRows(rows = []) {
+  if (!state.overview || !Array.isArray(state.overview.traders)) return;
+  const byInvestor = new Map(
+    state.overview.traders.map((row) => [String(row.investor || "").toLowerCase(), row])
+  );
+  rows.forEach((row) => {
+    byInvestor.set(String(row.investor || "").toLowerCase(), row);
+  });
+  state.overview.traders = [...byInvestor.values()];
+  rankTraders();
+}
+
+async function refreshPaperLedgerPortfolios() {
+  const payload = await fetchJson(`/api/paper-ledger-portfolios?${query()}`);
+  mergePortfolioRows(payload.traders || []);
+}
+
 function applyPreloadPreset(preloadPreset) {
   if (!preloadPreset) return;
   $("#from-date").value = preloadPreset.from_date;
@@ -2187,7 +2211,9 @@ async function loadOverview() {
   setLoading("Refreshing portfolio rankings and tracked instruments...", 5);
   try {
     state.overview = await fetchOverviewWithJob();
-    updateLoading("Portfolio rankings and tracked instruments loaded. Loading prior-close movers...", 75);
+    updateLoading("Portfolio rankings and tracked instruments loaded. Refreshing paper-ledger portfolios...", 72);
+    await refreshPaperLedgerPortfolios();
+    updateLoading("Paper-ledger portfolios refreshed. Loading prior-close movers...", 75);
     state.eod = await fetchJson(`/api/eod${wealthsimpleQuery()}`);
     updateLoading("Prior-close movers loaded. Loading universe registries...", 88);
     await refreshUniverse();

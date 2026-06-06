@@ -56,6 +56,7 @@ app = FastAPI(title="Paper Trading Dashboard", version="1.0.0")
 FRONTEND = ROOT / "frontend"
 OVERVIEW_JOBS: dict[str, dict[str, Any]] = {}
 OVERVIEW_JOB_LOCK = threading.Lock()
+OVERVIEW_JOB_STALE_SECONDS = 15 * 60
 PRELOAD_JOB: dict[str, Any] = {
     "status": "idle",
     "message": "Preload cache is ready to rebuild.",
@@ -223,8 +224,12 @@ def start_or_get_overview_job(start: date, end: date | None, apply_fees: bool) -
 
     with OVERVIEW_JOB_LOCK:
         existing = OVERVIEW_JOBS.get(job_id)
-        if existing and existing.get("status") in {"running", "complete"}:
+        if existing and existing.get("status") == "complete":
             return job_id, dict(existing)
+        if existing and existing.get("status") == "running":
+            started_at = float(existing.get("started_at") or 0)
+            if time.time() - started_at < OVERVIEW_JOB_STALE_SECONDS:
+                return job_id, dict(existing)
 
         OVERVIEW_JOBS[job_id] = {
             "status": "running",

@@ -66,10 +66,8 @@ const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, mil
 
 async function fetchOverviewWithJob() {
   const started = Date.now();
-  const initial = await fetchJson(`/api/overview-jobs?${query()}`, { method: "POST" });
-  if (initial.status === "complete" && initial.payload) {
-    return initial.payload;
-  }
+  let job = await fetchJson(`/api/overview-jobs?${query()}`, { method: "POST" });
+  if (job.status === "complete" && job.payload) return job.payload;
 
   let delay = 2500;
   while (true) {
@@ -79,7 +77,19 @@ async function fetchOverviewWithJob() {
       `Building dashboard cache on the server... ${elapsed}s elapsed. First uncached ranges can take a few minutes on Render.`,
       Math.min(70, 10 + Math.floor(elapsed / 4))
     );
-    const status = await fetchJson(`/api/overview-jobs/${encodeURIComponent(initial.job_id)}`);
+    const response = await fetch(`/api/overview-jobs/${encodeURIComponent(job.job_id)}`);
+    if (response.status === 404) {
+      updateLoading("Server lost the overview job during deploy/restart. Restarting it...", Math.min(70, 15 + Math.floor(elapsed / 4)));
+      job = await fetchJson(`/api/overview-jobs?${query()}`, { method: "POST" });
+      if (job.status === "complete" && job.payload) return job.payload;
+      delay = 2500;
+      continue;
+    }
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      throw new Error(body.detail || `Request failed: ${response.status}`);
+    }
+    const status = await response.json();
     if (status.status === "complete" && status.payload) {
       return status.payload;
     }

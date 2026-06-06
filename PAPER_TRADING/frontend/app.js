@@ -2169,9 +2169,10 @@ function applyPreloadPreset(preloadPreset) {
 
 function renderPreloadPresetControl(preloadPreset) {
   if (!preloadPreset) return;
+  const label = preloadPreset.cache_available ? preloadPreset.label : `${preloadPreset.label} (may build cache)`;
   $("#preload-preset").textContent = preloadPreset.includes_wealthsimple_fx_fees
-    ? `${preloadPreset.label} + fees`
-    : preloadPreset.label;
+    ? `${label} + fees`
+    : label;
 }
 
 async function refreshMeta() {

@@ -339,16 +339,25 @@ def health() -> dict[str, str]:
 @app.get("/api/meta")
 def meta() -> dict[str, object]:
     preload_start, preload_end = configured_preload_preset_window()
+    preload_includes_fees = env_bool("PRELOAD_DASHBOARD_CACHE_INCLUDE_FX")
+    preload_cache_available = read_cache(
+        "overview",
+        preload_start,
+        preload_end,
+        preload_includes_fees,
+    ) is not None
+    preload_label_prefix = "Preloaded" if preload_cache_available else "Load preset"
     return {
         "default_from_date": DEFAULT_START.isoformat(),
         "default_to_date": latest_market_date().isoformat(),
         "history_from_date": HISTORY_START.isoformat(),
         "public_dashboard": PUBLIC_DASHBOARD,
         "preload_preset": {
-            "label": f"Preloaded {preload_start.isoformat()} to {preload_end.isoformat()}",
+            "label": f"{preload_label_prefix} {preload_start.isoformat()} to {preload_end.isoformat()}",
             "from_date": preload_start.isoformat(),
             "to_date": preload_end.isoformat(),
-            "includes_wealthsimple_fx_fees": env_bool("PRELOAD_DASHBOARD_CACHE_INCLUDE_FX"),
+            "includes_wealthsimple_fx_fees": preload_includes_fees,
+            "cache_available": preload_cache_available,
         },
         "key_dates": [
             {"label": "Jan 1 reference", "date": "2026-01-01"},

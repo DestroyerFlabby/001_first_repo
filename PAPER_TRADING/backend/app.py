@@ -7,6 +7,7 @@ import threading
 import time
 from calendar import monthrange
 from datetime import date
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
@@ -39,18 +40,32 @@ from backend.dashboard_cache import (  # noqa: E402
     read_cache,
 )
 from backend.benchmark_service import benchmark_registry_response, upsert_benchmark  # noqa: E402
+from backend.correlation_service import correlation_response  # noqa: E402
+from backend.scenario_service import scenario_response  # noqa: E402
 from backend.basket_service import (  # noqa: E402
     basket_performance,
     custom_basket_response,
     upsert_basket,
     upsert_basket_member,
 )
+from backend.allocation_service import (  # noqa: E402
+    metadata_index,
+    resolved_instrument_metadata,
+    wealth_allocation_response,
+)
 from backend.email_service import send_daily_instructions  # noqa: E402
+from backend.day_rotation_service import daily_rotation_portfolio_response  # noqa: E402
+from backend.external_portfolio_service import external_portfolio_response  # noqa: E402
+from backend.model_portfolio_service import systematic_model_portfolio_response  # noqa: E402
 from backend.news_service import news_summary  # noqa: E402
+from backend.performance_service import portfolio_performance_response  # noqa: E402
 from backend.research_service import research_index_response, research_note_response  # noqa: E402
+from backend.rebalance_service import rebalance_preview, rebalance_profiles_response  # noqa: E402
+from backend.risk_service import portfolio_risk_response  # noqa: E402
 from backend.strategy_registry_service import read_strategies, strategy_registry_response, upsert_strategy  # noqa: E402
-from backend.universe_service import asset_universe_response, update_asset, upsert_asset  # noqa: E402
+from backend.universe_service import asset_universe_response, read_asset_universe, update_asset, upsert_asset  # noqa: E402
 from backend.wealth_intelligence_service import wealth_intelligence_response  # noqa: E402
+from backend.wealth_operations_service import wealth_operations_response  # noqa: E402
 
 
 app = FastAPI(title="Paper Trading Dashboard", version="1.0.0")
@@ -533,6 +548,192 @@ def wealth_intelligence(
     overview_payload = cached_or_build_overview(start, end, wealthsimple_fx_fees)
     baskets_payload = custom_basket_response(include_archived=False)
     return wealth_intelligence_response(overview_payload, baskets_payload, start, end)
+
+
+@app.get("/api/wealth-operations")
+def wealth_operations(
+    from_date: str | None = Query(default=None),
+    to_date: str | None = Query(default=None),
+    wealthsimple_fx_fees: bool = Query(default=False),
+) -> dict[str, object]:
+    start, end = window(from_date, to_date)
+    resolved_end = end or latest_market_date()
+    overview_payload = cached_or_build_overview(start, resolved_end, wealthsimple_fx_fees)
+    baskets_payload = custom_basket_response(include_archived=False)
+    wealth_payload = wealth_intelligence_response(overview_payload, baskets_payload, start, resolved_end)
+    return wealth_operations_response(wealth_payload, start, resolved_end)
+
+
+@app.get("/api/external-portfolios")
+def external_portfolios() -> dict[str, object]:
+    try:
+        return external_portfolio_response()
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/api/model-portfolio")
+def model_portfolio(
+    to_date: str | None = Query(default=None),
+) -> dict[str, object]:
+    try:
+        end = parse_date(to_date) if to_date else latest_market_date()
+        return systematic_model_portfolio_response(end)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/api/day-rotation-portfolio")
+def day_rotation_portfolio(
+    to_date: str | None = Query(default=None),
+) -> dict[str, object]:
+    try:
+        end = parse_date(to_date) if to_date else latest_market_date()
+        return daily_rotation_portfolio_response(end)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/api/wealth/risk")
+def wealth_risk(
+    portfolio: str = Query(..., min_length=1),
+    from_date: str | None = Query(default=None),
+    to_date: str | None = Query(default=None),
+    wealthsimple_fx_fees: bool = Query(default=False),
+) -> dict[str, object]:
+    start, end = window(from_date, to_date)
+    resolved_end = end or latest_market_date()
+    try:
+        detail = wealth_portfolio_detail(portfolio, start, resolved_end, wealthsimple_fx_fees)
+        return portfolio_risk_response(detail, start, resolved_end)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"unknown portfolio: {portfolio}") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+def wealth_portfolio_detail(
+    portfolio: str,
+    start: date,
+    end: date,
+    wealthsimple_fx_fees: bool,
+) -> dict[str, object]:
+    if portfolio == "systematic-model-portfolio":
+        return systematic_model_portfolio_response(end)
+    if portfolio == "daily-eod-rotation-portfolio":
+        return daily_rotation_portfolio_response(end)
+    return trader_detail(portfolio, start, end, wealthsimple_fx_fees)
+
+
+def detail_with_instrument_metadata(detail: dict[str, object]) -> dict[str, object]:
+    positions = detail.get("positions")
+    if not isinstance(positions, list):
+        return detail
+    indexed = metadata_index(read_asset_universe())
+    hydrated: list[dict[str, object]] = []
+    for raw_position in positions:
+        if not isinstance(raw_position, dict):
+            continue
+        position = dict(raw_position)
+        ticker = str(position.get("ticker") or "").strip().upper()
+        asset_type = str(position.get("security_type") or position.get("asset_type") or "").strip().casefold()
+        meta = indexed.get((ticker, asset_type)) or indexed.get((ticker, "")) or {}
+        resolved = resolved_instrument_metadata(ticker, asset_type, position, meta)
+        position["asset_type"] = resolved["asset_type"]
+        position["sector"] = resolved["sector"]
+        position["currency"] = resolved["currency"]
+        hydrated.append(position)
+    return {**detail, "positions": hydrated}
+
+
+@app.get("/api/wealth/performance")
+def wealth_performance(
+    portfolio: str = Query(..., min_length=1),
+    from_date: str | None = Query(default=None),
+    to_date: str | None = Query(default=None),
+    wealthsimple_fx_fees: bool = Query(default=False),
+) -> dict[str, object]:
+    start, end = window(from_date, to_date)
+    resolved_end = end or latest_market_date()
+    try:
+        detail = wealth_portfolio_detail(portfolio, start, resolved_end, wealthsimple_fx_fees)
+        return portfolio_performance_response(detail, start, resolved_end)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"unknown portfolio: {portfolio}") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/api/wealth/correlation")
+def wealth_correlation(
+    portfolio: str = Query(..., min_length=1),
+    from_date: str | None = Query(default=None),
+    to_date: str | None = Query(default=None),
+    wealthsimple_fx_fees: bool = Query(default=False),
+) -> dict[str, object]:
+    start, end = window(from_date, to_date)
+    resolved_end = end or latest_market_date()
+    try:
+        detail = wealth_portfolio_detail(portfolio, start, resolved_end, wealthsimple_fx_fees)
+        return correlation_response(detail, start, resolved_end)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"unknown portfolio: {portfolio}") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/api/wealth/scenarios")
+def wealth_scenarios(
+    portfolio: str = Query(..., min_length=1),
+    from_date: str | None = Query(default=None),
+    to_date: str | None = Query(default=None),
+    wealthsimple_fx_fees: bool = Query(default=False),
+) -> dict[str, object]:
+    start, end = window(from_date, to_date)
+    resolved_end = end or latest_market_date()
+    try:
+        detail = wealth_portfolio_detail(portfolio, start, resolved_end, wealthsimple_fx_fees)
+        detail = detail_with_instrument_metadata(detail)
+        return scenario_response(detail)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"unknown portfolio: {portfolio}") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/api/wealth/allocation")
+def wealth_allocation(
+    from_date: str | None = Query(default=None),
+    to_date: str | None = Query(default=None),
+    wealthsimple_fx_fees: bool = Query(default=False),
+) -> dict[str, object]:
+    start, end = window(from_date, to_date)
+    resolved_end = end or latest_market_date()
+    overview_payload = cached_or_build_overview(start, resolved_end, wealthsimple_fx_fees)
+    return wealth_allocation_response(
+        start,
+        resolved_end,
+        wealthsimple_fx_fees,
+        overview_payload=overview_payload,
+    )
+
+
+@app.get("/api/wealth/rebalance/profiles")
+def wealth_rebalance_profiles() -> dict[str, object]:
+    return rebalance_profiles_response()
+
+
+@app.post("/api/wealth/rebalance/preview")
+def wealth_rebalance_preview(payload: dict[str, object] = Body(...)) -> dict[str, object]:
+    try:
+        return rebalance_preview(
+            str(payload.get("profile_id") or ""),
+            list(payload.get("current_allocations") or []),
+            Decimal(str(payload.get("portfolio_value") or 0)),
+            exact_target=bool(payload.get("exact_target", False)),
+        )
+    except (ValueError, InvalidOperation) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.get("/api/strategies")

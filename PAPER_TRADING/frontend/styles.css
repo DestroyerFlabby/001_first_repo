@@ -225,6 +225,23 @@ input, select {
   top: 0;
   z-index: 2;
 }
+.tab-group {
+  align-items: center;
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-right: 8px;
+}
+.tab-group:last-child { border-right: 0; padding-right: 0; }
+.tab-group-label {
+  color: var(--blue);
+  font-size: .62rem;
+  font-weight: 900;
+  letter-spacing: .08em;
+  padding: 0 4px;
+  text-transform: uppercase;
+}
 .tab-button {
   background: transparent;
   border: 1px solid transparent;
@@ -257,6 +274,34 @@ input, select {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   margin-bottom: 14px;
 }
+.model-summary-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 16px 0;
+}
+.model-chart-grid,
+.model-table-grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 18px 0;
+}
+.model-chart-grid section,
+.model-table-grid section {
+  background: rgba(8, 19, 33, .72);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px;
+}
+[data-dashboard-tab="model-portfolio"] h3,
+[data-dashboard-tab="day-rotation"] h3,
+[data-dashboard-tab="risk"] h3,
+[data-dashboard-tab="allocation"] h3,
+[data-dashboard-tab="performance"] h3,
+[data-dashboard-tab="rebalancing"] h3 { margin: 20px 0 10px; }
+.model-chart-grid h3,
+.model-table-grid h3 { margin-top: 0; }
 .wealth-section-grid {
   display: grid;
   gap: 18px;
@@ -295,6 +340,12 @@ input, select {
 .wealth-positioning strong,
 .wealth-disclaimer strong {
   color: var(--text);
+}
+.prompt-cell {
+  line-height: 1.35;
+  max-width: 520px;
+  min-width: 320px;
+  white-space: normal;
 }
 .wealth-disclaimer {
   background: rgba(249, 199, 79, .1);
@@ -541,6 +592,13 @@ tbody tr:hover { background: rgba(87, 211, 162, .07); }
   text-transform: uppercase;
 }
 .low-priority-row { opacity: .72; }
+.row-number {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  width: 42px;
+  min-width: 42px;
+}
 .portfolio-description {
   background: rgba(111, 183, 255, .08);
   border-left: 3px solid var(--blue);
@@ -674,6 +732,7 @@ tbody tr:hover { background: rgba(87, 211, 162, .07); }
     -webkit-overflow-scrolling: touch;
   }
   .dashboard-tabs::-webkit-scrollbar { display: none; }
+  .tab-group { flex: 0 0 auto; flex-wrap: nowrap; }
   .tab-button {
     flex: 0 0 auto;
     min-height: 42px;
@@ -682,7 +741,10 @@ tbody tr:hover { background: rgba(87, 211, 162, .07); }
   .command-center-grid { grid-template-columns: 1fr; }
   .diagnostic-grid { grid-template-columns: 1fr; }
   .wealth-readiness-grid,
-  .wealth-section-grid { grid-template-columns: 1fr; }
+  .wealth-section-grid,
+  .model-summary-grid,
+  .model-chart-grid,
+  .model-table-grid { grid-template-columns: 1fr; }
   .eod-grid { grid-template-columns: 1fr; }
   .section-heading { align-items: start; flex-direction: column; gap: 12px; }
   .section-actions { align-items: start; flex-direction: column; }

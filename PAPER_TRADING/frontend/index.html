@@ -9,7 +9,7 @@
     <meta name="apple-mobile-web-app-title" content="Stock Tracking" />
     <title>Paper Trading Dashboard</title>
     <link rel="manifest" href="/static/site.webmanifest?v=20260612-1" />
-    <link rel="stylesheet" href="/static/styles.css?v=20260612-1" />
+    <link rel="stylesheet" href="/static/styles.css?v=20260612-9" />
   </head>
   <body>
     <header class="topbar">
@@ -75,15 +75,141 @@
         <div id="summary-cards" class="summary-grid"></div>
 
         <nav class="dashboard-tabs" aria-label="Dashboard sections">
-          <button class="tab-button active" type="button" data-tab-target="home">Home</button>
-          <button class="tab-button" type="button" data-tab-target="ai-wealth">AI Wealth</button>
-          <button class="tab-button" type="button" data-tab-target="portfolios">Portfolios</button>
-          <button class="tab-button" type="button" data-tab-target="stocks">Stocks</button>
-          <button class="tab-button" type="button" data-tab-target="sectors">Sectors</button>
-          <button class="tab-button" type="button" data-tab-target="strategy">Strategy Lab</button>
-          <button class="tab-button" type="button" data-tab-target="universe">Universe</button>
-          <button class="tab-button" type="button" data-tab-target="research">Research</button>
+          <div class="tab-group"><span class="tab-group-label">Wealth</span>
+            <button class="tab-button active" type="button" data-tab-target="home">Home</button>
+            <button class="tab-button" type="button" data-tab-target="ai-wealth">AI Wealth</button>
+            <button class="tab-button" type="button" data-tab-target="allocation">Allocation</button>
+            <button class="tab-button" type="button" data-tab-target="risk">Risk</button>
+            <button class="tab-button" type="button" data-tab-target="performance">Performance</button>
+            <button class="tab-button" type="button" data-tab-target="rebalancing">Rebalancing</button>
+          </div>
+          <div class="tab-group"><span class="tab-group-label">Portfolios</span>
+            <button class="tab-button" type="button" data-tab-target="model-portfolio">Model Portfolio</button>
+            <button class="tab-button" type="button" data-tab-target="day-rotation">Day Rotation</button>
+            <button class="tab-button" type="button" data-tab-target="portfolios">Portfolios</button>
+            <button class="tab-button" type="button" data-tab-target="stocks">Stocks</button>
+            <button class="tab-button" type="button" data-tab-target="sectors">Sectors</button>
+          </div>
+          <div class="tab-group"><span class="tab-group-label">Research / Admin</span>
+            <button class="tab-button" type="button" data-tab-target="strategy">Strategy Lab</button>
+            <button class="tab-button" type="button" data-tab-target="universe">Universe</button>
+            <button class="tab-button" type="button" data-tab-target="research">Research</button>
+          </div>
         </nav>
+
+        <section class="card dashboard-tab-panel" data-dashboard-tab="risk">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Wealth management analytics</p>
+              <h2>Portfolio Risk &amp; Concentration</h2>
+            </div>
+            <div class="section-actions">
+              <label>
+                <span>Portfolio</span>
+                <select id="risk-portfolio-select"></select>
+              </label>
+              <button id="reload-risk" class="secondary" type="button">Calculate risk</button>
+              <button id="export-risk" class="secondary" type="button">Download Excel</button>
+            </div>
+          </div>
+          <p id="risk-status" class="muted">Load a date range, then select a portfolio.</p>
+          <div id="risk-content" class="hidden">
+            <div id="risk-summary" class="model-summary-grid"></div>
+            <div class="model-chart-grid">
+              <section><h3>Drawdown history</h3><div id="risk-drawdown-chart" class="chart"></div></section>
+              <section><h3>Decision Alerts</h3><div id="risk-alerts" class="command-center-grid"></div></section>
+            </div>
+            <div class="model-table-grid">
+              <section><h3>Sector Concentration</h3><div class="table-wrap"><table id="risk-sector-table" data-sortable>
+                <thead><tr><th>Sector</th><th>Value</th><th>Weight</th></tr></thead><tbody id="risk-sector-rows"></tbody>
+              </table></div></section>
+              <section><h3>Data Quality &amp; Assumptions</h3><div id="risk-data-quality"></div></section>
+            </div>
+            <div class="section-heading"><div><h3>Top-Position Correlation</h3><p class="muted">On-demand analysis of up to 12 largest positions. ETF look-through is unavailable.</p></div><button id="load-risk-correlation" class="secondary" type="button">Load correlations</button></div>
+            <p id="risk-correlation-status" class="muted"></p>
+            <div id="risk-correlation-content" class="hidden">
+              <div id="risk-correlation-summary" class="model-summary-grid"></div>
+              <div class="table-wrap"><table id="risk-correlation-table" data-sortable><thead><tr><th>Left</th><th>Right</th><th>Correlation</th><th>Observations</th><th>Status</th></tr></thead><tbody id="risk-correlation-rows"></tbody></table></div>
+            </div>
+            <div class="section-heading"><div><h3>Hypothetical Stress Scenarios</h3><p class="muted">Linear first-order estimates based on current holdings. These are not forecasts or trade instructions.</p></div><button id="load-risk-scenarios" class="secondary" type="button">Run scenarios</button></div>
+            <p id="risk-scenario-status" class="muted"></p>
+            <div id="risk-scenario-content" class="hidden">
+              <div id="risk-scenario-summary" class="model-summary-grid"></div>
+              <div class="table-wrap"><table id="risk-scenario-table" data-sortable><thead><tr><th>Scenario</th><th>Estimated impact</th><th>Dollar impact</th><th>Affected positions</th><th>Largest contributors</th></tr></thead><tbody id="risk-scenario-rows"></tbody></table></div>
+              <div id="risk-scenario-quality"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card dashboard-tab-panel" data-dashboard-tab="allocation">
+          <div class="section-heading">
+            <div><p class="eyebrow">Tracked portfolio research collection</p><h2>Allocation &amp; Overlap</h2></div>
+            <div class="section-actions">
+              <button id="reload-allocation" class="secondary" type="button">Calculate allocation</button>
+              <button id="export-allocation" class="secondary" type="button">Download Excel</button>
+            </div>
+          </div>
+          <p id="allocation-status" class="muted">Load a date range to calculate allocation across primary tracked portfolios.</p>
+          <div id="allocation-content" class="hidden">
+            <div id="allocation-summary" class="model-summary-grid"></div>
+            <p id="allocation-note" class="portfolio-description"></p>
+            <div class="model-chart-grid">
+              <section><h3>Decision Alerts</h3><div id="allocation-alerts" class="command-center-grid"></div></section>
+              <section><h3>Data Quality</h3><div id="allocation-data-quality"></div></section>
+            </div>
+            <div class="model-table-grid">
+              <section><h3>Portfolio / Strategy</h3><div class="table-wrap"><table id="allocation-portfolio-table" data-sortable><thead><tr><th>Name</th><th>Value</th><th>Weight</th></tr></thead><tbody id="allocation-portfolio-rows"></tbody></table></div></section>
+              <section><h3>Sector</h3><div class="table-wrap"><table id="allocation-sector-table" data-sortable><thead><tr><th>Sector</th><th>Value</th><th>Weight</th></tr></thead><tbody id="allocation-sector-rows"></tbody></table></div></section>
+              <section><h3>Asset Type</h3><div class="table-wrap"><table id="allocation-type-table" data-sortable><thead><tr><th>Asset type</th><th>Value</th><th>Weight</th></tr></thead><tbody id="allocation-type-rows"></tbody></table></div></section>
+              <section><h3>Currency</h3><div class="table-wrap"><table id="allocation-currency-table" data-sortable><thead><tr><th>Currency</th><th>Value</th><th>Weight</th></tr></thead><tbody id="allocation-currency-rows"></tbody></table></div></section>
+            </div>
+            <h3>Combined Security Overlap</h3>
+            <div class="table-wrap"><table id="allocation-security-table" data-sortable><thead><tr><th>Ticker</th><th>Type</th><th>Sector</th><th>Currency</th><th>Value</th><th>Weight</th></tr></thead><tbody id="allocation-security-rows"></tbody></table></div>
+          </div>
+        </section>
+
+        <section class="card dashboard-tab-panel" data-dashboard-tab="performance">
+          <div class="section-heading">
+            <div><p class="eyebrow">Performance and reconciliation</p><h2>Performance &amp; Contribution</h2></div>
+            <div class="section-actions">
+              <label><span>Portfolio</span><select id="performance-portfolio-select"></select></label>
+              <button id="reload-performance" class="secondary" type="button">Calculate performance</button>
+              <button id="export-performance" class="secondary" type="button">Download Excel</button>
+            </div>
+          </div>
+          <p id="performance-status" class="muted">Load a date range, then select a portfolio.</p>
+          <div id="performance-content" class="hidden">
+            <div id="performance-summary" class="model-summary-grid"></div>
+            <div class="model-chart-grid">
+              <section><h3>Portfolio Value</h3><div id="performance-chart" class="chart"></div></section>
+              <section><h3>Data Quality</h3><div id="performance-data-quality"></div></section>
+            </div>
+            <h3>Position Contribution Snapshot</h3>
+            <p class="muted">Gain/loss contribution divided by opening portfolio value. This is a reconciliation view, not full Brinson attribution.</p>
+            <div class="table-wrap"><table id="performance-contribution-table" data-sortable><thead><tr><th>Ticker</th><th>Status</th><th>Value</th><th>Gain / loss</th><th>Return</th><th>Contribution</th></tr></thead><tbody id="performance-contribution-rows"></tbody></table></div>
+          </div>
+        </section>
+
+        <section class="card dashboard-tab-panel" data-dashboard-tab="rebalancing">
+          <div class="section-heading">
+            <div><p class="eyebrow">Draft review workflow</p><h2>Policy Rebalancing Preview</h2></div>
+            <button id="export-rebalance" class="secondary" type="button">Download Excel</button>
+          </div>
+          <div class="strategy-lab-controls">
+            <label><span>Demo policy profile</span><select id="rebalance-profile"></select></label>
+            <label><span>Portfolio value (USD)</span><input id="rebalance-value" type="number" min="1" step="100" value="100000" /></label>
+            <label class="fee-toggle"><input id="rebalance-exact-target" type="checkbox" /><span>Comparison only: trade to exact targets</span></label>
+            <button id="run-rebalance" class="primary" type="button">Build draft preview</button>
+          </div>
+          <p id="rebalance-status" class="muted">Current sleeve weights must be entered explicitly. No orders or ledger entries are created.</p>
+          <div id="rebalance-input-wrap" class="table-wrap hidden"><table id="rebalance-input-table"><thead><tr><th>Basket</th><th>Target</th><th>Current weight</th></tr></thead><tbody id="rebalance-input-rows"></tbody></table></div>
+          <div id="rebalance-content" class="hidden">
+            <div id="rebalance-summary" class="model-summary-grid"></div>
+            <p id="rebalance-methodology" class="portfolio-description"></p>
+            <div class="table-wrap"><table id="rebalance-result-table" data-sortable><thead><tr><th>Basket</th><th>Current</th><th>Target</th><th>Lower</th><th>Upper</th><th>Drift</th><th>Action</th><th>Proposed</th><th>Dollar change</th></tr></thead><tbody id="rebalance-result-rows"></tbody></table></div>
+            <h3>Warnings</h3><ul id="rebalance-warning-list" class="wealth-list"></ul>
+          </div>
+        </section>
 
         <section class="card dashboard-tab-panel" data-dashboard-tab="ai-wealth">
           <div class="section-heading">
@@ -101,6 +227,7 @@
             <strong>Research only.</strong>
             <span id="ai-wealth-disclaimer"></span>
           </div>
+          <div id="wealth-ops-summary" class="wealth-readiness-grid"></div>
           <div class="wealth-section-grid">
             <section>
               <h3>Operating Model</h3>
@@ -110,6 +237,111 @@
               <h3>Marketing Guardrails</h3>
               <div id="ai-wealth-positioning" class="wealth-positioning"></div>
             </section>
+          </div>
+          <h3>Operating Modules</h3>
+          <div class="table-wrap">
+            <table data-sortable>
+              <thead>
+                <tr>
+                  <th>Module</th>
+                  <th>Status</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody id="wealth-ops-module-rows"></tbody>
+            </table>
+          </div>
+          <div class="section-heading wealth-subheading">
+            <h3>External Portfolio Integrations</h3>
+            <p id="external-portfolio-status" class="muted"></p>
+          </div>
+          <div class="table-wrap">
+            <table data-sortable>
+              <thead>
+                <tr>
+                  <th>Portfolio</th>
+                  <th>Type</th>
+                  <th>Status</th>
+                  <th>Source</th>
+                  <th>Path</th>
+                  <th>Benchmark</th>
+                  <th>Positions</th>
+                  <th>Latest source date</th>
+                  <th>Weight</th>
+                  <th>Validation</th>
+                </tr>
+              </thead>
+              <tbody id="external-portfolio-rows"></tbody>
+            </table>
+          </div>
+          <h3>AI Command Workbench</h3>
+          <div class="table-wrap">
+            <table data-sortable>
+              <thead>
+                <tr>
+                  <th>Command</th>
+                  <th>Category</th>
+                  <th>Trigger</th>
+                  <th>Output</th>
+                  <th>Guardrail</th>
+                  <th>Prompt</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="wealth-command-rows"></tbody>
+            </table>
+          </div>
+          <p id="wealth-command-status" class="muted"></p>
+          <h3>Client Policy Profiles</h3>
+          <div class="table-wrap">
+            <table data-sortable>
+              <thead>
+                <tr>
+                  <th>Profile</th>
+                  <th>Status</th>
+                  <th>Risk</th>
+                  <th>Horizon</th>
+                  <th>Objective</th>
+                  <th>Liquidity</th>
+                  <th>Max tactical</th>
+                  <th>Max theme</th>
+                  <th>Min cash</th>
+                </tr>
+              </thead>
+              <tbody id="wealth-profile-rows"></tbody>
+            </table>
+          </div>
+          <h3>Proposal Matrix</h3>
+          <div class="table-wrap">
+            <table data-sortable>
+              <thead>
+                <tr>
+                  <th>Profile</th>
+                  <th>Status</th>
+                  <th>Return</th>
+                  <th>Alpha</th>
+                  <th>Allocations</th>
+                  <th>Warnings</th>
+                  <th>Next actions</th>
+                </tr>
+              </thead>
+              <tbody id="wealth-proposal-rows"></tbody>
+            </table>
+          </div>
+          <h3>Advisor Review Queue</h3>
+          <div class="table-wrap">
+            <table data-sortable>
+              <thead>
+                <tr>
+                  <th>Priority</th>
+                  <th>Type</th>
+                  <th>Subject</th>
+                  <th>Source</th>
+                  <th>Detail</th>
+                </tr>
+              </thead>
+              <tbody id="wealth-review-rows"></tbody>
+            </table>
           </div>
           <h3>Market Context</h3>
           <div class="table-wrap">
@@ -191,6 +423,104 @@
           </div>
         </section>
 
+        <section class="card dashboard-tab-panel" data-dashboard-tab="model-portfolio">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Point-in-time systematic simulation</p>
+              <h2>Systematic Model Portfolio</h2>
+            </div>
+            <div class="section-actions">
+              <p id="model-portfolio-window" class="muted">Starts 2026-01-31</p>
+              <button id="reload-model-portfolio" class="secondary" type="button">Recalculate model</button>
+              <button id="export-model-portfolio" class="secondary" type="button">Download Excel</button>
+            </div>
+          </div>
+          <p id="model-portfolio-status" class="muted">Open this tab after loading a dashboard date range.</p>
+          <div id="model-portfolio-content" class="hidden">
+            <div id="model-portfolio-summary" class="model-summary-grid"></div>
+            <p id="model-methodology" class="portfolio-description"></p>
+            <div class="model-chart-grid">
+              <section><h3>Portfolio value</h3><div id="model-portfolio-chart" class="chart"></div></section>
+              <section><h3>Drawdown</h3><div id="model-drawdown-chart" class="chart"></div></section>
+            </div>
+            <h3>Next Available Close Orders</h3>
+            <div class="table-wrap"><table id="model-pending-table" data-sortable>
+              <thead><tr><th>Action</th><th>Ticker</th><th>Signal</th><th>Score</th><th>Target</th><th>Amount</th><th>Observed</th><th>Reason</th></tr></thead>
+              <tbody id="model-pending-rows"></tbody>
+            </table></div>
+            <h3>Current Holdings</h3>
+            <div class="table-wrap"><table id="model-holdings-table" data-sortable>
+              <thead><tr><th>Ticker</th><th>Sector</th><th>Signal</th><th>Score</th><th>Weight</th><th>Value</th><th>Gain / loss</th><th>Return</th></tr></thead>
+              <tbody id="model-holding-rows"></tbody>
+            </table></div>
+            <div class="model-table-grid">
+              <section><h3>Current Sector Exposure</h3><div class="table-wrap"><table id="model-sector-table" data-sortable>
+                <thead><tr><th>Sector</th><th>Value</th><th>Weight</th></tr></thead><tbody id="model-sector-rows"></tbody>
+              </table></div></section>
+              <section><h3>Methodology Warnings</h3><ul id="model-warning-list" class="wealth-list"></ul></section>
+            </div>
+            <h3>Daily Rebalance History</h3>
+            <div class="table-wrap"><table id="model-rebalance-table" data-sortable>
+              <thead><tr><th>Execution date</th><th>Observed date</th><th>Buys</th><th>Sells</th><th>Traded</th><th>Turnover</th><th>Positions</th><th>Cash</th></tr></thead>
+              <tbody id="model-rebalance-rows"></tbody>
+            </table></div>
+            <h3>Full Simulated Trade Ledger</h3>
+            <div class="table-wrap"><table id="model-trades-table" data-sortable>
+              <thead><tr><th>Execution date</th><th>Observed date</th><th>Action</th><th>Ticker</th><th>Signal</th><th>Score</th><th>Amount</th><th>Target</th><th>Realized P&amp;L</th><th>Reason</th></tr></thead>
+              <tbody id="model-trade-rows"></tbody>
+            </table></div>
+          </div>
+        </section>
+
+        <section class="card dashboard-tab-panel" data-dashboard-tab="day-rotation">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">High-turnover point-in-time simulation</p>
+              <h2>Daily EOD Rotation Portfolio</h2>
+            </div>
+            <div class="section-actions">
+              <p id="rotation-window" class="muted">Starts 2026-01-31</p>
+              <button id="reload-rotation" class="secondary" type="button">Recalculate rotation</button>
+              <button id="export-rotation" class="secondary" type="button">Download Excel</button>
+            </div>
+          </div>
+          <p id="rotation-status" class="muted">Open this tab after loading a dashboard date range.</p>
+          <div id="rotation-content" class="hidden">
+            <div id="rotation-summary" class="model-summary-grid"></div>
+            <p id="rotation-methodology" class="portfolio-description"></p>
+            <div class="model-chart-grid">
+              <section><h3>Portfolio value</h3><div id="rotation-chart" class="chart"></div></section>
+              <section><h3>Drawdown</h3><div id="rotation-drawdown-chart" class="chart"></div></section>
+            </div>
+            <h3>Next Available Close Orders</h3>
+            <div class="table-wrap"><table id="rotation-pending-table" data-sortable>
+              <thead><tr><th>Action</th><th>Ticker</th><th>Signal</th><th>Score</th><th>Target</th><th>Amount</th><th>Observed</th><th>Reason</th></tr></thead>
+              <tbody id="rotation-pending-rows"></tbody>
+            </table></div>
+            <h3>Current Holdings</h3>
+            <div class="table-wrap"><table id="rotation-holdings-table" data-sortable>
+              <thead><tr><th>Ticker</th><th>Sector</th><th>Signal</th><th>Score</th><th>Weight</th><th>Value</th><th>Gain / loss</th><th>Return</th></tr></thead>
+              <tbody id="rotation-holding-rows"></tbody>
+            </table></div>
+            <div class="model-table-grid">
+              <section><h3>Current Sector Exposure</h3><div class="table-wrap"><table id="rotation-sector-table" data-sortable>
+                <thead><tr><th>Sector</th><th>Value</th><th>Weight</th></tr></thead><tbody id="rotation-sector-rows"></tbody>
+              </table></div></section>
+              <section><h3>Methodology Warnings</h3><ul id="rotation-warning-list" class="wealth-list"></ul></section>
+            </div>
+            <h3>Daily Rotation History</h3>
+            <div class="table-wrap"><table id="rotation-rebalance-table" data-sortable>
+              <thead><tr><th>Execution date</th><th>Observed date</th><th>Buys</th><th>Sells</th><th>Traded</th><th>Turnover</th><th>Positions</th><th>Cash</th></tr></thead>
+              <tbody id="rotation-rebalance-rows"></tbody>
+            </table></div>
+            <h3>Full Simulated Trade Ledger</h3>
+            <div class="table-wrap"><table id="rotation-trades-table" data-sortable>
+              <thead><tr><th>Execution date</th><th>Observed date</th><th>Action</th><th>Ticker</th><th>Signal</th><th>Score</th><th>Amount</th><th>Target</th><th>Realized P&amp;L</th><th>Reason</th></tr></thead>
+              <tbody id="rotation-trade-rows"></tbody>
+            </table></div>
+          </div>
+        </section>
+
         <section class="card dashboard-tab-panel active" data-dashboard-tab="home">
           <div class="section-heading">
             <div>
@@ -201,7 +531,7 @@
               <p class="muted">Built from the selected To-date close; strategy-specific pending orders remain in trader drilldowns.</p>
               <label class="compact-toggle">
                 <input type="checkbox" data-show-low-priority />
-                <span>Show low priority</span>
+                <span>Show research watchlists</span>
               </label>
               <p class="muted" data-low-priority-count></p>
             </div>
@@ -596,7 +926,7 @@
               <p id="window-label" class="muted"></p>
               <label class="compact-toggle">
                 <input type="checkbox" data-show-low-priority />
-                <span>Show low priority</span>
+                <span>Show research watchlists</span>
               </label>
               <p class="muted" data-low-priority-count></p>
               <button id="export-traders" class="secondary">Download Excel</button>
@@ -672,6 +1002,6 @@
     </aside>
     <div id="backdrop" class="backdrop hidden"></div>
 
-    <script src="/static/app.js?v=20260612-2"></script>
+    <script src="/static/app.js?v=20260612-13"></script>
   </body>
 </html>

@@ -1309,6 +1309,9 @@ function portfolioDescription(row = {}) {
   if (source.includes("derived-master-signal")) {
     return "Master ranked portfolio: scores the hybrid stock universe with signals, relative strength, volume, news, and overextension checks, then holds only the top capped positions.";
   }
+  if (source.includes("derived-news-analysis")) {
+    return "News + analysis variable watchlist: requires accelerating news plus a market-analysis score using relative strength, volume confirmation, trend quality, multi-horizon confirmation, and overextension risk.";
+  }
   if (source.includes("derived-news-assisted")) {
     if (investor.includes("optimized")) {
       return "News-assisted variable watchlist using EOD signal timing and the optimized news/signal rules selected from backtests.";

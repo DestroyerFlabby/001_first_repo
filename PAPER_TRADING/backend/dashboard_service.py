@@ -72,6 +72,7 @@ PUBLIC_DASHBOARD = os.environ.get("PUBLIC_DASHBOARD", "").casefold() in {
 VARIABLE_STRATEGY_NAME = "watchlist-variable"
 MASS_CHANGE_STRATEGY_NAME = "watchlist-variable-mass-change"
 HYBRID_NEWS_OPTIMIZED_STRATEGY_NAME = "watchlist-variable-news-optimized-hybrid"
+ANALYSIS_DRIVEN_STRATEGY_NAME = "watchlist-variable-news-analysis-driven"
 MASTER_STRATEGY_NAME = "watchlist-master"
 VARIABLE_BUY_ONLY_NAME = "watchlist-variable-buy-only"
 VARIABLE_BUY_ONLY_STRATEGIES = {
@@ -80,6 +81,7 @@ VARIABLE_BUY_ONLY_STRATEGIES = {
     "watchlist-variable-buy-only-near-only": "near",
 }
 VARIABLE_MORE_SIGNALS_NAME = "watchlist-variable-more-signals"
+ANALYSIS_ENTRY_SCORE = Decimal("180")
 VARIABLE_TECHNICAL_STRATEGIES = {
     "watchlist-variable-fresh-only": {
         "entry_categories": {"fresh"},
@@ -124,6 +126,7 @@ SECTOR_OWNER_LABELS = {
     "analyst-mike-mayo": "Analyst Picks - Financials",
     MASS_CHANGE_STRATEGY_NAME: "News-Driven Mass Change",
     HYBRID_NEWS_OPTIMIZED_STRATEGY_NAME: "Hybrid News-Optimized",
+    ANALYSIS_DRIVEN_STRATEGY_NAME: "News + Analysis Driven",
     MASTER_STRATEGY_NAME: "Master Ranked Portfolio",
 }
 TICKER_SECTOR_OVERRIDES = {
@@ -1046,6 +1049,87 @@ def entry_signal(signal: dict[str, object] | None) -> str | None:
     return str(signal["classification"])
 
 
+def _decimal_from_nested(mapping: dict[str, object], *keys: str, default: str = "0") -> Decimal:
+    value: object = mapping
+    for key in keys:
+        if not isinstance(value, dict):
+            return Decimal(default)
+        value = value.get(key, default)
+    try:
+        return Decimal(str(value))
+    except Exception:
+        return Decimal(default)
+
+
+def analysis_entry_score(
+    signal: dict[str, object] | None,
+    category: str,
+    news: dict[str, Decimal | int | None],
+) -> Decimal:
+    if not signal:
+        return Decimal("0")
+    horizons = signal.get("horizons", {}) if isinstance(signal.get("horizons"), dict) else {}
+    five_day = horizons.get("5d", {}) if isinstance(horizons.get("5d"), dict) else {}
+    one_week = horizons.get("1w", {}) if isinstance(horizons.get("1w"), dict) else {}
+    one_month = horizons.get("1m", {}) if isinstance(horizons.get("1m"), dict) else {}
+    three_month = horizons.get("3m", {}) if isinstance(horizons.get("3m"), dict) else {}
+    score = Decimal(str(signal.get("overall_score", 0)))
+    score += {"fresh": Decimal("14"), "strict": Decimal("9"), "near": Decimal("-8")}.get(category, Decimal("0"))
+
+    articles_7d = int(news["articles_7d"])
+    articles_prior_7d = int(news["articles_prior_7d"])
+    if articles_7d > 0:
+        score += Decimal("8")
+    if articles_7d > articles_prior_7d:
+        score += Decimal("14")
+    weekly_velocity = news.get("weekly_velocity")
+    if isinstance(weekly_velocity, Decimal) and weekly_velocity > Decimal("1"):
+        score += min((weekly_velocity - Decimal("1")) * Decimal("4"), Decimal("10"))
+
+    five_day_rel = _decimal_from_nested(five_day, "relative_strength_pct")
+    one_month_rel = _decimal_from_nested(one_month, "relative_strength_pct")
+    five_day_volume = _decimal_from_nested(five_day, "volume_ratio")
+    distance_to_high = _decimal_from_nested(five_day, "distance_to_20d_high_pct")
+    five_day_return = _decimal_from_nested(five_day, "return_pct")
+    one_month_return = _decimal_from_nested(one_month, "return_pct")
+    three_month_return = _decimal_from_nested(three_month, "return_pct")
+
+    if five_day_rel > 0:
+        score += min(five_day_rel * Decimal("0.7"), Decimal("12"))
+    else:
+        score += max(five_day_rel * Decimal("0.8"), Decimal("-12"))
+    if one_month_rel > 0:
+        score += min(one_month_rel * Decimal("0.35"), Decimal("10"))
+    elif one_month_rel < Decimal("-3"):
+        score -= Decimal("8")
+    if five_day_volume >= Decimal("1.25"):
+        score += min((five_day_volume - Decimal("1")) * Decimal("8"), Decimal("12"))
+    elif five_day_volume < Decimal("0.85"):
+        score -= Decimal("5")
+    if distance_to_high >= Decimal("-3"):
+        score += Decimal("6")
+    elif distance_to_high < Decimal("-10"):
+        score -= Decimal("10")
+
+    confirming_horizons = 0
+    for horizon in (five_day, one_week, one_month):
+        horizon_rel = _decimal_from_nested(horizon, "relative_strength_pct")
+        horizon_score = _decimal_from_nested(horizon, "score")
+        if horizon_rel > 0 and horizon_score >= Decimal("45"):
+            confirming_horizons += 1
+    score += Decimal(confirming_horizons * 3)
+
+    if five_day_return > Decimal("55"):
+        score -= Decimal("8")
+    if one_month_return > Decimal("120"):
+        score -= Decimal("14")
+    if three_month_return > Decimal("220"):
+        score -= Decimal("10")
+    if one_month_return < Decimal("-10"):
+        score -= Decimal("8")
+    return score
+
+
 def variable_strategy_detail(
     start: date,
     end: date | None,
@@ -1054,6 +1138,7 @@ def variable_strategy_detail(
     news_rule: str | None = None,
     entry_categories: set[str] | None = None,
     entry_news_rule: str = "ignore",
+    entry_analysis_rule: str = "ignore",
     apply_wealthsimple_fx_fees: bool = False,
     universe_assets: list[tuple[str, str]] | None = None,
     news_note: str | None = None,
@@ -1126,6 +1211,15 @@ def variable_strategy_detail(
             return int(news["articles_7d"]) > int(news["articles_prior_7d"])
         return True
 
+    def entry_analysis_matches(
+        signal: dict[str, object] | None,
+        category: str,
+        news: dict[str, Decimal | int | None],
+    ) -> bool:
+        if entry_analysis_rule == "quality-score":
+            return analysis_entry_score(signal, category, news) >= ANALYSIS_ENTRY_SCORE
+        return True
+
     def exit_matches(
         position: dict[str, object],
         signal: dict[str, object] | None,
@@ -1182,6 +1276,8 @@ def variable_strategy_detail(
 
         for ticker in sorted(set(desired) - set(active)):
             if not entry_news_matches(observed_news[ticker]):
+                continue
+            if not entry_analysis_matches(observed[ticker], desired[ticker], observed_news[ticker]):
                 continue
             price_bar = on_or_before(charts[ticker], session)
             if not price_bar or price_bar.day <= previous_session.day:
@@ -1336,6 +1432,8 @@ def variable_strategy_detail(
     for ticker in sorted(set(latest_desired) - set(active)):
         if not entry_news_matches(latest_news[ticker]):
             continue
+        if not entry_analysis_matches(latest_observed[ticker], latest_desired[ticker], latest_news[ticker]):
+            continue
         pending_next_close_orders.append(
             {
                 "date": "next available close",
@@ -1408,7 +1506,9 @@ def variable_strategy_detail(
     detail = {
         "investor": strategy_name,
         "source": (
-            "derived-news-assisted-signal-strategy"
+            "derived-news-analysis-signal-strategy"
+            if entry_analysis_rule != "ignore"
+            else "derived-news-assisted-signal-strategy"
             if news_rule or entry_news_rule != "ignore"
             else (
                 "derived-multi-signal-exit-strategy"
@@ -1438,13 +1538,24 @@ def variable_strategy_detail(
         "category_stats_scope": f"{VARIABLE_STRATEGY_START.isoformat()} to {latest_market.day.isoformat()}",
         "trade_cycles": len(cycles) + len(open_positions),
         "closed_cycles": len(cycles),
-        "news_counts_to_date": daily_news.get("to_date") if news_rule or entry_news_rule != "ignore" else None,
+        "entry_analysis_rule": entry_analysis_rule,
+        "analysis_entry_score_threshold": as_float(ANALYSIS_ENTRY_SCORE)
+        if entry_analysis_rule != "ignore"
+        else None,
+        "news_counts_to_date": daily_news.get("to_date")
+        if news_rule or entry_news_rule != "ignore" or entry_analysis_rule != "ignore"
+        else None,
         "note": (
-            f"News-assisted EOD strategy. {news_note or NEWS_STRATEGIES.get(strategy_name, {}).get('note', 'News-assisted strategy.')} "
+            (
+                "News + analysis driven EOD strategy. "
+                if entry_analysis_rule != "ignore"
+                else "News-assisted EOD strategy. "
+            )
+            + f"{news_note or NEWS_STRATEGIES.get(strategy_name, {}).get('note', 'News-assisted strategy.')} "
             f"Committed Alpaca daily news counts currently end on {daily_news.get('to_date')}. "
             "Signals and news are observed at one close and executed at the next "
             "available close. Each entry deploys $1,000. FX conversion is intentionally ignored."
-            if news_rule or entry_news_rule != "ignore"
+            if news_rule or entry_news_rule != "ignore" or entry_analysis_rule != "ignore"
             else
             "Multi-signal EOD strategy. Entries use the five-day non-none signal. "
             "An exit requires ten consecutive five-day none observations and a "
@@ -2043,6 +2154,47 @@ def hybrid_news_optimized_strategy_summary(
         key: detail[key]
         for key in SUMMARY_KEYS
     } | {"warnings": []}
+
+
+def analysis_driven_strategy_detail(
+    start: date,
+    end: date | None,
+    apply_wealthsimple_fx_fees: bool = False,
+) -> dict[str, object]:
+    config = NEWS_STRATEGIES["watchlist-variable-news-optimized-experimental"]
+    return variable_strategy_detail(
+        start,
+        end,
+        strategy_name=ANALYSIS_DRIVEN_STRATEGY_NAME,
+        news_rule=str(config["rule"]),
+        entry_categories={"fresh", "strict"},
+        entry_news_rule="accelerating",
+        entry_analysis_rule="quality-score",
+        apply_wealthsimple_fx_fees=apply_wealthsimple_fx_fees,
+        news_note=(
+            "Buy fresh or strict signals only when seven-day Alpaca news is accelerating "
+            f"and the market-analysis score is at least {as_float(ANALYSIS_ENTRY_SCORE)}. "
+            "The score rewards relative strength, volume confirmation, trend quality, "
+            "multi-horizon confirmation, and penalizes overextended moves. Exit rules "
+            f"match {config['note']}"
+        ),
+    )
+
+
+def analysis_driven_strategy_summary(
+    start: date,
+    end: date | None,
+    apply_wealthsimple_fx_fees: bool = False,
+) -> dict[str, object]:
+    detail = analysis_driven_strategy_detail(start, end, apply_wealthsimple_fx_fees)
+    return {
+        key: detail[key]
+        for key in SUMMARY_KEYS
+    } | {
+        "warnings": [],
+        "pending_next_close_orders": detail.get("pending_next_close_orders", []),
+        "execution_convention": detail.get("execution_convention"),
+    }
 
 
 def variable_buy_only_detail(
@@ -2661,6 +2813,7 @@ def build_overview(
     for strategy_name in NEWS_STRATEGIES:
         traders.append(variable_news_strategy_summary(strategy_name, start, end, apply_wealthsimple_fx_fees))
     traders.append(hybrid_news_optimized_strategy_summary(start, end, apply_wealthsimple_fx_fees))
+    traders.append(analysis_driven_strategy_summary(start, end, apply_wealthsimple_fx_fees))
     traders.extend(saved_strategy_dashboard_summaries(start, end, apply_wealthsimple_fx_fees))
     traders.sort(key=lambda row: row["return_pct"], reverse=True)
     for rank, trader in enumerate(traders, start=1):
@@ -2985,6 +3138,12 @@ def trader_detail(
             universe_assets=hybrid_news_optimized_assets(),
             apply_wealthsimple_fx_fees=apply_wealthsimple_fx_fees,
             news_note=f"Expanded-universe version of {config['note']}",
+        )
+    if investor.casefold() == ANALYSIS_DRIVEN_STRATEGY_NAME:
+        return analysis_driven_strategy_detail(
+            start,
+            end,
+            apply_wealthsimple_fx_fees=apply_wealthsimple_fx_fees,
         )
     if investor.casefold() == MASTER_STRATEGY_NAME:
         return master_portfolio_detail(

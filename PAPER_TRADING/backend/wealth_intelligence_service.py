@@ -36,6 +36,48 @@ MARKET_CONTEXT = [
         "source": "https://www.barrons.com/advisor/articles/betterment-ramps-up-portfolio-offerings-for-advisors-6a227a6c",
     },
     {
+        "category": "Next-best action intelligence",
+        "reference": "Envestnet Gen BI and Insights AI",
+        "signal": "Advisor platforms are packaging AI as easier access to data, better interpretation, and faster advisor decisions.",
+        "product_implication": "Add an advisor action queue that turns model, risk, data-quality, and client-policy signals into review tasks.",
+        "source": "https://www.prnewswire.com/news-releases/envestnet-unveils-two-breakthrough-ai-innovations-ushering-in-a-new-era-of-intelligence-driven-wealth-management-302472902.html",
+    },
+    {
+        "category": "Enterprise advisor operating system",
+        "reference": "Orion Denali AI",
+        "signal": "Large advisor platforms are building AI layers across CRM, reporting, trading, planning, compliance, and leadership dashboards.",
+        "product_implication": "Treat AI Wealth as an operating console with profile proposals, review queues, governance records, and report exports.",
+        "source": "https://orion.com/",
+    },
+    {
+        "category": "Research and proposal assistant",
+        "reference": "Morningstar Direct AI Solutions",
+        "signal": "Investment data vendors are positioning AI around personalized insights, research acceleration, portfolio analysis, and proposal support.",
+        "product_implication": "Build model fact sheets and client-policy proposal drafts backed by transparent portfolio data and assumptions.",
+        "source": "https://www.morningstar.com/business/products/direct-ai-solutions",
+    },
+    {
+        "category": "Client onboarding and meeting capture",
+        "reference": "AI notetakers for financial advisors",
+        "signal": "Advisor AI adoption is concentrated in meeting notes, meeting prep, CRM updates, task creation, and intake automation.",
+        "product_implication": "Add structured client profiles, meeting-prep prompts, and follow-up tasks before attempting deeper financial-planning automation.",
+        "source": "https://wealthtechtoday.com/2026/05/08/ai-notetakers-financial-advisors-2026/",
+    },
+    {
+        "category": "Consumer AI portfolio monitoring",
+        "reference": "PortfolioPilot",
+        "signal": "Consumer-facing AI wealth tools emphasize portfolio assessment, risk alerts, tax optimization, and specific allocation feedback.",
+        "product_implication": "Offer portfolio diagnostics and policy-fit checks, but keep outputs labelled research-only until advisory registration is resolved.",
+        "source": "https://portfoliopilot.com/",
+    },
+    {
+        "category": "AI-assisted broker workflow",
+        "reference": "Microsoft financial-services scenario library",
+        "signal": "AI-assisted portfolio management workflows combine market data, news, client priorities, opportunity recommendations, and advisor review.",
+        "product_implication": "Connect candidates, model baskets, market context, and client policy constraints into a human-reviewed proposal workflow.",
+        "source": "https://adoption.microsoft.com/en-us/scenario-library/financial-services/ai-assisted-broker-portfolio-management/",
+    },
+    {
         "category": "Canadian AI governance",
         "reference": "CSA Staff Notice and Consultation 11-348",
         "signal": "Canadian securities regulators expect AI users to address governance, supervision, conflicts, disclosure, data quality, and investor protection.",
@@ -112,6 +154,18 @@ def ai_wealth_score(row: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def data_quality_flags(row: dict[str, Any]) -> list[str]:
+    flags: list[str] = []
+    daily = abs(decimal_value(row.get("daily_change_pct")))
+    monthly = abs(decimal_value(row.get("monthly_change_pct")))
+    total_return = abs(decimal_value(row.get("return_pct")))
+    if daily >= Decimal("50"):
+        flags.append("extreme_daily_move_check_split_or_bad_price")
+    if monthly >= Decimal("100") or total_return >= Decimal("300"):
+        flags.append("extreme_period_move_review_required")
+    return flags
+
+
 def risk_bucket(row: dict[str, Any], score: float) -> str:
     sector = str(row.get("sector") or "")
     security_type = str(row.get("security_type") or "").casefold()
@@ -126,7 +180,9 @@ def risk_bucket(row: dict[str, Any], score: float) -> str:
     return "watchlist"
 
 
-def candidate_action(bucket: str, classification: str, score: float) -> str:
+def candidate_action(bucket: str, classification: str, score: float, flags: list[str] | None = None) -> str:
+    if flags:
+        return "data_review"
     if bucket == "high":
         return "risk_review"
     if score >= 80 and classification in {"fresh", "strict"}:
@@ -145,6 +201,7 @@ def build_candidates(stocks: list[dict[str, Any]], limit: int = 20) -> list[dict
         score = float(scored["score"])
         classification = str(scored["classification"])
         bucket = risk_bucket(row, score)
+        flags = data_quality_flags(row)
         candidates.append(
             {
                 "ticker": row.get("ticker"),
@@ -153,11 +210,12 @@ def build_candidates(stocks: list[dict[str, Any]], limit: int = 20) -> list[dict
                 "score": score,
                 "signal": classification,
                 "risk_bucket": bucket,
-                "suggested_action": candidate_action(bucket, classification, score),
+                "suggested_action": candidate_action(bucket, classification, score, flags),
                 "return_pct": row.get("return_pct"),
                 "daily_change_pct": row.get("daily_change_pct"),
                 "five_day_change_pct": row.get("five_day_change_pct"),
                 "monthly_change_pct": row.get("monthly_change_pct"),
+                "data_quality_flags": flags,
                 "drivers": scored["drivers"],
                 "wealthsimple": row.get("wealthsimple"),
             }

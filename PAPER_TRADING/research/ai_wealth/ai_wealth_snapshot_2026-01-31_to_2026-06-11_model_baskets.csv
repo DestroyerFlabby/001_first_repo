@@ -1,0 +1,10 @@
+basket_id,name,role,status,member_count,return_pct,benchmark_return_pct,alpha_pct,from_date,to_date,warning
+ai-wealth-growth,AI Wealth Growth Model,model_theme,active,11,14.352226,15.316706,-0.96448,2026-01-31,2026-06-11,
+ai-wealth-defensive-income,AI Wealth Defensive Income Model,model_theme,active,10,11.226852,19.147247,-7.920395,2026-01-31,2026-06-11,
+ai-wealth-core,AI Wealth Core Model,model_theme,active,7,6.160071,6.617345,-0.457274,2026-01-31,2026-06-11,
+ai-infrastructure,AI Infrastructure Index,model_theme,active,5,57.054398,6.617345,50.437053,2026-01-31,2026-06-11,
+crypto-proxy,Crypto Proxy Index,model_theme,active,5,9.178377,-19.155238,28.333615,2026-01-31,2026-06-11,
+semiconductor-supply-chain,Semiconductor Supply Chain Index,model_theme,active,5,63.683919,6.617345,57.066574,2026-01-31,2026-06-11,
+ai-wealth-tactical-ai,AI Wealth Tactical AI Model,research_theme,research,10,47.701268,15.316706,32.384562,2026-01-31,2026-06-11,
+creator-watchlist,Creator Watchlist Index,research_theme,research,3,-9.285562,6.617345,-15.902907,2026-01-31,2026-06-11,
+mass-change-candidate,Mass-Change Candidate Index,research_theme,research,3,23.252823,6.617345,16.635478,2026-01-31,2026-06-11,

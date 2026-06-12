@@ -1,0 +1,5 @@
+"profile_id","profile_name","status","risk_tolerance","time_horizon_years","primary_objective","liquidity_need","max_tactical_pct","max_single_theme_pct","min_cash_pct","notes"
+"capital-preservation","Capital Preservation Demo","active","low","3","Protect capital with income and liquidity","high","5","60","15","Research demo profile for conservative wealth conversations."
+"balanced-growth","Balanced Growth Demo","active","medium","7","Balanced compounding with diversified equity exposure","medium","10","60","7.5","Research demo profile for core model proposals."
+"ai-growth","AI Growth Demo","active","high","10","Long-term growth with AI and technology exposure","low","20","60","5","Research demo profile for higher-volatility AI growth discussions."
+"opportunistic-ai","Opportunistic AI Demo","research","very_high","10","Tactical AI theme exposure with strict review controls","low","30","50","5","Research-stage profile for concentrated AI model review only."

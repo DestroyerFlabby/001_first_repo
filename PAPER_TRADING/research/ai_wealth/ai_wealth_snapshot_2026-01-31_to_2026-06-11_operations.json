@@ -1,0 +1,597 @@
+{
+  "advisor_review_queue": [
+    {
+      "detail": "extreme_daily_move_check_split_or_bad_price",
+      "priority": "high",
+      "source": "ai_signal_candidates",
+      "subject": "KLAC",
+      "task_type": "data_review"
+    },
+    {
+      "detail": "extreme_period_move_review_required",
+      "priority": "high",
+      "source": "ai_signal_candidates",
+      "subject": "KXIAY",
+      "task_type": "data_review"
+    },
+    {
+      "detail": "extreme_period_move_review_required",
+      "priority": "high",
+      "source": "ai_signal_candidates",
+      "subject": "MNTS",
+      "task_type": "data_review"
+    },
+    {
+      "detail": "tactical sleeve 45.0% exceeds policy max 30.0%",
+      "priority": "high",
+      "source": "proposal_matrix",
+      "subject": "opportunistic-ai",
+      "task_type": "policy_warning"
+    },
+    {
+      "detail": "none technical signal; 16.299681% 5D relative strength vs SPY; 1.011053x 5D volume ratio; 35.231079% monthly move",
+      "priority": "medium",
+      "source": "ai_signal_candidates",
+      "subject": "BBAR",
+      "task_type": "risk_review"
+    },
+    {
+      "detail": "near technical signal; 10.314557% 5D relative strength vs SPY; 1.488282x 5D volume ratio; 25.335362% monthly move",
+      "priority": "medium",
+      "source": "ai_signal_candidates",
+      "subject": "LRCX",
+      "task_type": "risk_review"
+    },
+    {
+      "detail": "near technical signal; 4.632652% 5D relative strength vs SPY; 1.538222x 5D volume ratio; 44.545116% monthly move",
+      "priority": "medium",
+      "source": "ai_signal_candidates",
+      "subject": "MOV",
+      "task_type": "risk_review"
+    },
+    {
+      "detail": "none technical signal; 13.024151% 5D relative strength vs SPY; 0.936132x 5D volume ratio; 9.207022% monthly move",
+      "priority": "medium",
+      "source": "ai_signal_candidates",
+      "subject": "ONTO",
+      "task_type": "risk_review"
+    },
+    {
+      "detail": "none technical signal; 9.476614% 5D relative strength vs SPY; 0.950176x 5D volume ratio; 29.578793% monthly move",
+      "priority": "medium",
+      "source": "ai_signal_candidates",
+      "subject": "SNDK",
+      "task_type": "risk_review"
+    },
+    {
+      "detail": "near technical signal; 23.339292% 5D relative strength vs SPY; 1.313555x 5D volume ratio; 36.698033% monthly move",
+      "priority": "medium",
+      "source": "ai_signal_candidates",
+      "subject": "TEO",
+      "task_type": "risk_review"
+    }
+  ],
+  "ai_command_workbench": [
+    {
+      "available": true,
+      "category": "client_workflow",
+      "command_id": "meeting-prep",
+      "execution_mode": "copy_to_ai_tool",
+      "generated_prompt": "Prepare an advisor meeting brief for Capital Preservation Demo. Use the current proposal return 9.766016% and alpha -4.612711%. Cover objective, risk profile, model allocation rationale, questions to ask, and items requiring human review. Include this disclaimer: research-only, no personalized advice.",
+      "guardrail": "Do not imply suitability or personalized recommendation approval.",
+      "output_type": "meeting brief",
+      "prompt_template": "Prepare an advisor meeting brief for {profile_name}. Use the current proposal return {proposal_return_pct}% and alpha {proposal_alpha_pct}%. Cover objective, risk profile, model allocation rationale, questions to ask, and items requiring human review. Include this disclaimer: research-only, no personalized advice.",
+      "required_context": "profile, proposal, review queue",
+      "title": "Advisor Meeting Prep",
+      "trigger": "Before a prospect/client meeting"
+    },
+    {
+      "available": true,
+      "category": "proposal",
+      "command_id": "proposal-draft",
+      "execution_mode": "copy_to_ai_tool",
+      "generated_prompt": "Draft an internal model proposal for Capital Preservation Demo. Explain allocations: ai-wealth-defensive-income 55.0%; ai-wealth-core 35.0%; ai-wealth-growth 10.0%. Explain policy warnings: none. Use plain language and separate portfolio rationale from compliance limitations.",
+      "guardrail": "State that this is an internal research proposal draft only.",
+      "output_type": "proposal narrative",
+      "prompt_template": "Draft an internal model proposal for {profile_name}. Explain allocations: {allocations}. Explain policy warnings: {policy_warnings}. Use plain language and separate portfolio rationale from compliance limitations.",
+      "required_context": "profile, allocations, model performance",
+      "title": "Model Proposal Draft",
+      "trigger": "After selecting a policy profile"
+    },
+    {
+      "available": true,
+      "category": "reporting",
+      "command_id": "portfolio-commentary",
+      "execution_mode": "copy_to_ai_tool",
+      "generated_prompt": "Write portfolio commentary for the AI Wealth platform from 2026-01-31 to 2026-06-11. Mention top model baskets, underperforming models, risk-review candidates, and the need for human approval before external use.",
+      "guardrail": "Do not market simulated results as live audited performance.",
+      "output_type": "client-ready commentary draft",
+      "prompt_template": "Write portfolio commentary for the AI Wealth platform from {from_date} to {to_date}. Mention top model baskets, underperforming models, risk-review candidates, and the need for human approval before external use.",
+      "required_context": "model basket performance, candidates, market context",
+      "title": "Portfolio Commentary",
+      "trigger": "After snapshot generation"
+    },
+    {
+      "available": true,
+      "category": "supervision",
+      "command_id": "review-queue",
+      "execution_mode": "copy_to_ai_tool",
+      "generated_prompt": "Prioritize the advisor review queue. High priority tasks: data_review:KLAC; data_review:KXIAY; data_review:MNTS; policy_warning:opportunistic-ai. Medium priority tasks: risk_review:BBAR; risk_review:LRCX; risk_review:MOV; risk_review:ONTO; risk_review:SNDK; risk_review:TEO. Return actions, owner, evidence needed, and decision status.",
+      "guardrail": "Data-review items must be resolved before external use.",
+      "output_type": "prioritized review list",
+      "prompt_template": "Prioritize the advisor review queue. High priority tasks: {high_priority_tasks}. Medium priority tasks: {medium_priority_tasks}. Return actions, owner, evidence needed, and decision status.",
+      "required_context": "review queue, data flags, risk flags",
+      "title": "Advisor Review Queue Triage",
+      "trigger": "Daily or before publishing reports"
+    },
+    {
+      "available": true,
+      "category": "supervision",
+      "command_id": "data-quality-review",
+      "execution_mode": "copy_to_ai_tool",
+      "generated_prompt": "Review data-quality issues for tickers: KLAC, KXIAY, MNTS. For each ticker, list likely issue, validation steps, whether it can remain in reports, and what evidence is required.",
+      "guardrail": "Do not approve candidates with unresolved split/bad-price flags.",
+      "output_type": "data-quality checklist",
+      "prompt_template": "Review data-quality issues for tickers: {data_review_tickers}. For each ticker, list likely issue, validation steps, whether it can remain in reports, and what evidence is required.",
+      "required_context": "data quality flags, tickers, price changes",
+      "title": "Market Data Quality Review",
+      "trigger": "When candidates show extreme moves"
+    },
+    {
+      "available": true,
+      "category": "compliance",
+      "command_id": "compliance-review",
+      "execution_mode": "copy_to_ai_tool",
+      "generated_prompt": "Review AI wealth marketing language against these guardrails: AI outputs must be dated and reproducible from source data.; Every model candidate must retain visible signal, risk, and data-quality drivers.; Human review is required before external use of candidate, model, or proposal output.; Client profile proposals are policy-fit research drafts, not personalized investment advice.; Marketing language must say AI-assisted and human-supervised unless a registered process supports stronger claims.; Performance output must distinguish simulated/backtested results from live audited performance.. Rewrite claims to be CFA-led, human-supervised, AI-assisted, research-only, and not personalized advice.",
+      "guardrail": "Flag guaranteed-return, autonomous-advice, and unregistered-advice language.",
+      "output_type": "compliance notes",
+      "prompt_template": "Review AI wealth marketing language against these guardrails: {governance_checklist}. Rewrite claims to be CFA-led, human-supervised, AI-assisted, research-only, and not personalized advice.",
+      "required_context": "marketing copy, AI claims, CSA guardrails",
+      "title": "AI Marketing Compliance Review",
+      "trigger": "Before publishing website/report/pitch copy"
+    },
+    {
+      "available": true,
+      "category": "reporting",
+      "command_id": "fact-sheet",
+      "execution_mode": "copy_to_ai_tool",
+      "generated_prompt": "Create a model fact sheet for AI Wealth Growth Model. Include objective, benchmark, holdings count, return, alpha, risks, ideal policy profile, methodology, and simulation limitations.",
+      "guardrail": "Include methodology, assumptions, risks, and simulation limits.",
+      "output_type": "model fact sheet",
+      "prompt_template": "Create a model fact sheet for {basket_name}. Include objective, benchmark, holdings count, return, alpha, risks, ideal policy profile, methodology, and simulation limitations.",
+      "required_context": "basket performance, holdings, benchmark",
+      "title": "Model Fact Sheet Generator",
+      "trigger": "Monthly or after model changes"
+    },
+    {
+      "available": true,
+      "category": "advisor_os",
+      "command_id": "next-best-action",
+      "execution_mode": "copy_to_ai_tool",
+      "generated_prompt": "Generate next-best actions for the AI Wealth advisor console using top candidates TEO, KLAC, AMAT, ASML, LRCX, KXIAY, MOV, BBAR, ready profiles Capital Preservation Demo, Balanced Growth Demo, AI Growth Demo, and review tasks 10. Group actions by research, client workflow, supervision, and reporting.",
+      "guardrail": "Actions are workflow tasks, not trade instructions.",
+      "output_type": "action queue",
+      "prompt_template": "Generate next-best actions for the AI Wealth advisor console using top candidates {top_candidates}, ready profiles {ready_profiles}, and review tasks {review_task_count}. Group actions by research, client workflow, supervision, and reporting.",
+      "required_context": "signals, proposals, review queue",
+      "title": "Next Best Action Engine",
+      "trigger": "Daily workflow review"
+    },
+    {
+      "available": true,
+      "category": "client_workflow",
+      "command_id": "client-follow-up",
+      "execution_mode": "copy_to_ai_tool",
+      "generated_prompt": "Draft a concise follow-up email for Capital Preservation Demo. Summarize discussion points, documents needed, model research under review, and next steps. Keep it educational and compliance-safe.",
+      "guardrail": "Do not include specific investment recommendations unless reviewed by a registered advisor.",
+      "output_type": "follow-up email draft",
+      "prompt_template": "Draft a concise follow-up email for {profile_name}. Summarize discussion points, documents needed, model research under review, and next steps. Keep it educational and compliance-safe.",
+      "required_context": "profile, proposal, open questions",
+      "title": "Client Follow-Up Draft",
+      "trigger": "After a meeting or proposal review"
+    },
+    {
+      "available": true,
+      "category": "governance",
+      "command_id": "governance-log",
+      "execution_mode": "copy_to_ai_tool",
+      "generated_prompt": "Create a governance log entry for the AI Wealth run from 2026-01-31 to 2026-06-11. Include data sources, generated outputs, unresolved review tasks, human reviewer fields, and publication decision.",
+      "guardrail": "Record assumptions and unresolved risks.",
+      "output_type": "governance record",
+      "prompt_template": "Create a governance log entry for the AI Wealth run from {from_date} to {to_date}. Include data sources, generated outputs, unresolved review tasks, human reviewer fields, and publication decision.",
+      "required_context": "window, command, inputs, outputs, reviewer",
+      "title": "AI Governance Log Entry",
+      "trigger": "After every snapshot/run"
+    }
+  ],
+  "client_profiles": [
+    {
+      "liquidity_need": "high",
+      "max_single_theme_pct": 60.0,
+      "max_tactical_pct": 5.0,
+      "min_cash_pct": 15.0,
+      "notes": "Research demo profile for conservative wealth conversations.",
+      "primary_objective": "Protect capital with income and liquidity",
+      "profile_id": "capital-preservation",
+      "profile_name": "Capital Preservation Demo",
+      "risk_tolerance": "low",
+      "status": "active",
+      "time_horizon_years": 3
+    },
+    {
+      "liquidity_need": "medium",
+      "max_single_theme_pct": 60.0,
+      "max_tactical_pct": 10.0,
+      "min_cash_pct": 7.5,
+      "notes": "Research demo profile for core model proposals.",
+      "primary_objective": "Balanced compounding with diversified equity exposure",
+      "profile_id": "balanced-growth",
+      "profile_name": "Balanced Growth Demo",
+      "risk_tolerance": "medium",
+      "status": "active",
+      "time_horizon_years": 7
+    },
+    {
+      "liquidity_need": "low",
+      "max_single_theme_pct": 60.0,
+      "max_tactical_pct": 20.0,
+      "min_cash_pct": 5.0,
+      "notes": "Research demo profile for higher-volatility AI growth discussions.",
+      "primary_objective": "Long-term growth with AI and technology exposure",
+      "profile_id": "ai-growth",
+      "profile_name": "AI Growth Demo",
+      "risk_tolerance": "high",
+      "status": "active",
+      "time_horizon_years": 10
+    },
+    {
+      "liquidity_need": "low",
+      "max_single_theme_pct": 50.0,
+      "max_tactical_pct": 30.0,
+      "min_cash_pct": 5.0,
+      "notes": "Research-stage profile for concentrated AI model review only.",
+      "primary_objective": "Tactical AI theme exposure with strict review controls",
+      "profile_id": "opportunistic-ai",
+      "profile_name": "Opportunistic AI Demo",
+      "risk_tolerance": "very_high",
+      "status": "research",
+      "time_horizon_years": 10
+    }
+  ],
+  "disclaimer": "Operational research workflow only. Client profiles are demo policy profiles and do not represent personalized advice, suitability approval, account opening, custody, or order execution.",
+  "from_date": "2026-01-31",
+  "governance_checklist": [
+    "AI outputs must be dated and reproducible from source data.",
+    "Every model candidate must retain visible signal, risk, and data-quality drivers.",
+    "Human review is required before external use of candidate, model, or proposal output.",
+    "Client profile proposals are policy-fit research drafts, not personalized investment advice.",
+    "Marketing language must say AI-assisted and human-supervised unless a registered process supports stronger claims.",
+    "Performance output must distinguish simulated/backtested results from live audited performance."
+  ],
+  "operating_modules": [
+    {
+      "description": "Structured demo profiles capture objective, risk tolerance, horizon, liquidity, tactical limits, and cash minimums.",
+      "module": "Client intake and policy profile",
+      "status": "configured"
+    },
+    {
+      "description": "AI Wealth model baskets and existing theme baskets are available for proposal construction and performance checks.",
+      "module": "Model portfolio library",
+      "status": "configured"
+    },
+    {
+      "description": "Signal candidates are scored with explainable technical, relative-strength, volume, risk, and data-quality drivers.",
+      "module": "AI research and candidate ranking",
+      "status": "configured"
+    },
+    {
+      "description": "Profiles map to target model allocations with policy warnings for high tactical or alternative exposure.",
+      "module": "Policy-fit proposal matrix",
+      "status": "configured"
+    },
+    {
+      "description": "Data-review flags, risk-review candidates, and policy exceptions become human review tasks.",
+      "module": "Advisor review queue",
+      "status": "configured"
+    },
+    {
+      "description": "Markdown/CSV/JSON snapshots exist; PDF-style fact sheets and meeting packets are the next export layer.",
+      "module": "Client-ready reporting",
+      "status": "partial"
+    },
+    {
+      "description": "Registration, suitability, KYC, custody, order management, and client advice require a registered firm or legal setup.",
+      "module": "Compliance and registration workflow",
+      "status": "external_required"
+    }
+  ],
+  "proposal_matrix": [
+    {
+      "allocation_count": 3,
+      "allocations": [
+        {
+          "allocation_role": "core_income",
+          "basket_alpha_pct": -7.920395,
+          "basket_id": "ai-wealth-defensive-income",
+          "basket_name": "AI Wealth Defensive Income Model",
+          "basket_return_pct": 11.226852,
+          "profile_id": "capital-preservation",
+          "rationale": "Defensive income sleeve for lower-volatility Canadian wealth profile.",
+          "target_weight": 55.0,
+          "warning": "",
+          "weighted_return_contribution_pct": 6.1747686
+        },
+        {
+          "allocation_role": "diversified_core",
+          "basket_alpha_pct": -0.457274,
+          "basket_id": "ai-wealth-core",
+          "basket_name": "AI Wealth Core Model",
+          "basket_return_pct": 6.160071,
+          "profile_id": "capital-preservation",
+          "rationale": "Diversified global equity and cash/gold mix.",
+          "target_weight": 35.0,
+          "warning": "",
+          "weighted_return_contribution_pct": 2.15602485
+        },
+        {
+          "allocation_role": "growth_satellite",
+          "basket_alpha_pct": -0.96448,
+          "basket_id": "ai-wealth-growth",
+          "basket_name": "AI Wealth Growth Model",
+          "basket_return_pct": 14.352226,
+          "profile_id": "capital-preservation",
+          "rationale": "Small growth sleeve capped by conservative policy.",
+          "target_weight": 10.0,
+          "warning": "",
+          "weighted_return_contribution_pct": 1.4352226
+        }
+      ],
+      "next_best_actions": [
+        "Generate meeting-prep packet using current model-basket performance.",
+        "Confirm risk tolerance, time horizon, liquidity need, and constraints before any external use.",
+        "Document human approval and dated source data for the proposal."
+      ],
+      "policy_warnings": [],
+      "profile": {
+        "liquidity_need": "high",
+        "max_single_theme_pct": 60.0,
+        "max_tactical_pct": 5.0,
+        "min_cash_pct": 15.0,
+        "notes": "Research demo profile for conservative wealth conversations.",
+        "primary_objective": "Protect capital with income and liquidity",
+        "profile_id": "capital-preservation",
+        "profile_name": "Capital Preservation Demo",
+        "risk_tolerance": "low",
+        "status": "active",
+        "time_horizon_years": 3
+      },
+      "proposal_alpha_pct": -4.612711,
+      "proposal_return_pct": 9.766016,
+      "review_status": "ready_for_internal_review"
+    },
+    {
+      "allocation_count": 3,
+      "allocations": [
+        {
+          "allocation_role": "diversified_core",
+          "basket_alpha_pct": -0.457274,
+          "basket_id": "ai-wealth-core",
+          "basket_name": "AI Wealth Core Model",
+          "basket_return_pct": 6.160071,
+          "profile_id": "balanced-growth",
+          "rationale": "Primary diversified model sleeve.",
+          "target_weight": 55.0,
+          "warning": "",
+          "weighted_return_contribution_pct": 3.38803905
+        },
+        {
+          "allocation_role": "growth_satellite",
+          "basket_alpha_pct": -0.96448,
+          "basket_id": "ai-wealth-growth",
+          "basket_name": "AI Wealth Growth Model",
+          "basket_return_pct": 14.352226,
+          "profile_id": "balanced-growth",
+          "rationale": "AI/platform growth sleeve within medium-risk policy.",
+          "target_weight": 30.0,
+          "warning": "",
+          "weighted_return_contribution_pct": 4.3056678
+        },
+        {
+          "allocation_role": "income_buffer",
+          "basket_alpha_pct": -7.920395,
+          "basket_id": "ai-wealth-defensive-income",
+          "basket_name": "AI Wealth Defensive Income Model",
+          "basket_return_pct": 11.226852,
+          "profile_id": "balanced-growth",
+          "rationale": "Income and defensive balance.",
+          "target_weight": 15.0,
+          "warning": "",
+          "weighted_return_contribution_pct": 1.6840278
+        }
+      ],
+      "next_best_actions": [
+        "Generate meeting-prep packet using current model-basket performance.",
+        "Confirm risk tolerance, time horizon, liquidity need, and constraints before any external use.",
+        "Document human approval and dated source data for the proposal."
+      ],
+      "policy_warnings": [],
+      "profile": {
+        "liquidity_need": "medium",
+        "max_single_theme_pct": 60.0,
+        "max_tactical_pct": 10.0,
+        "min_cash_pct": 7.5,
+        "notes": "Research demo profile for core model proposals.",
+        "primary_objective": "Balanced compounding with diversified equity exposure",
+        "profile_id": "balanced-growth",
+        "profile_name": "Balanced Growth Demo",
+        "risk_tolerance": "medium",
+        "status": "active",
+        "time_horizon_years": 7
+      },
+      "proposal_alpha_pct": -1.728904,
+      "proposal_return_pct": 9.377735,
+      "review_status": "ready_for_internal_review"
+    },
+    {
+      "allocation_count": 4,
+      "allocations": [
+        {
+          "allocation_role": "growth_core",
+          "basket_alpha_pct": -0.96448,
+          "basket_id": "ai-wealth-growth",
+          "basket_name": "AI Wealth Growth Model",
+          "basket_return_pct": 14.352226,
+          "profile_id": "ai-growth",
+          "rationale": "Main AI/platform growth sleeve.",
+          "target_weight": 55.0,
+          "warning": "",
+          "weighted_return_contribution_pct": 7.8937243
+        },
+        {
+          "allocation_role": "diversified_core",
+          "basket_alpha_pct": -0.457274,
+          "basket_id": "ai-wealth-core",
+          "basket_name": "AI Wealth Core Model",
+          "basket_return_pct": 6.160071,
+          "profile_id": "ai-growth",
+          "rationale": "Diversification ballast.",
+          "target_weight": 25.0,
+          "warning": "",
+          "weighted_return_contribution_pct": 1.54001775
+        },
+        {
+          "allocation_role": "tactical_ai",
+          "basket_alpha_pct": 32.384562,
+          "basket_id": "ai-wealth-tactical-ai",
+          "basket_name": "AI Wealth Tactical AI Model",
+          "basket_return_pct": 47.701268,
+          "profile_id": "ai-growth",
+          "rationale": "Human-reviewed tactical AI sleeve.",
+          "target_weight": 15.0,
+          "warning": "",
+          "weighted_return_contribution_pct": 7.1551902
+        },
+        {
+          "allocation_role": "income_buffer",
+          "basket_alpha_pct": -7.920395,
+          "basket_id": "ai-wealth-defensive-income",
+          "basket_name": "AI Wealth Defensive Income Model",
+          "basket_return_pct": 11.226852,
+          "profile_id": "ai-growth",
+          "rationale": "Small defensive buffer.",
+          "target_weight": 5.0,
+          "warning": "",
+          "weighted_return_contribution_pct": 0.5613426
+        }
+      ],
+      "next_best_actions": [
+        "Generate meeting-prep packet using current model-basket performance.",
+        "Confirm risk tolerance, time horizon, liquidity need, and constraints before any external use.",
+        "Document human approval and dated source data for the proposal."
+      ],
+      "policy_warnings": [],
+      "profile": {
+        "liquidity_need": "low",
+        "max_single_theme_pct": 60.0,
+        "max_tactical_pct": 20.0,
+        "min_cash_pct": 5.0,
+        "notes": "Research demo profile for higher-volatility AI growth discussions.",
+        "primary_objective": "Long-term growth with AI and technology exposure",
+        "profile_id": "ai-growth",
+        "profile_name": "AI Growth Demo",
+        "risk_tolerance": "high",
+        "status": "active",
+        "time_horizon_years": 10
+      },
+      "proposal_alpha_pct": 3.816882,
+      "proposal_return_pct": 17.150275,
+      "review_status": "ready_for_internal_review"
+    },
+    {
+      "allocation_count": 4,
+      "allocations": [
+        {
+          "allocation_role": "tactical_ai",
+          "basket_alpha_pct": 32.384562,
+          "basket_id": "ai-wealth-tactical-ai",
+          "basket_name": "AI Wealth Tactical AI Model",
+          "basket_return_pct": 47.701268,
+          "profile_id": "opportunistic-ai",
+          "rationale": "Research-stage concentrated AI sleeve requiring human approval.",
+          "target_weight": 45.0,
+          "warning": "",
+          "weighted_return_contribution_pct": 21.4655706
+        },
+        {
+          "allocation_role": "growth_core",
+          "basket_alpha_pct": -0.96448,
+          "basket_id": "ai-wealth-growth",
+          "basket_name": "AI Wealth Growth Model",
+          "basket_return_pct": 14.352226,
+          "profile_id": "opportunistic-ai",
+          "rationale": "AI/platform growth core.",
+          "target_weight": 35.0,
+          "warning": "",
+          "weighted_return_contribution_pct": 5.0232791
+        },
+        {
+          "allocation_role": "diversified_core",
+          "basket_alpha_pct": -0.457274,
+          "basket_id": "ai-wealth-core",
+          "basket_name": "AI Wealth Core Model",
+          "basket_return_pct": 6.160071,
+          "profile_id": "opportunistic-ai",
+          "rationale": "Diversification ballast.",
+          "target_weight": 15.0,
+          "warning": "",
+          "weighted_return_contribution_pct": 0.92401065
+        },
+        {
+          "allocation_role": "alternative_satellite",
+          "basket_alpha_pct": 28.333615,
+          "basket_id": "crypto-proxy",
+          "basket_name": "Crypto Proxy Index",
+          "basket_return_pct": 9.178377,
+          "profile_id": "opportunistic-ai",
+          "rationale": "High-risk alternative sleeve for review only.",
+          "target_weight": 5.0,
+          "warning": "",
+          "weighted_return_contribution_pct": 0.45891885
+        }
+      ],
+      "next_best_actions": [
+        "Keep this profile in research mode until a reviewer approves the policy limits.",
+        "Resolve policy warnings before using this profile in an advisor demo.",
+        "Generate meeting-prep packet using current model-basket performance.",
+        "Confirm risk tolerance, time horizon, liquidity need, and constraints before any external use.",
+        "Document human approval and dated source data for the proposal."
+      ],
+      "policy_warnings": [
+        "tactical sleeve 45.0% exceeds policy max 30.0%"
+      ],
+      "profile": {
+        "liquidity_need": "low",
+        "max_single_theme_pct": 50.0,
+        "max_tactical_pct": 30.0,
+        "min_cash_pct": 5.0,
+        "notes": "Research-stage profile for concentrated AI model review only.",
+        "primary_objective": "Tactical AI theme exposure with strict review controls",
+        "profile_id": "opportunistic-ai",
+        "profile_name": "Opportunistic AI Demo",
+        "risk_tolerance": "very_high",
+        "status": "research",
+        "time_horizon_years": 10
+      },
+      "proposal_alpha_pct": 15.583575,
+      "proposal_return_pct": 27.871779,
+      "review_status": "needs_review"
+    }
+  ],
+  "summary": {
+    "ai_command_count": 10,
+    "high_priority_task_count": 4,
+    "profile_count": 4,
+    "ready_profile_count": 3,
+    "review_task_count": 10
+  },
+  "to_date": "2026-06-11"
+}

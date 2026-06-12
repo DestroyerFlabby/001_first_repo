@@ -1,0 +1,975 @@
+{
+  "ai_signal_candidates": [
+    {
+      "daily_change_pct": 12.297962,
+      "data_quality_flags": [],
+      "drivers": [
+        "near technical signal",
+        "23.339292% 5D relative strength vs SPY",
+        "1.313555x 5D volume ratio",
+        "36.698033% monthly move"
+      ],
+      "five_day_change_pct": 20.786093,
+      "monthly_change_pct": 36.698033,
+      "return_pct": 22.077917,
+      "risk_bucket": "high",
+      "score": 100.0,
+      "sector": "Daily Fresh Setups",
+      "security_type": "stock",
+      "signal": "near",
+      "suggested_action": "risk_review",
+      "ticker": "TEO",
+      "wealthsimple": {
+        "alternative_note": null,
+        "availability": "likely-supported",
+        "canadian_hedged_alternative": null,
+        "reason": "Appears US-listed on a generally supported exchange. Liquidity and settlement rules still apply."
+      }
+    },
+    {
+      "daily_change_pct": 1029.235239,
+      "data_quality_flags": [
+        "extreme_daily_move_check_split_or_bad_price"
+      ],
+      "drivers": [
+        "fresh technical signal",
+        "15.717283% 5D relative strength vs SPY",
+        "9.39868x 5D volume ratio",
+        "33.140471% monthly move"
+      ],
+      "five_day_change_pct": 13.164083,
+      "monthly_change_pct": 33.140471,
+      "return_pct": 70.983727,
+      "risk_bucket": "high",
+      "score": 100.0,
+      "sector": "Semiconductors - CMP, Cleaning & Metrology",
+      "security_type": "stock",
+      "signal": "fresh",
+      "suggested_action": "data_review",
+      "ticker": "KLAC",
+      "wealthsimple": {
+        "alternative_note": null,
+        "availability": "likely-supported",
+        "canadian_hedged_alternative": null,
+        "reason": "Appears US-listed on a generally supported exchange. Liquidity and settlement rules still apply."
+      }
+    },
+    {
+      "daily_change_pct": 11.192935,
+      "data_quality_flags": [],
+      "drivers": [
+        "near technical signal",
+        "12.706678% 5D relative strength vs SPY",
+        "1.395497x 5D volume ratio",
+        "28.163265% monthly move"
+      ],
+      "five_day_change_pct": 10.153478,
+      "monthly_change_pct": 28.163265,
+      "return_pct": 68.28259,
+      "risk_bucket": "satellite",
+      "score": 94.831504,
+      "sector": "Semiconductors - Deposition & Etch",
+      "security_type": "stock",
+      "signal": "near",
+      "suggested_action": "watchlist_candidate",
+      "ticker": "AMAT",
+      "wealthsimple": {
+        "alternative_note": null,
+        "availability": "likely-supported",
+        "canadian_hedged_alternative": null,
+        "reason": "Appears US-listed on a generally supported exchange. Liquidity and settlement rules still apply."
+      }
+    },
+    {
+      "daily_change_pct": 9.531253,
+      "data_quality_flags": [],
+      "drivers": [
+        "near technical signal",
+        "10.633565% 5D relative strength vs SPY",
+        "1.656899x 5D volume ratio",
+        "24.888559% monthly move"
+      ],
+      "five_day_change_pct": 8.080366,
+      "monthly_change_pct": 24.888559,
+      "return_pct": 31.781125,
+      "risk_bucket": "satellite",
+      "score": 91.67012,
+      "sector": "Semiconductors - Lithography",
+      "security_type": "stock",
+      "signal": "near",
+      "suggested_action": "watchlist_candidate",
+      "ticker": "ASML",
+      "wealthsimple": {
+        "alternative_note": null,
+        "availability": "likely-supported",
+        "canadian_hedged_alternative": null,
+        "reason": "Appears US-listed on a generally supported exchange. Liquidity and settlement rules still apply."
+      }
+    },
+    {
+      "daily_change_pct": 12.653823,
+      "data_quality_flags": [],
+      "drivers": [
+        "near technical signal",
+        "10.314557% 5D relative strength vs SPY",
+        "1.488282x 5D volume ratio",
+        "25.335362% monthly move"
+      ],
+      "five_day_change_pct": 7.761358,
+      "monthly_change_pct": 25.335362,
+      "return_pct": 52.639995,
+      "risk_bucket": "high",
+      "score": 90.499517,
+      "sector": "Semiconductors - Deposition & Etch",
+      "security_type": "stock",
+      "signal": "near",
+      "suggested_action": "risk_review",
+      "ticker": "LRCX",
+      "wealthsimple": {
+        "alternative_note": null,
+        "availability": "likely-supported",
+        "canadian_hedged_alternative": null,
+        "reason": "Appears US-listed on a generally supported exchange. Liquidity and settlement rules still apply."
+      }
+    },
+    {
+      "daily_change_pct": 19.341374,
+      "data_quality_flags": [
+        "extreme_period_move_review_required"
+      ],
+      "drivers": [
+        "near technical signal",
+        "7.466553% 5D relative strength vs SPY",
+        "1.278038x 5D volume ratio",
+        "79.993% monthly move"
+      ],
+      "five_day_change_pct": 4.913353,
+      "monthly_change_pct": 79.993,
+      "return_pct": 306.798424,
+      "risk_bucket": "high",
+      "score": 86.969964,
+      "sector": "Semiconductors - Memory",
+      "security_type": "stock",
+      "signal": "near",
+      "suggested_action": "data_review",
+      "ticker": "KXIAY",
+      "wealthsimple": {
+        "alternative_note": null,
+        "availability": "verify-in-app",
+        "canadian_hedged_alternative": null,
+        "reason": "Possible OTC or ADR exposure. Wealthsimple supports only select OTC securities."
+      }
+    },
+    {
+      "daily_change_pct": 6.213597,
+      "data_quality_flags": [],
+      "drivers": [
+        "near technical signal",
+        "4.632652% 5D relative strength vs SPY",
+        "1.538222x 5D volume ratio",
+        "44.545116% monthly move"
+      ],
+      "five_day_change_pct": 2.079452,
+      "monthly_change_pct": 44.545116,
+      "return_pct": 61.493051,
+      "risk_bucket": "high",
+      "score": 83.02976,
+      "sector": "Tactical Momentum",
+      "security_type": "stock",
+      "signal": "near",
+      "suggested_action": "risk_review",
+      "ticker": "MOV",
+      "wealthsimple": {
+        "alternative_note": null,
+        "availability": "likely-supported",
+        "canadian_hedged_alternative": null,
+        "reason": "Appears US-listed on a generally supported exchange. Liquidity and settlement rules still apply."
+      }
+    },
+    {
+      "daily_change_pct": 14.326165,
+      "data_quality_flags": [],
+      "drivers": [
+        "none technical signal",
+        "16.299681% 5D relative strength vs SPY",
+        "1.011053x 5D volume ratio",
+        "35.231079% monthly move"
+      ],
+      "five_day_change_pct": 13.746482,
+      "monthly_change_pct": 35.231079,
+      "return_pct": 1.051056,
+      "risk_bucket": "high",
+      "score": 77.326993,
+      "sector": "Daily Fresh Setups",
+      "security_type": "stock",
+      "signal": "none",
+      "suggested_action": "risk_review",
+      "ticker": "BBAR",
+      "wealthsimple": {
+        "alternative_note": null,
+        "availability": "likely-supported",
+        "canadian_hedged_alternative": null,
+        "reason": "Appears US-listed on a generally supported exchange. Liquidity and settlement rules still apply."
+      }
+    },
+    {
+      "daily_change_pct": 5.054993,
+      "data_quality_flags": [],
+      "drivers": [
+        "near technical signal",
+        "5.885618% 5D relative strength vs SPY",
+        "1.434376x 5D volume ratio",
+        "11.991356% monthly move"
+      ],
+      "five_day_change_pct": 3.332419,
+      "monthly_change_pct": 11.991356,
+      "return_pct": 32.464994,
+      "risk_bucket": "watchlist",
+      "score": 74.175322,
+      "sector": "Analyst Picks - Freight & Materials",
+      "security_type": "stock",
+      "signal": "near",
+      "suggested_action": "watchlist_candidate",
+      "ticker": "SAIA",
+      "wealthsimple": {
+        "alternative_note": null,
+        "availability": "likely-supported",
+        "canadian_hedged_alternative": null,
+        "reason": "Appears US-listed on a generally supported exchange. Liquidity and settlement rules still apply."
+      }
+    },
+    {
+      "daily_change_pct": 2.710029,
+      "data_quality_flags": [],
+      "drivers": [
+        "near technical signal",
+        "2.290044% 5D relative strength vs SPY",
+        "1.320285x 5D volume ratio",
+        "23.586958% monthly move"
+      ],
+      "five_day_change_pct": -0.263156,
+      "monthly_change_pct": 23.586958,
+      "return_pct": -3.234044,
+      "risk_bucket": "watchlist",
+      "score": 70.666664,
+      "sector": "Daily Fresh Setups",
+      "security_type": "stock",
+      "signal": "near",
+      "suggested_action": "watchlist_candidate",
+      "ticker": "BHVN",
+      "wealthsimple": {
+        "alternative_note": null,
+        "availability": "likely-supported",
+        "canadian_hedged_alternative": null,
+        "reason": "Appears US-listed on a generally supported exchange. Liquidity and settlement rules still apply."
+      }
+    },
+    {
+      "daily_change_pct": 3.090502,
+      "data_quality_flags": [],
+      "drivers": [
+        "near technical signal",
+        "2.572666% 5D relative strength vs SPY",
+        "1.879679x 5D volume ratio",
+        "2.966525% monthly move"
+      ],
+      "five_day_change_pct": 0.019467,
+      "monthly_change_pct": 2.966525,
+      "return_pct": 5.374357,
+      "risk_bucket": "core",
+      "score": 66.638757,
+      "sector": "ETF / Developed Markets",
+      "security_type": "etf",
+      "signal": "near",
+      "suggested_action": "monitor",
+      "ticker": "XEF",
+      "wealthsimple": {
+        "alternative_note": null,
+        "availability": "likely-supported",
+        "canadian_hedged_alternative": null,
+        "reason": "Canadian-listed security on a generally supported exchange. Verify in Wealthsimple."
+      }
+    },
+    {
+      "daily_change_pct": 1.578907,
+      "data_quality_flags": [],
+      "drivers": [
+        "none technical signal",
+        "16.016323% 5D relative strength vs SPY",
+        "1.090066x 5D volume ratio",
+        "16.823883% monthly move"
+      ],
+      "five_day_change_pct": 13.463124,
+      "monthly_change_pct": 16.823883,
+      "return_pct": -6.128244,
+      "risk_bucket": "watchlist",
+      "score": 66.524411,
+      "sector": "Software",
+      "security_type": "stock",
+      "signal": "none",
+      "suggested_action": "monitor",
+      "ticker": "DUOL",
+      "wealthsimple": {
+        "alternative_note": null,
+        "availability": "likely-supported",
+        "canadian_hedged_alternative": null,
+        "reason": "Appears US-listed on a generally supported exchange. Liquidity and settlement rules still apply."
+      }
+    },
+    {
+      "daily_change_pct": 14.500711,
+      "data_quality_flags": [],
+      "drivers": [
+        "none technical signal",
+        "9.476614% 5D relative strength vs SPY",
+        "0.950176x 5D volume ratio",
+        "29.578793% monthly move"
+      ],
+      "five_day_change_pct": 6.923415,
+      "monthly_change_pct": 29.578793,
+      "return_pct": 182.831766,
+      "risk_bucket": "high",
+      "score": 64.813474,
+      "sector": "Long-Term Watchlist",
+      "security_type": "stock",
+      "signal": "none",
+      "suggested_action": "risk_review",
+      "ticker": "SNDK",
+      "wealthsimple": {
+        "alternative_note": null,
+        "availability": "likely-supported",
+        "canadian_hedged_alternative": null,
+        "reason": "Appears US-listed on a generally supported exchange. Liquidity and settlement rules still apply."
+      }
+    },
+    {
+      "daily_change_pct": 12.698182,
+      "data_quality_flags": [],
+      "drivers": [
+        "none technical signal",
+        "13.024151% 5D relative strength vs SPY",
+        "0.936132x 5D volume ratio",
+        "9.207022% monthly move"
+      ],
+      "five_day_change_pct": 10.470952,
+      "monthly_change_pct": 9.207022,
+      "return_pct": 49.943195,
+      "risk_bucket": "high",
+      "score": 64.75365,
+      "sector": "Semiconductors - CMP, Cleaning & Metrology",
+      "security_type": "stock",
+      "signal": "none",
+      "suggested_action": "risk_review",
+      "ticker": "ONTO",
+      "wealthsimple": {
+        "alternative_note": null,
+        "availability": "likely-supported",
+        "canadian_hedged_alternative": null,
+        "reason": "Appears US-listed on a generally supported exchange. Liquidity and settlement rules still apply."
+      }
+    },
+    {
+      "daily_change_pct": 0.728026,
+      "data_quality_flags": [],
+      "drivers": [
+        "near technical signal",
+        "3.702023% 5D relative strength vs SPY",
+        "1.309328x 5D volume ratio",
+        "6.604293% monthly move"
+      ],
+      "five_day_change_pct": 1.148823,
+      "monthly_change_pct": 6.604293,
+      "return_pct": 21.39634,
+      "risk_bucket": "watchlist",
+      "score": 62.957544,
+      "sector": "Energy Infrastructure",
+      "security_type": "stock",
+      "signal": "near",
+      "suggested_action": "monitor",
+      "ticker": "TRP",
+      "wealthsimple": {
+        "alternative_note": null,
+        "availability": "likely-supported",
+        "canadian_hedged_alternative": null,
+        "reason": "Canadian-listed security on a generally supported exchange. Verify in Wealthsimple."
+      }
+    },
+    {
+      "daily_change_pct": 0.596718,
+      "data_quality_flags": [],
+      "drivers": [
+        "none technical signal",
+        "5.691397% 5D relative strength vs SPY",
+        "3.84314x 5D volume ratio",
+        "13.08322% monthly move"
+      ],
+      "five_day_change_pct": 1.871658,
+      "monthly_change_pct": 13.08322,
+      "return_pct": 42.568483,
+      "risk_bucket": "watchlist",
+      "score": 62.387988,
+      "sector": "Semiconductors - Deposition & Etch",
+      "security_type": "stock",
+      "signal": "none",
+      "suggested_action": "monitor",
+      "ticker": "TOELY",
+      "wealthsimple": {
+        "alternative_note": null,
+        "availability": "verify-in-app",
+        "canadian_hedged_alternative": null,
+        "reason": "Possible OTC or ADR exposure. Wealthsimple supports only select OTC securities."
+      }
+    },
+    {
+      "daily_change_pct": 10.252185,
+      "data_quality_flags": [],
+      "drivers": [
+        "none technical signal",
+        "9.78123% 5D relative strength vs SPY",
+        "1.172943x 5D volume ratio",
+        "7.380604% monthly move"
+      ],
+      "five_day_change_pct": 7.22803,
+      "monthly_change_pct": 7.380604,
+      "return_pct": 95.439716,
+      "risk_bucket": "watchlist",
+      "score": 61.83303,
+      "sector": "Semiconductors - Deposition & Etch",
+      "security_type": "stock",
+      "signal": "none",
+      "suggested_action": "monitor",
+      "ticker": "ACLS",
+      "wealthsimple": {
+        "alternative_note": null,
+        "availability": "likely-supported",
+        "canadian_hedged_alternative": null,
+        "reason": "Appears US-listed on a generally supported exchange. Liquidity and settlement rules still apply."
+      }
+    },
+    {
+      "daily_change_pct": 5.142203,
+      "data_quality_flags": [],
+      "drivers": [
+        "none technical signal",
+        "10.043307% 5D relative strength vs SPY",
+        "0.599722x 5D volume ratio",
+        "21.765476% monthly move"
+      ],
+      "five_day_change_pct": 7.490108,
+      "monthly_change_pct": 21.765476,
+      "return_pct": 24.354142,
+      "risk_bucket": "watchlist",
+      "score": 60.841787,
+      "sector": "Daily Fresh Setups",
+      "security_type": "stock",
+      "signal": "none",
+      "suggested_action": "monitor",
+      "ticker": "BIRK",
+      "wealthsimple": {
+        "alternative_note": null,
+        "availability": "likely-supported",
+        "canadian_hedged_alternative": null,
+        "reason": "Appears US-listed on a generally supported exchange. Liquidity and settlement rules still apply."
+      }
+    },
+    {
+      "daily_change_pct": 9.970014,
+      "data_quality_flags": [],
+      "drivers": [
+        "none technical signal",
+        "6.96601% 5D relative strength vs SPY",
+        "0.58256x 5D volume ratio",
+        "30.748661% monthly move"
+      ],
+      "five_day_change_pct": 4.412811,
+      "monthly_change_pct": 30.748661,
+      "return_pct": -29.942695,
+      "risk_bucket": "watchlist",
+      "score": 60.320226,
+      "sector": "Consumer Health",
+      "security_type": "stock",
+      "signal": "none",
+      "suggested_action": "monitor",
+      "ticker": "KITS",
+      "wealthsimple": {
+        "alternative_note": null,
+        "availability": "likely-supported",
+        "canadian_hedged_alternative": null,
+        "reason": "Canadian-listed security on a generally supported exchange. Verify in Wealthsimple."
+      }
+    },
+    {
+      "daily_change_pct": 43.738968,
+      "data_quality_flags": [
+        "extreme_period_move_review_required"
+      ],
+      "drivers": [
+        "none technical signal",
+        "5.783087% 5D relative strength vs SPY",
+        "0.918019x 5D volume ratio",
+        "205.243423% monthly move"
+      ],
+      "five_day_change_pct": 3.229888,
+      "monthly_change_pct": 205.243423,
+      "return_pct": 155.886963,
+      "risk_bucket": "high",
+      "score": 59.15402,
+      "sector": "Long-Term Watchlist",
+      "security_type": "stock",
+      "signal": "none",
+      "suggested_action": "data_review",
+      "ticker": "MNTS",
+      "wealthsimple": {
+        "alternative_note": null,
+        "availability": "likely-supported",
+        "canadian_hedged_alternative": null,
+        "reason": "Appears US-listed on a generally supported exchange. Liquidity and settlement rules still apply."
+      }
+    }
+  ],
+  "business_readiness": {
+    "gaps": [
+      "No client suitability, KYC, account opening, custody, or order-management workflow is included.",
+      "AI scoring is a research layer; it does not create discretionary trades.",
+      "Performance claims need audited/controlled track records before external marketing."
+    ],
+    "score": 18.5,
+    "stage": "research_mvp",
+    "strengths": [
+      "CFA-led investment framing can sit above the signal engine.",
+      "Existing dashboard already tracks signals, baskets, strategy previews, sectors, and research notes.",
+      "Outputs are structured enough for advisor demos and model-governance documentation."
+    ]
+  },
+  "disclaimer": "Research workspace output only. This endpoint does not provide personalized investment advice, does not assess suitability, and does not create broker orders or client portfolios.",
+  "from_date": "2026-01-31",
+  "latest_available_date": "2026-06-11",
+  "market_context": [
+    {
+      "category": "Advisor copilot",
+      "product_implication": "Prioritize advisor-facing research notes, meeting-ready portfolio commentary, and human approval workflows before autonomous investing.",
+      "reference": "Morgan Stanley AI assistant and Debrief",
+      "signal": "Large wealth platforms are using AI first to retrieve knowledge, summarize meetings, draft follow-ups, and support advisors rather than replacing registered advisors.",
+      "source": "https://www.morganstanley.com/press-releases/ai-at-morgan-stanley-debrief-launch"
+    },
+    {
+      "category": "Portfolio risk commentary",
+      "product_implication": "Add explainable portfolio commentary, risk flags, and benchmark-relative narratives for each model basket.",
+      "reference": "BlackRock Aladdin Wealth AI commentary",
+      "signal": "Institutional wealth technology is moving toward AI-generated portfolio narratives layered on top of risk analytics.",
+      "source": "https://www.blackrock.com/aladdin/discover/aladdin-wealth-launches-ai-enabled-commentary-tool-at-morgan-stanley"
+    },
+    {
+      "category": "Advisor platform automation",
+      "product_implication": "Keep model baskets exportable and build toward advisor-demo workflows rather than only a consumer robo-advisor screen.",
+      "reference": "Betterment advisor platform expansion",
+      "signal": "Advisor platforms are expanding model marketplaces, direct indexing, onboarding automation, and flexible human/automated portfolio controls.",
+      "source": "https://www.barrons.com/advisor/articles/betterment-ramps-up-portfolio-offerings-for-advisors-6a227a6c"
+    },
+    {
+      "category": "Next-best action intelligence",
+      "product_implication": "Add an advisor action queue that turns model, risk, data-quality, and client-policy signals into review tasks.",
+      "reference": "Envestnet Gen BI and Insights AI",
+      "signal": "Advisor platforms are packaging AI as easier access to data, better interpretation, and faster advisor decisions.",
+      "source": "https://www.prnewswire.com/news-releases/envestnet-unveils-two-breakthrough-ai-innovations-ushering-in-a-new-era-of-intelligence-driven-wealth-management-302472902.html"
+    },
+    {
+      "category": "Enterprise advisor operating system",
+      "product_implication": "Treat AI Wealth as an operating console with profile proposals, review queues, governance records, and report exports.",
+      "reference": "Orion Denali AI",
+      "signal": "Large advisor platforms are building AI layers across CRM, reporting, trading, planning, compliance, and leadership dashboards.",
+      "source": "https://orion.com/"
+    },
+    {
+      "category": "Research and proposal assistant",
+      "product_implication": "Build model fact sheets and client-policy proposal drafts backed by transparent portfolio data and assumptions.",
+      "reference": "Morningstar Direct AI Solutions",
+      "signal": "Investment data vendors are positioning AI around personalized insights, research acceleration, portfolio analysis, and proposal support.",
+      "source": "https://www.morningstar.com/business/products/direct-ai-solutions"
+    },
+    {
+      "category": "Client onboarding and meeting capture",
+      "product_implication": "Add structured client profiles, meeting-prep prompts, and follow-up tasks before attempting deeper financial-planning automation.",
+      "reference": "AI notetakers for financial advisors",
+      "signal": "Advisor AI adoption is concentrated in meeting notes, meeting prep, CRM updates, task creation, and intake automation.",
+      "source": "https://wealthtechtoday.com/2026/05/08/ai-notetakers-financial-advisors-2026/"
+    },
+    {
+      "category": "Consumer AI portfolio monitoring",
+      "product_implication": "Offer portfolio diagnostics and policy-fit checks, but keep outputs labelled research-only until advisory registration is resolved.",
+      "reference": "PortfolioPilot",
+      "signal": "Consumer-facing AI wealth tools emphasize portfolio assessment, risk alerts, tax optimization, and specific allocation feedback.",
+      "source": "https://portfoliopilot.com/"
+    },
+    {
+      "category": "AI-assisted broker workflow",
+      "product_implication": "Connect candidates, model baskets, market context, and client policy constraints into a human-reviewed proposal workflow.",
+      "reference": "Microsoft financial-services scenario library",
+      "signal": "AI-assisted portfolio management workflows combine market data, news, client priorities, opportunity recommendations, and advisor review.",
+      "source": "https://adoption.microsoft.com/en-us/scenario-library/financial-services/ai-assisted-broker-portfolio-management/"
+    },
+    {
+      "category": "Canadian AI governance",
+      "product_implication": "Keep AI outputs explainable, dated, supervised, and clearly separated from personalized advice or trade execution.",
+      "reference": "CSA Staff Notice and Consultation 11-348",
+      "signal": "Canadian securities regulators expect AI users to address governance, supervision, conflicts, disclosure, data quality, and investor protection.",
+      "source": "https://www.osc.ca/en/securities-law/instruments-rules-policies/1/11-348/csa-staff-notice-and-consultation-11-348-applicability-canadian-securities-laws-and-use-artificial"
+    },
+    {
+      "category": "Material AI strategy disclosure",
+      "product_implication": "Use precise language: AI-assisted, human-supervised research and risk intelligence until a registered structure and disclosure package exist.",
+      "reference": "CSA/market commentary on AI as material fund strategy",
+      "signal": "If an investment fund markets AI as a material investment strategy, that use should be clearly disclosed and controlled.",
+      "source": "https://www.osler.com/en/insights/blogs/risk/navigating-ai-systems-in-capital-markets-recent-guidance-from-the-csa/"
+    }
+  ],
+  "model_basket_performance": [
+    {
+      "alpha_pct": -0.96448,
+      "basket_id": "ai-wealth-growth",
+      "benchmark_return_pct": 15.316706,
+      "from_date": "2026-01-31",
+      "member_count": 11,
+      "name": "AI Wealth Growth Model",
+      "return_pct": 14.352226,
+      "role": "model_theme",
+      "status": "active",
+      "to_date": "2026-06-11",
+      "warning": ""
+    },
+    {
+      "alpha_pct": -7.920395,
+      "basket_id": "ai-wealth-defensive-income",
+      "benchmark_return_pct": 19.147247,
+      "from_date": "2026-01-31",
+      "member_count": 10,
+      "name": "AI Wealth Defensive Income Model",
+      "return_pct": 11.226852,
+      "role": "model_theme",
+      "status": "active",
+      "to_date": "2026-06-11",
+      "warning": ""
+    },
+    {
+      "alpha_pct": -0.457274,
+      "basket_id": "ai-wealth-core",
+      "benchmark_return_pct": 6.617345,
+      "from_date": "2026-01-31",
+      "member_count": 7,
+      "name": "AI Wealth Core Model",
+      "return_pct": 6.160071,
+      "role": "model_theme",
+      "status": "active",
+      "to_date": "2026-06-11",
+      "warning": ""
+    },
+    {
+      "alpha_pct": 50.437053,
+      "basket_id": "ai-infrastructure",
+      "benchmark_return_pct": 6.617345,
+      "from_date": "2026-01-31",
+      "member_count": 5,
+      "name": "AI Infrastructure Index",
+      "return_pct": 57.054398,
+      "role": "model_theme",
+      "status": "active",
+      "to_date": "2026-06-11",
+      "warning": ""
+    },
+    {
+      "alpha_pct": 28.333615,
+      "basket_id": "crypto-proxy",
+      "benchmark_return_pct": -19.155238,
+      "from_date": "2026-01-31",
+      "member_count": 5,
+      "name": "Crypto Proxy Index",
+      "return_pct": 9.178377,
+      "role": "model_theme",
+      "status": "active",
+      "to_date": "2026-06-11",
+      "warning": ""
+    },
+    {
+      "alpha_pct": 57.066574,
+      "basket_id": "semiconductor-supply-chain",
+      "benchmark_return_pct": 6.617345,
+      "from_date": "2026-01-31",
+      "member_count": 5,
+      "name": "Semiconductor Supply Chain Index",
+      "return_pct": 63.683919,
+      "role": "model_theme",
+      "status": "active",
+      "to_date": "2026-06-11",
+      "warning": ""
+    },
+    {
+      "alpha_pct": 32.384562,
+      "basket_id": "ai-wealth-tactical-ai",
+      "benchmark_return_pct": 15.316706,
+      "from_date": "2026-01-31",
+      "member_count": 10,
+      "name": "AI Wealth Tactical AI Model",
+      "return_pct": 47.701268,
+      "role": "research_theme",
+      "status": "research",
+      "to_date": "2026-06-11",
+      "warning": ""
+    },
+    {
+      "alpha_pct": -15.902907,
+      "basket_id": "creator-watchlist",
+      "benchmark_return_pct": 6.617345,
+      "from_date": "2026-01-31",
+      "member_count": 3,
+      "name": "Creator Watchlist Index",
+      "return_pct": -9.285562,
+      "role": "research_theme",
+      "status": "research",
+      "to_date": "2026-06-11",
+      "warning": ""
+    },
+    {
+      "alpha_pct": 16.635478,
+      "basket_id": "mass-change-candidate",
+      "benchmark_return_pct": 6.617345,
+      "from_date": "2026-01-31",
+      "member_count": 3,
+      "name": "Mass-Change Candidate Index",
+      "return_pct": 23.252823,
+      "role": "research_theme",
+      "status": "research",
+      "to_date": "2026-06-11",
+      "warning": ""
+    }
+  ],
+  "model_baskets": [
+    {
+      "basket_id": "ai-wealth-growth",
+      "benchmark": "QQQ",
+      "member_count": 11,
+      "name": "AI Wealth Growth Model",
+      "notes": "Growth-oriented model emphasizing AI platforms, semiconductors, cloud, cybersecurity, and digital infrastructure.",
+      "rebalance_frequency": "monthly",
+      "role": "model_theme",
+      "status": "active"
+    },
+    {
+      "basket_id": "ai-wealth-defensive-income",
+      "benchmark": "VDY.TO",
+      "member_count": 10,
+      "name": "AI Wealth Defensive Income Model",
+      "notes": "Canada-heavy defensive income model using banks, utilities, telecom, infrastructure, dividend ETF, cash, and gold hedge.",
+      "rebalance_frequency": "quarterly",
+      "role": "model_theme",
+      "status": "active"
+    },
+    {
+      "basket_id": "ai-wealth-core",
+      "benchmark": "SPY",
+      "member_count": 7,
+      "name": "AI Wealth Core Model",
+      "notes": "Diversified core model combining broad equity ETFs, Canada exposure, cash proxy, and gold hedge for AI wealth demos.",
+      "rebalance_frequency": "monthly",
+      "role": "model_theme",
+      "status": "active"
+    },
+    {
+      "basket_id": "ai-infrastructure",
+      "benchmark": "SPY",
+      "member_count": 5,
+      "name": "AI Infrastructure Index",
+      "notes": "AI data center, power, networking, and accelerator infrastructure basket.",
+      "rebalance_frequency": "monthly",
+      "role": "model_theme",
+      "status": "active"
+    },
+    {
+      "basket_id": "crypto-proxy",
+      "benchmark": "BTC-USD",
+      "member_count": 5,
+      "name": "Crypto Proxy Index",
+      "notes": "Crypto miners, infrastructure, and related ETF/proxy exposure.",
+      "rebalance_frequency": "monthly",
+      "role": "model_theme",
+      "status": "active"
+    },
+    {
+      "basket_id": "semiconductor-supply-chain",
+      "benchmark": "SPY",
+      "member_count": 5,
+      "name": "Semiconductor Supply Chain Index",
+      "notes": "Semiconductor equipment, materials, foundry, memory, and packaging exposure.",
+      "rebalance_frequency": "quarterly",
+      "role": "model_theme",
+      "status": "active"
+    },
+    {
+      "basket_id": "ai-wealth-tactical-ai",
+      "benchmark": "QQQ",
+      "member_count": 10,
+      "name": "AI Wealth Tactical AI Model",
+      "notes": "Research-stage tactical AI model using concentrated AI compute, networking, semiconductor, and security exposure.",
+      "rebalance_frequency": "monthly",
+      "role": "research_theme",
+      "status": "research"
+    },
+    {
+      "basket_id": "creator-watchlist",
+      "benchmark": "SPY",
+      "member_count": 3,
+      "name": "Creator Watchlist Index",
+      "notes": "Creator and social-watchlist names.",
+      "rebalance_frequency": "none",
+      "role": "research_theme",
+      "status": "research"
+    },
+    {
+      "basket_id": "mass-change-candidate",
+      "benchmark": "SPY",
+      "member_count": 3,
+      "name": "Mass-Change Candidate Index",
+      "notes": "Discovery-stage sector/news-driven candidates.",
+      "rebalance_frequency": "none",
+      "role": "research_theme",
+      "status": "research"
+    }
+  ],
+  "next_build_steps": [
+    "Add persistent dated wealth-intelligence snapshots.",
+    "Add model portfolio fact sheets for selected baskets.",
+    "Add backtest-vs-benchmark reports with drawdown, volatility, turnover, and assumptions.",
+    "Add advisor-demo export with compliance footnotes.",
+    "Add optional LLM narrative generation behind a human-review queue."
+  ],
+  "operating_model": [
+    "Research engine ranks securities and themes from market data, signal strength, relative strength, and risk flags.",
+    "Human review approves model themes and any external communication.",
+    "Registered partner or future registered PM/IFM handles client advice, suitability, custody, and trading."
+  ],
+  "positioning": {
+    "avoid_claims": [
+      "Do not claim guaranteed returns.",
+      "Do not imply fully autonomous client portfolio management.",
+      "Do not market backtests as live audited performance."
+    ],
+    "business_name_placeholder": "AI Wealth Intelligence",
+    "recommended_claim": "CFA-led, human-supervised, AI-assisted portfolio research and risk intelligence."
+  },
+  "risk_controls": [
+    "Use model outputs as research only until registration or a registered partner is in place.",
+    "Separate model-candidate status from any real client recommendation.",
+    "Keep explainable signal drivers for every candidate.",
+    "Flag high-risk crypto, single-name volatility, and overextended momentum before marketing a theme.",
+    "Preserve dated snapshots so future claims can be tied to exact source data."
+  ],
+  "theme_opportunities": [
+    {
+      "average_score": 91.67,
+      "candidate_count": 1,
+      "high_risk_count": 0,
+      "model_candidates": 0,
+      "theme": "Semiconductors - Lithography",
+      "top_tickers": [
+        "ASML"
+      ]
+    },
+    {
+      "average_score": 86.97,
+      "candidate_count": 1,
+      "high_risk_count": 1,
+      "model_candidates": 0,
+      "theme": "Semiconductors - Memory",
+      "top_tickers": [
+        "KXIAY"
+      ]
+    },
+    {
+      "average_score": 83.03,
+      "candidate_count": 1,
+      "high_risk_count": 1,
+      "model_candidates": 0,
+      "theme": "Tactical Momentum",
+      "top_tickers": [
+        "MOV"
+      ]
+    },
+    {
+      "average_score": 82.38,
+      "candidate_count": 2,
+      "high_risk_count": 2,
+      "model_candidates": 0,
+      "theme": "Semiconductors - CMP, Cleaning & Metrology",
+      "top_tickers": [
+        "KLAC",
+        "ONTO"
+      ]
+    },
+    {
+      "average_score": 77.39,
+      "candidate_count": 4,
+      "high_risk_count": 1,
+      "model_candidates": 0,
+      "theme": "Semiconductors - Deposition & Etch",
+      "top_tickers": [
+        "AMAT",
+        "LRCX",
+        "TOELY",
+        "ACLS"
+      ]
+    },
+    {
+      "average_score": 77.21,
+      "candidate_count": 4,
+      "high_risk_count": 2,
+      "model_candidates": 0,
+      "theme": "Daily Fresh Setups",
+      "top_tickers": [
+        "TEO",
+        "BBAR",
+        "BHVN",
+        "BIRK"
+      ]
+    },
+    {
+      "average_score": 74.18,
+      "candidate_count": 1,
+      "high_risk_count": 0,
+      "model_candidates": 0,
+      "theme": "Analyst Picks - Freight & Materials",
+      "top_tickers": [
+        "SAIA"
+      ]
+    },
+    {
+      "average_score": 66.64,
+      "candidate_count": 1,
+      "high_risk_count": 0,
+      "model_candidates": 0,
+      "theme": "ETF / Developed Markets",
+      "top_tickers": [
+        "XEF"
+      ]
+    },
+    {
+      "average_score": 66.52,
+      "candidate_count": 1,
+      "high_risk_count": 0,
+      "model_candidates": 0,
+      "theme": "Software",
+      "top_tickers": [
+        "DUOL"
+      ]
+    },
+    {
+      "average_score": 62.96,
+      "candidate_count": 1,
+      "high_risk_count": 0,
+      "model_candidates": 0,
+      "theme": "Energy Infrastructure",
+      "top_tickers": [
+        "TRP"
+      ]
+    }
+  ],
+  "to_date": "2026-06-11"
+}

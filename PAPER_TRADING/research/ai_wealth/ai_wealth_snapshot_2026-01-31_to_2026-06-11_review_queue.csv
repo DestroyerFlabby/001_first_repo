@@ -1,0 +1,11 @@
+priority,task_type,subject,source,detail
+high,data_review,KLAC,ai_signal_candidates,extreme_daily_move_check_split_or_bad_price
+high,data_review,KXIAY,ai_signal_candidates,extreme_period_move_review_required
+high,data_review,MNTS,ai_signal_candidates,extreme_period_move_review_required
+high,policy_warning,opportunistic-ai,proposal_matrix,tactical sleeve 45.0% exceeds policy max 30.0%
+medium,risk_review,BBAR,ai_signal_candidates,none technical signal; 16.299681% 5D relative strength vs SPY; 1.011053x 5D volume ratio; 35.231079% monthly move
+medium,risk_review,LRCX,ai_signal_candidates,near technical signal; 10.314557% 5D relative strength vs SPY; 1.488282x 5D volume ratio; 25.335362% monthly move
+medium,risk_review,MOV,ai_signal_candidates,near technical signal; 4.632652% 5D relative strength vs SPY; 1.538222x 5D volume ratio; 44.545116% monthly move
+medium,risk_review,ONTO,ai_signal_candidates,none technical signal; 13.024151% 5D relative strength vs SPY; 0.936132x 5D volume ratio; 9.207022% monthly move
+medium,risk_review,SNDK,ai_signal_candidates,none technical signal; 9.476614% 5D relative strength vs SPY; 0.950176x 5D volume ratio; 29.578793% monthly move
+medium,risk_review,TEO,ai_signal_candidates,near technical signal; 23.339292% 5D relative strength vs SPY; 1.313555x 5D volume ratio; 36.698033% monthly move

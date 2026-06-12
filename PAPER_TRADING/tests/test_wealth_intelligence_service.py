@@ -68,6 +68,21 @@ def test_build_candidates_flags_crypto_and_large_moves_for_risk_review() -> None
     assert candidates[0]["suggested_action"] == "risk_review"
 
 
+def test_build_candidates_routes_extreme_data_moves_to_data_review() -> None:
+    candidates = build_candidates(
+        [
+            stock_row(
+                "SPLT",
+                daily_change_pct=400,
+                monthly_change_pct=35,
+            )
+        ]
+    )
+
+    assert candidates[0]["suggested_action"] == "data_review"
+    assert "extreme_daily_move_check_split_or_bad_price" in candidates[0]["data_quality_flags"]
+
+
 def test_wealth_intelligence_response_is_research_only() -> None:
     payload = wealth_intelligence_response(
         {

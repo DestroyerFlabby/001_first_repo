@@ -24,6 +24,8 @@ const state = {
   wealthAllocationRequestKey: null,
   wealthPerformance: null,
   wealthPerformanceRequestKey: null,
+  strategySelector: null,
+  strategySelectorRequestKey: null,
   rebalanceProfiles: null,
   rebalancePreview: null,
   showLowPriorityPortfolios: false,
@@ -352,6 +354,9 @@ function setActiveDashboardTab(tabName, updateHash = true) {
   }
   if (nextTab === "day-rotation" && state.overview) {
     loadDayRotationPortfolio().catch(() => {});
+  }
+  if (nextTab === "wealth-overview" && state.overview) {
+    loadStrategySelector().catch(() => {});
   }
   if (nextTab === "risk" && state.overview) {
     loadRiskPortfolio().catch(() => {});
@@ -1027,6 +1032,50 @@ function renderWealthOverview() {
         <p class="value">${escapeHtml(value)}</p>
         <p class="muted">${escapeHtml(note)}</p>
       </article>`).join("");
+}
+
+function renderStrategySelector() {
+  const payload = state.strategySelector;
+  if (!payload) return;
+  const ranked = payload.ranked_strategies || [];
+  $("#strategy-selector-summary").innerHTML = [
+    ["Recommendation", String(payload.recommendation_status || "-").replaceAll("_", " "), payload.recommended_action || ""],
+    ["Selected strategy", payload.recommended_strategy || "-", `${number(ranked.length)} candidates reviewed`],
+    ["Draft blend", `${number((payload.draft_blend || []).length)} sleeves`, "Research-only allocation sketch"],
+    ["Review mode", payload.data_quality?.write_behavior || "read only", "No orders or ledgers created"],
+  ].map(([label, value, note]) => `<article class="diagnostic-card"><p class="eyebrow">${escapeHtml(label)}</p><p class="value">${escapeHtml(value)}</p><p class="muted">${escapeHtml(note)}</p></article>`).join("");
+  $("#strategy-selector-rows").innerHTML = ranked.map((row, index) => {
+    const metrics = row.metrics || {};
+    return `<tr><td>${index + 1}</td><td><strong>${escapeHtml(row.label || row.strategy_id)}</strong></td><td>${number(row.score)}</td><td class="${tone(metrics.return_pct)}">${pct(metrics.return_pct)}</td><td class="${tone(metrics.max_drawdown_pct)}">${pct(metrics.max_drawdown_pct)}</td><td>${number(metrics.top_five_weight_pct)}%</td><td>${escapeHtml(String(row.review_action || "").replaceAll("_", " "))}</td><td>${escapeHtml((row.warnings || []).join("; ") || "None")}</td></tr>`;
+  }).join("") || '<tr><td colspan="8">No strategy candidates available.</td></tr>';
+  const blend = payload.draft_blend || [];
+  $("#strategy-selector-blend").innerHTML = blend.length
+    ? `<h4>Draft blend guardrails</h4><ul class="wealth-list">${blend.map((row) => `<li><strong>${escapeHtml(row.sleeve)}</strong>: ${number(row.target_weight_pct)}% - ${escapeHtml(row.reason)}</li>`).join("")}</ul>`
+    : `<h4>Warnings</h4><ul class="wealth-list">${(payload.warnings || []).map((warning) => `<li>${escapeHtml(warning)}</li>`).join("") || "<li>No selector warnings.</li>"}</ul>`;
+  $("#strategy-selector-content").classList.remove("hidden");
+  $("#strategy-selector-status").textContent = `${payload.from_date} to ${payload.to_date}; ${payload.assumptions?.[0] || "Research-only strategy comparison."}`;
+  enableSorting();
+}
+
+async function loadStrategySelector(force = false) {
+  if (!$("#from-date").value || !$("#to-date").value) return;
+  const requestKey = query();
+  if (!force && state.strategySelector && state.strategySelectorRequestKey === requestKey) {
+    renderStrategySelector();
+    return;
+  }
+  const button = $("#reload-strategy-selector");
+  button.disabled = true;
+  $("#strategy-selector-status").textContent = "Running investment committee selector...";
+  try {
+    state.strategySelector = await fetchJson(`/api/wealth/strategy-selector?${requestKey}`);
+    state.strategySelectorRequestKey = requestKey;
+    renderStrategySelector();
+  } catch (error) {
+    $("#strategy-selector-status").textContent = `Strategy selector failed: ${error.message}`;
+  } finally {
+    button.disabled = false;
+  }
 }
 
 function listItems(rows, formatter, empty = "No items for this window.") {
@@ -3153,6 +3202,8 @@ async function loadOverview() {
     state.wealthAllocationRequestKey = null;
     state.wealthPerformance = null;
     state.wealthPerformanceRequestKey = null;
+    state.strategySelector = null;
+    state.strategySelectorRequestKey = null;
     updateLoading("Portfolio rankings and tracked instruments loaded. Refreshing paper-ledger portfolios...", 72);
     await refreshPaperLedgerPortfolios();
     updateLoading("Paper-ledger portfolios refreshed. Loading prior-close movers...", 75);
@@ -3197,6 +3248,9 @@ async function loadOverview() {
     }
     if (activeDashboardTab() === "performance") {
       loadWealthPerformance().catch(() => {});
+    }
+    if (activeDashboardTab() === "wealth-overview") {
+      loadStrategySelector().catch(() => {});
     }
     updateLoading("Dashboard ready.", 100);
     sendDailyInstructionsEmail().then((notification) => {
@@ -3306,6 +3360,14 @@ async function init() {
         $("#ai-wealth-basket-rows")?.closest("table"),
         $("#ai-wealth-candidate-rows")?.closest("table"),
       ]
+    );
+  });
+  $("#reload-strategy-selector").addEventListener("click", () => loadStrategySelector(true));
+  $("#export-strategy-selector").addEventListener("click", () => {
+    downloadExcelTables(
+      "strategy-selector",
+      "Investment Committee Strategy Selector",
+      [$("#strategy-selector-table")]
     );
   });
   $("#reload-risk").addEventListener("click", () => loadRiskPortfolio(true));

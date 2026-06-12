@@ -139,6 +139,27 @@
               <span class="muted">Self-financing review proposals with explicit current weights.</span>
             </button>
           </div>
+          <div class="section-heading wealth-subheading">
+            <div>
+              <p class="eyebrow">Investment committee</p>
+              <h3>Strategy Selector</h3>
+            </div>
+            <div class="section-actions">
+              <button id="reload-strategy-selector" class="secondary" type="button">Run selector</button>
+              <button id="export-strategy-selector" class="secondary" type="button">Download Excel</button>
+            </div>
+          </div>
+          <p id="strategy-selector-status" class="muted">Ranks research strategies after return, drawdown, concentration, turnover, and data-quality checks.</p>
+          <div id="strategy-selector-content" class="hidden">
+            <div id="strategy-selector-summary" class="model-summary-grid"></div>
+            <div class="table-wrap">
+              <table id="strategy-selector-table" data-sortable>
+                <thead><tr><th>Rank</th><th>Strategy</th><th>Score</th><th>Return</th><th>Drawdown</th><th>Concentration</th><th>Action</th><th>Warnings</th></tr></thead>
+                <tbody id="strategy-selector-rows"></tbody>
+              </table>
+            </div>
+            <div id="strategy-selector-blend"></div>
+          </div>
         </section>
 
         <section class="card dashboard-tab-panel" data-dashboard-tab="risk">
@@ -1046,6 +1067,6 @@
     </aside>
     <div id="backdrop" class="backdrop hidden"></div>
 
-    <script src="/static/app.js?v=20260612-15"></script>
+    <script src="/static/app.js?v=20260612-16"></script>
   </body>
 </html>

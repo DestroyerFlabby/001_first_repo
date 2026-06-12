@@ -63,6 +63,7 @@ from backend.research_service import research_index_response, research_note_resp
 from backend.rebalance_service import rebalance_preview, rebalance_profiles_response  # noqa: E402
 from backend.risk_service import portfolio_risk_response  # noqa: E402
 from backend.strategy_registry_service import read_strategies, strategy_registry_response, upsert_strategy  # noqa: E402
+from backend.strategy_selector_service import strategy_selector_response  # noqa: E402
 from backend.universe_service import asset_universe_response, read_asset_universe, update_asset, upsert_asset  # noqa: E402
 from backend.wealth_intelligence_service import wealth_intelligence_response  # noqa: E402
 from backend.wealth_operations_service import wealth_operations_response  # noqa: E402
@@ -592,6 +593,51 @@ def day_rotation_portfolio(
         return daily_rotation_portfolio_response(end)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+def strategy_selector_candidates(start: date, end: date, wealthsimple_fx_fees: bool) -> tuple[list[dict[str, object]], list[str]]:
+    candidates: list[dict[str, object]] = []
+    warnings: list[str] = []
+    for strategy_id, builder in [
+        ("systematic-model-portfolio", lambda: systematic_model_portfolio_response(end)),
+        ("daily-eod-rotation-portfolio", lambda: daily_rotation_portfolio_response(end)),
+    ]:
+        try:
+            detail = builder()
+            detail["label"] = strategy_id.replace("-", " ").title()
+            candidates.append(detail)
+        except ValueError as exc:
+            warnings.append(f"{strategy_id}: {exc}")
+    for strategy_id in [
+        "watchlist-variable-news-optimized-experimental",
+        "master-portfolio",
+        "insta_watchlist",
+        "social_media_signal",
+        "model-portfolio",
+    ]:
+        try:
+            detail = trader_detail(strategy_id, start, end, wealthsimple_fx_fees)
+            detail["label"] = strategy_id.replace("-", " ").replace("_", " ").title()
+            candidates.append(detail)
+        except KeyError:
+            warnings.append(f"{strategy_id}: not present in tracked paper ledgers for this window.")
+        except ValueError as exc:
+            warnings.append(f"{strategy_id}: {exc}")
+    return candidates, warnings
+
+
+@app.get("/api/wealth/strategy-selector")
+def wealth_strategy_selector(
+    from_date: str | None = Query(default=None),
+    to_date: str | None = Query(default=None),
+    wealthsimple_fx_fees: bool = Query(default=False),
+) -> dict[str, object]:
+    start, end = window(from_date, to_date)
+    resolved_end = end or latest_market_date()
+    candidates, warnings = strategy_selector_candidates(start, resolved_end, wealthsimple_fx_fees)
+    payload = strategy_selector_response(start, resolved_end, candidates, apply_wealthsimple_fx_fees=wealthsimple_fx_fees)
+    payload["warnings"] = sorted(set([*payload.get("warnings", []), *warnings]))
+    return payload
 
 
 @app.get("/api/wealth/risk")

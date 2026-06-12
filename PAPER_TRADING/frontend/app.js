@@ -31,6 +31,28 @@ const state = {
 const $ = (selector) => document.querySelector(selector);
 let loadingTimer = null;
 let loadingStartedAt = null;
+const tabWorkspace = {
+  "wealth-overview": "wealth",
+  allocation: "wealth",
+  risk: "wealth",
+  performance: "wealth",
+  rebalancing: "wealth",
+  "ai-wealth": "wealth",
+  "model-portfolio": "wealth",
+  "day-rotation": "wealth",
+  home: "trading",
+  portfolios: "trading",
+  stocks: "trading",
+  sectors: "trading",
+  strategy: "admin",
+  universe: "admin",
+  research: "admin",
+};
+const workspaceDefaultTab = {
+  wealth: "wealth-overview",
+  trading: "home",
+  admin: "strategy",
+};
 
 const money = (value) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value || 0);
@@ -302,11 +324,19 @@ function enableSorting(root = document) {
 
 function activeDashboardTab() {
   const requested = window.location.hash.replace("#", "");
-  return document.querySelector(`[data-dashboard-tab="${requested}"]`) ? requested : "home";
+  return document.querySelector(`[data-dashboard-tab="${requested}"]`) ? requested : "wealth-overview";
 }
 
 function setActiveDashboardTab(tabName, updateHash = true) {
-  const nextTab = document.querySelector(`[data-dashboard-tab="${tabName}"]`) ? tabName : "home";
+  const nextTab = document.querySelector(`[data-dashboard-tab="${tabName}"]`) ? tabName : "wealth-overview";
+  const nextWorkspace = tabWorkspace[nextTab] || "wealth";
+  document.querySelectorAll("[data-workspace-target]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.workspaceTarget === nextWorkspace);
+    button.setAttribute("aria-selected", button.dataset.workspaceTarget === nextWorkspace ? "true" : "false");
+  });
+  document.querySelectorAll("[data-workspace-tab]").forEach((group) => {
+    group.classList.toggle("workspace-hidden", group.dataset.workspaceTab !== nextWorkspace);
+  });
   document.querySelectorAll("[data-tab-target]").forEach((button) => {
     button.classList.toggle("active", button.dataset.tabTarget === nextTab);
     button.setAttribute("aria-selected", button.dataset.tabTarget === nextTab ? "true" : "false");
@@ -335,6 +365,10 @@ function setActiveDashboardTab(tabName, updateHash = true) {
   if (nextTab === "rebalancing") {
     loadRebalanceProfiles().catch(() => {});
   }
+}
+
+function setActiveWorkspace(workspaceName) {
+  setActiveDashboardTab(workspaceDefaultTab[workspaceName] || "wealth-overview");
 }
 
 function exportRangeSuffix() {
@@ -963,6 +997,36 @@ function renderCards() {
         </article>`
     )
     .join("");
+}
+
+function renderWealthOverview() {
+  if (!state.overview) return;
+  const allTraders = state.overview.traders || [];
+  const traders = portfolioRows(allTraders);
+  const stocks = state.overview.stocks || [];
+  const leader = traders[0];
+  const totalCurrent = traders.reduce((sum, row) => sum + Number(row.current_value || 0), 0);
+  const reviewQueue = state.wealthOperations?.advisor_review_queue || [];
+  const proposals = state.wealthOperations?.proposal_matrix || [];
+  const wsAvailability = state.overview.wealthsimple_availability || {};
+  const strict = stocks.filter((row) => row.signal?.classification === "strict").length;
+  const fresh = stocks.filter((row) => row.signal?.fresh_priority).length;
+  const topSector = state.overview.sector_breakdowns?.[0];
+  $("#wealth-overview-window").textContent =
+    `${state.overview.from_date} to ${state.overview.latest_available_date || state.overview.to_date || "latest available close"} | Research-only wealth analytics.`;
+  $("#wealth-overview-cards").innerHTML = [
+    ["Tracked value", money(totalCurrent), `${traders.length} primary portfolios included`],
+    ["Leading strategy", leader?.investor || "-", leader ? pct(leader.return_pct) : "No result yet"],
+    ["Fresh / strict signals", `${fresh} / ${strict}`, `${stocks.length} tracked instruments`],
+    ["Top sector", topSector?.sector || "-", topSector ? pct(topSector.average_return_pct) : "No sector result"],
+    ["Review queue", reviewQueue.length, `${proposals.length} draft proposal rows`],
+    ["Wealthsimple coverage", wsAvailability["likely-supported"] ?? "-", `${wsAvailability["verify-in-app"] || 0} verify in app`],
+  ].map(([label, value, note]) => `
+      <article class="summary-card wealth-kpi">
+        <p class="eyebrow">${escapeHtml(label)}</p>
+        <p class="value">${escapeHtml(value)}</p>
+        <p class="muted">${escapeHtml(note)}</p>
+      </article>`).join("");
 }
 
 function listItems(rows, formatter, empty = "No items for this window.") {
@@ -3103,6 +3167,7 @@ async function loadOverview() {
     renderDiagnostics();
     renderWealthIntelligence();
     renderWealthOperations();
+    renderWealthOverview();
     renderExternalPortfolios();
     populateRiskPortfolioOptions();
     renderEod();
@@ -3176,6 +3241,9 @@ async function init() {
   }
   $("#apply-window").addEventListener("click", loadOverview);
   $("#rebuild-preload").addEventListener("click", rebuildPreloadAndLoad);
+  document.querySelectorAll("[data-workspace-target]").forEach((button) => {
+    button.addEventListener("click", () => setActiveWorkspace(button.dataset.workspaceTarget));
+  });
   document.querySelectorAll("[data-tab-target]").forEach((button) => {
     button.addEventListener("click", () => setActiveDashboardTab(button.dataset.tabTarget));
   });

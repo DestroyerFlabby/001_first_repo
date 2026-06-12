@@ -74,28 +74,72 @@
       <section id="content" class="hidden">
         <div id="summary-cards" class="summary-grid"></div>
 
+        <nav class="workspace-tabs" aria-label="Workspace sections">
+          <button class="workspace-button active" type="button" data-workspace-target="wealth">Wealth Management</button>
+          <button class="workspace-button" type="button" data-workspace-target="trading">Paper Trading</button>
+          <button class="workspace-button" type="button" data-workspace-target="admin">Research / Admin</button>
+        </nav>
+
         <nav class="dashboard-tabs" aria-label="Dashboard sections">
-          <div class="tab-group"><span class="tab-group-label">Wealth</span>
-            <button class="tab-button active" type="button" data-tab-target="home">Home</button>
-            <button class="tab-button" type="button" data-tab-target="ai-wealth">AI Wealth</button>
+          <div class="tab-group" data-workspace-tab="wealth"><span class="tab-group-label">Wealth</span>
+            <button class="tab-button active" type="button" data-tab-target="wealth-overview">Overview</button>
             <button class="tab-button" type="button" data-tab-target="allocation">Allocation</button>
             <button class="tab-button" type="button" data-tab-target="risk">Risk</button>
             <button class="tab-button" type="button" data-tab-target="performance">Performance</button>
-            <button class="tab-button" type="button" data-tab-target="rebalancing">Rebalancing</button>
+            <button class="tab-button" type="button" data-tab-target="rebalancing">Rebalance</button>
+            <button class="tab-button" type="button" data-tab-target="ai-wealth">AI Ops</button>
+            <button class="tab-button" type="button" data-tab-target="model-portfolio">Model</button>
+            <button class="tab-button" type="button" data-tab-target="day-rotation">Rotation</button>
           </div>
-          <div class="tab-group"><span class="tab-group-label">Portfolios</span>
-            <button class="tab-button" type="button" data-tab-target="model-portfolio">Model Portfolio</button>
-            <button class="tab-button" type="button" data-tab-target="day-rotation">Day Rotation</button>
+          <div class="tab-group" data-workspace-tab="trading"><span class="tab-group-label">Trading</span>
+            <button class="tab-button" type="button" data-tab-target="home">Home</button>
             <button class="tab-button" type="button" data-tab-target="portfolios">Portfolios</button>
             <button class="tab-button" type="button" data-tab-target="stocks">Stocks</button>
             <button class="tab-button" type="button" data-tab-target="sectors">Sectors</button>
           </div>
-          <div class="tab-group"><span class="tab-group-label">Research / Admin</span>
+          <div class="tab-group" data-workspace-tab="admin"><span class="tab-group-label">Admin</span>
             <button class="tab-button" type="button" data-tab-target="strategy">Strategy Lab</button>
             <button class="tab-button" type="button" data-tab-target="universe">Universe</button>
             <button class="tab-button" type="button" data-tab-target="research">Research</button>
           </div>
         </nav>
+
+        <section class="card dashboard-tab-panel" data-dashboard-tab="wealth-overview">
+          <div class="wealth-hero">
+            <div>
+              <p class="eyebrow">Advisor workstation</p>
+              <h2>Wealth Management Overview</h2>
+              <p id="wealth-overview-window" class="muted">Load a date range to review allocation, risk, performance, and action items.</p>
+            </div>
+            <div class="wealth-hero-status">
+              <span class="status-dot"></span>
+              <span>Research analytics only. No broker orders are created.</span>
+            </div>
+          </div>
+          <div id="wealth-overview-cards" class="wealth-overview-grid"></div>
+          <div class="wealth-decision-grid">
+            <button class="wealth-decision-card" type="button" data-tab-target="allocation">
+              <span class="eyebrow">Allocation</span>
+              <strong>Review drift and overlap</strong>
+              <span class="muted">Portfolio, sector, type, currency, and security concentration.</span>
+            </button>
+            <button class="wealth-decision-card" type="button" data-tab-target="risk">
+              <span class="eyebrow">Risk</span>
+              <strong>Inspect drawdowns and scenarios</strong>
+              <span class="muted">Volatility, drawdown, concentration, correlations, and shocks.</span>
+            </button>
+            <button class="wealth-decision-card" type="button" data-tab-target="performance">
+              <span class="eyebrow">Performance</span>
+              <strong>Explain return drivers</strong>
+              <span class="muted">Path, contribution, realized/unrealized, and residual warnings.</span>
+            </button>
+            <button class="wealth-decision-card" type="button" data-tab-target="rebalancing">
+              <span class="eyebrow">Rebalance</span>
+              <strong>Draft policy actions</strong>
+              <span class="muted">Self-financing review proposals with explicit current weights.</span>
+            </button>
+          </div>
+        </section>
 
         <section class="card dashboard-tab-panel" data-dashboard-tab="risk">
           <div class="section-heading">
@@ -1002,6 +1046,6 @@
     </aside>
     <div id="backdrop" class="backdrop hidden"></div>
 
-    <script src="/static/app.js?v=20260612-13"></script>
+    <script src="/static/app.js?v=20260612-14"></script>
   </body>
 </html>

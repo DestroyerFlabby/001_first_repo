@@ -1369,6 +1369,9 @@ function renderModelPortfolio() {
   $("#model-portfolio-window").textContent = `${payload.from_date} to ${payload.to_date}`;
   $("#model-portfolio-summary").innerHTML = [
     ["Return", pct(payload.return_pct), tone(payload.return_pct), `${money(payload.gain_loss)} gain / loss`],
+    ["Daily", pctOrDash(payload.daily_change_pct), toneOrEmpty(payload.daily_change_pct), "Ending close vs prior close"],
+    ["5D", pctOrDash(payload.five_day_change_pct), toneOrEmpty(payload.five_day_change_pct), "Ending close vs five sessions prior"],
+    ["Monthly", pctOrDash(payload.monthly_change_pct), toneOrEmpty(payload.monthly_change_pct), "Ending close vs monthly reference"],
     ["Current value", money(payload.current_value), "", `${money(payload.cash)} cash (${number(payload.cash_pct)}%)`],
     ["Positions", number(payload.position_count), "", `${number(stats.sector_count)} sectors`],
     ["Alpha vs SPY", pct(benchmark.alpha_pct), tone(benchmark.alpha_pct), `SPY ${pct(benchmark.benchmark_return_pct)}`],

@@ -8,8 +8,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Stock Tracking" />
     <title>Paper Trading Dashboard</title>
-    <link rel="manifest" href="/static/site.webmanifest?v=20260606-2" />
-    <link rel="stylesheet" href="/static/styles.css?v=20260606-2" />
+    <link rel="manifest" href="/static/site.webmanifest?v=20260612-1" />
+    <link rel="stylesheet" href="/static/styles.css?v=20260612-1" />
   </head>
   <body>
     <header class="topbar">
@@ -76,6 +76,7 @@
 
         <nav class="dashboard-tabs" aria-label="Dashboard sections">
           <button class="tab-button active" type="button" data-tab-target="home">Home</button>
+          <button class="tab-button" type="button" data-tab-target="ai-wealth">AI Wealth</button>
           <button class="tab-button" type="button" data-tab-target="portfolios">Portfolios</button>
           <button class="tab-button" type="button" data-tab-target="stocks">Stocks</button>
           <button class="tab-button" type="button" data-tab-target="sectors">Sectors</button>
@@ -84,13 +85,126 @@
           <button class="tab-button" type="button" data-tab-target="research">Research</button>
         </nav>
 
+        <section class="card dashboard-tab-panel" data-dashboard-tab="ai-wealth">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">AI wealth intelligence</p>
+              <h2>Business Buildout Console</h2>
+            </div>
+            <div class="section-actions">
+              <p id="ai-wealth-window" class="muted"></p>
+              <button id="export-ai-wealth" class="secondary">Download Excel</button>
+            </div>
+          </div>
+          <div id="ai-wealth-readiness" class="wealth-readiness-grid"></div>
+          <div class="wealth-disclaimer">
+            <strong>Research only.</strong>
+            <span id="ai-wealth-disclaimer"></span>
+          </div>
+          <div class="wealth-section-grid">
+            <section>
+              <h3>Operating Model</h3>
+              <ul id="ai-wealth-operating-model" class="wealth-list"></ul>
+            </section>
+            <section>
+              <h3>Marketing Guardrails</h3>
+              <div id="ai-wealth-positioning" class="wealth-positioning"></div>
+            </section>
+          </div>
+          <h3>Market Context</h3>
+          <div class="table-wrap">
+            <table data-sortable>
+              <thead>
+                <tr>
+                  <th>Category</th>
+                  <th>Reference</th>
+                  <th>Signal</th>
+                  <th>Product implication</th>
+                  <th>Source</th>
+                </tr>
+              </thead>
+              <tbody id="ai-wealth-market-rows"></tbody>
+            </table>
+          </div>
+          <h3>Theme Opportunities</h3>
+          <div class="table-wrap">
+            <table data-sortable>
+              <thead>
+                <tr>
+                  <th>Theme</th>
+                  <th>Candidates</th>
+                  <th>Model candidates</th>
+                  <th>High risk</th>
+                  <th>Avg score</th>
+                  <th>Top tickers</th>
+                </tr>
+              </thead>
+              <tbody id="ai-wealth-theme-rows"></tbody>
+            </table>
+          </div>
+          <h3>Model Baskets</h3>
+          <div class="table-wrap">
+            <table data-sortable>
+              <thead>
+                <tr>
+                  <th>Basket</th>
+                  <th>Role</th>
+                  <th>Status</th>
+                  <th>Members</th>
+                  <th>Benchmark</th>
+                  <th>Rebalance</th>
+                  <th>Notes</th>
+                </tr>
+              </thead>
+              <tbody id="ai-wealth-basket-rows"></tbody>
+            </table>
+          </div>
+          <h3>AI Signal Candidates</h3>
+          <div class="table-wrap">
+            <table data-sortable>
+              <thead>
+                <tr>
+                  <th>Ticker</th>
+                  <th>Sector</th>
+                  <th>Score</th>
+                  <th>Signal</th>
+                  <th>Risk</th>
+                  <th>Action</th>
+                  <th>Daily</th>
+                  <th>5D</th>
+                  <th>Monthly</th>
+                  <th>Drivers</th>
+                </tr>
+              </thead>
+              <tbody id="ai-wealth-candidate-rows"></tbody>
+            </table>
+          </div>
+          <div class="wealth-section-grid">
+            <section>
+              <h3>Risk Controls</h3>
+              <ul id="ai-wealth-risk-controls" class="wealth-list"></ul>
+            </section>
+            <section>
+              <h3>Next Build Steps</h3>
+              <ul id="ai-wealth-next-steps" class="wealth-list"></ul>
+            </section>
+          </div>
+        </section>
+
         <section class="card dashboard-tab-panel active" data-dashboard-tab="home">
           <div class="section-heading">
             <div>
               <p class="eyebrow">Daily command center</p>
               <h2>What To Watch Today</h2>
             </div>
-            <p class="muted">Built from the selected To-date close; strategy-specific pending orders remain in trader drilldowns.</p>
+            <div class="section-actions">
+              <p class="muted">Built from the selected To-date close; strategy-specific pending orders remain in trader drilldowns.</p>
+              <label class="compact-toggle">
+                <input type="checkbox" data-show-low-priority />
+                <span>Show low priority</span>
+              </label>
+              <p class="muted" data-low-priority-count></p>
+            </div>
           </div>
           <div id="command-center-grid" class="command-center-grid"></div>
         </section>
@@ -480,6 +594,11 @@
             </div>
             <div class="section-actions">
               <p id="window-label" class="muted"></p>
+              <label class="compact-toggle">
+                <input type="checkbox" data-show-low-priority />
+                <span>Show low priority</span>
+              </label>
+              <p class="muted" data-low-priority-count></p>
               <button id="export-traders" class="secondary">Download Excel</button>
             </div>
           </div>
@@ -553,6 +672,6 @@
     </aside>
     <div id="backdrop" class="backdrop hidden"></div>
 
-    <script src="/static/app.js?v=20260606-2"></script>
+    <script src="/static/app.js?v=20260612-2"></script>
   </body>
 </html>

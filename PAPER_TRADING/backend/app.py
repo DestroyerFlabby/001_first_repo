@@ -50,6 +50,7 @@ from backend.news_service import news_summary  # noqa: E402
 from backend.research_service import research_index_response, research_note_response  # noqa: E402
 from backend.strategy_registry_service import read_strategies, strategy_registry_response, upsert_strategy  # noqa: E402
 from backend.universe_service import asset_universe_response, update_asset, upsert_asset  # noqa: E402
+from backend.wealth_intelligence_service import wealth_intelligence_response  # noqa: E402
 
 
 app = FastAPI(title="Paper Trading Dashboard", version="1.0.0")
@@ -520,6 +521,18 @@ def basket_detail(
         raise HTTPException(status_code=404, detail=f"unknown basket: {basket_id}") from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/api/wealth-intelligence")
+def wealth_intelligence(
+    from_date: str | None = Query(default=None),
+    to_date: str | None = Query(default=None),
+    wealthsimple_fx_fees: bool = Query(default=False),
+) -> dict[str, object]:
+    start, end = window(from_date, to_date)
+    overview_payload = cached_or_build_overview(start, end, wealthsimple_fx_fees)
+    baskets_payload = custom_basket_response(include_archived=False)
+    return wealth_intelligence_response(overview_payload, baskets_payload, start, end)
 
 
 @app.get("/api/strategies")

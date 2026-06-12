@@ -236,6 +236,18 @@ SUMMARY_KEYS = (
     "position_count",
     "source",
 )
+MAIN_PRIORITY_PORTFOLIOS = {
+    VARIABLE_STRATEGY_NAME,
+    MASTER_STRATEGY_NAME,
+    "watchlist-variable-news-optimized-experimental",
+    HYBRID_NEWS_OPTIMIZED_STRATEGY_NAME,
+    ANALYSIS_DRIVEN_STRATEGY_NAME,
+}
+LOW_PRIORITY_PORTFOLIOS = {
+    MASS_CHANGE_STRATEGY_NAME,
+    VARIABLE_BUY_ONLY_NAME,
+    VARIABLE_MORE_SIGNALS_NAME,
+}
 
 
 @dataclass(frozen=True)
@@ -1047,6 +1059,42 @@ def entry_signal(signal: dict[str, object] | None) -> str | None:
     if signal["fresh_priority"]:
         return "fresh"
     return str(signal["classification"])
+
+
+def portfolio_priority(row: dict[str, object]) -> tuple[str, str | None]:
+    investor = str(row.get("investor") or "").casefold()
+    source = str(row.get("source") or "").casefold()
+    position_count = int(row.get("position_count") or 0)
+    if investor in MAIN_PRIORITY_PORTFOLIOS:
+        return "main", None
+    if source in {"paper-ledger", "wealthsimple-import"}:
+        return "main", None
+    if source.startswith("saved-strategy-registry"):
+        return "low", "Saved Strategy Lab experiments stay available but are hidden from the main dashboard by default."
+    if investor in LOW_PRIORITY_PORTFOLIOS:
+        return "low", "Research or discovery strategy; useful for comparison but not a primary decision portfolio."
+    if investor.startswith("analyst-"):
+        return "low", "Public analyst-pick basket; useful as reference data, not an actively managed strategy."
+    if investor.startswith("watchlist-variable-buy-only-"):
+        return "low", "Category-specific buy-only diagnostic variant."
+    if investor.startswith("watchlist-variable-more-signals-"):
+        return "low", "Category-specific technical-exit diagnostic variant."
+    if investor in VARIABLE_TECHNICAL_STRATEGIES:
+        return "low", "Category-specific technical signal diagnostic variant."
+    if investor in NEWS_STRATEGIES and investor not in MAIN_PRIORITY_PORTFOLIOS:
+        return "low", "News-strategy variant kept for research comparison; main page focuses on optimized/news-analysis strategies."
+    if source.startswith("derived") and position_count == 0:
+        return "low", "No active positions in the selected window."
+    return "main", None
+
+
+def add_portfolio_priority(row: dict[str, object]) -> dict[str, object]:
+    priority, reason = portfolio_priority(row)
+    return {
+        **row,
+        "portfolio_priority": priority,
+        "portfolio_priority_reason": reason,
+    }
 
 
 def _decimal_from_nested(mapping: dict[str, object], *keys: str, default: str = "0") -> Decimal:
@@ -2818,6 +2866,7 @@ def build_overview(
     traders.sort(key=lambda row: row["return_pct"], reverse=True)
     for rank, trader in enumerate(traders, start=1):
         trader["rank"] = rank
+    traders = [add_portfolio_priority(trader) for trader in traders]
     return {
         "from_date": start.isoformat(),
         "to_date": end.isoformat() if end else None,
@@ -3036,7 +3085,7 @@ def paper_ledger_summaries(
     summaries.sort(key=lambda row: row["return_pct"], reverse=True)
     for rank, row in enumerate(summaries, start=1):
         row["rank"] = rank
-    return summaries
+    return [add_portfolio_priority(row) for row in summaries]
 
 
 def nisarg_detail(start: date, end: date | None) -> dict[str, object]:

@@ -1,4 +1,15 @@
-const state = { overview: null, eod: null, meta: null, universe: null, benchmarks: null, strategies: null, baskets: null, research: null };
+const state = {
+  overview: null,
+  eod: null,
+  meta: null,
+  universe: null,
+  benchmarks: null,
+  strategies: null,
+  baskets: null,
+  research: null,
+  wealthIntelligence: null,
+  showLowPriorityPortfolios: false,
+};
 const $ = (selector) => document.querySelector(selector);
 let loadingTimer = null;
 let loadingStartedAt = null;
@@ -818,8 +829,34 @@ function classificationPill(classification, label = classification) {
   return `<span class="pill ${classification}">${label}</span>`;
 }
 
+function isLowPriorityPortfolio(row = {}) {
+  return String(row.portfolio_priority || "").toLowerCase() === "low";
+}
+
+function portfolioRows(rows = []) {
+  return state.showLowPriorityPortfolios ? rows : rows.filter((row) => !isLowPriorityPortfolio(row));
+}
+
+function lowPriorityCount(rows = []) {
+  return rows.filter(isLowPriorityPortfolio).length;
+}
+
+function renderLowPriorityControls() {
+  const controls = document.querySelectorAll("[data-low-priority-count]");
+  const count = lowPriorityCount(state.overview?.traders || []);
+  controls.forEach((control) => {
+    control.textContent = state.showLowPriorityPortfolios
+      ? `${count} low-priority portfolios shown`
+      : `${count} low-priority portfolios hidden`;
+  });
+  document.querySelectorAll("[data-show-low-priority]").forEach((input) => {
+    input.checked = state.showLowPriorityPortfolios;
+  });
+}
+
 function renderCards() {
-  const traders = state.overview.traders;
+  const allTraders = state.overview.traders;
+  const traders = portfolioRows(allTraders);
   const stocks = state.overview.stocks;
   const strict = stocks.filter((row) => row.signal?.classification === "strict").length;
   const fresh = stocks.filter((row) => row.signal?.fresh_priority).length;
@@ -827,11 +864,15 @@ function renderCards() {
   const wsAvailability = state.overview.wealthsimple_availability;
   const topSector = state.overview.sector_breakdowns?.[0];
   $("#summary-cards").innerHTML = [
-    ["Portfolios", traders.length, state.meta?.public_dashboard ? "Public paper ledgers" : "Paper ledgers plus imported account"],
+    [
+      "Portfolios",
+      traders.length,
+      `${state.meta?.public_dashboard ? "Public paper ledgers" : "Paper ledgers plus imported account"}; ${lowPriorityCount(allTraders)} low-priority hidden by default`,
+    ],
     ["Tracked instruments", stocks.length, "Stocks, ETFs, and crypto"],
     ["Leading sector", topSector?.sector || "-", topSector ? pct(topSector.average_return_pct) : "-"],
     ["Fresh signal matches", fresh, `${strict} strict technical matches`],
-    ["Leading portfolio", leader.investor, pct(leader.return_pct)],
+    ["Leading portfolio", leader?.investor || "-", leader ? pct(leader.return_pct) : "-"],
     ["Wealthsimple estimate", wsAvailability["likely-supported"], `${wsAvailability["verify-in-app"]} verify in app; ${wsAvailability["likely-unsupported"]} likely unsupported`],
   ]
     .map(
@@ -862,7 +903,7 @@ function commandCenterPanel(title, rows, formatter, empty) {
 function renderCommandCenter() {
   const stocks = state.overview.stocks || [];
   const sectors = state.overview.sector_breakdowns || [];
-  const traders = state.overview.traders || [];
+  const traders = portfolioRows(state.overview.traders || []);
   const recommendations = recommendationRows();
   const freshSignals = stocks
     .filter((row) => row.signal?.fresh_priority)
@@ -976,6 +1017,97 @@ function renderDiagnostics() {
         </article>`
     )
     .join("");
+}
+
+function listHtml(rows = []) {
+  return rows.map((row) => `<li>${escapeHtml(row)}</li>`).join("");
+}
+
+function renderWealthIntelligence() {
+  const payload = state.wealthIntelligence;
+  if (!payload) return;
+  const readiness = payload.business_readiness || {};
+  const positioning = payload.positioning || {};
+  $("#ai-wealth-window").textContent = `${payload.from_date} to ${payload.latest_available_date || payload.to_date || "latest"}`;
+  $("#ai-wealth-disclaimer").textContent = ` ${payload.disclaimer || ""}`;
+  $("#ai-wealth-readiness").innerHTML = [
+    {
+      label: "Readiness",
+      value: `${number(readiness.score)} / 100`,
+      note: readiness.stage || "-",
+      toneValue: Number(readiness.score || 0) - 60,
+    },
+    {
+      label: "Positioning",
+      value: "AI-assisted",
+      note: positioning.recommended_claim || "-",
+      toneValue: 1,
+    },
+    {
+      label: "Model candidates",
+      value: (payload.ai_signal_candidates || []).filter((row) => row.suggested_action === "model_candidate").length,
+      note: "Research candidates only; no trades created",
+      toneValue: 1,
+    },
+  ].map((card) => `
+    <article class="diagnostic-card">
+      <p class="eyebrow">${escapeHtml(card.label)}</p>
+      <p class="value ${tone(card.toneValue)}">${escapeHtml(card.value)}</p>
+      <p class="muted">${escapeHtml(card.note)}</p>
+    </article>`).join("");
+  $("#ai-wealth-operating-model").innerHTML = listHtml(payload.operating_model || []);
+  $("#ai-wealth-positioning").innerHTML = `
+    <p><strong>Use:</strong> ${escapeHtml(positioning.recommended_claim || "-")}</p>
+    <p><strong>Avoid:</strong></p>
+    <ul class="wealth-list">${listHtml(positioning.avoid_claims || [])}</ul>
+    <p class="muted">${escapeHtml((readiness.strengths || []).join(" "))}</p>
+    <p class="muted">${escapeHtml((readiness.gaps || []).join(" "))}</p>`;
+  $("#ai-wealth-market-rows").innerHTML = (payload.market_context || []).map((row) => `
+    <tr>
+      <td>${escapeHtml(row.category || "-")}</td>
+      <td><strong>${escapeHtml(row.reference || "-")}</strong></td>
+      <td>${escapeHtml(row.signal || "-")}</td>
+      <td>${escapeHtml(row.product_implication || "-")}</td>
+      <td><a href="${safeUrl(row.source)}" target="_blank" rel="noopener noreferrer">Source</a></td>
+    </tr>`).join("") || '<tr><td colspan="5">No market context is available.</td></tr>';
+  $("#ai-wealth-theme-rows").innerHTML = (payload.theme_opportunities || []).map((row) => `
+    <tr>
+      <td><strong>${escapeHtml(row.theme)}</strong></td>
+      <td>${number(row.candidate_count)}</td>
+      <td>${number(row.model_candidates)}</td>
+      <td>${number(row.high_risk_count)}</td>
+      <td>${number(row.average_score)}</td>
+      <td>${escapeHtml((row.top_tickers || []).join(", "))}</td>
+    </tr>`).join("") || '<tr><td colspan="6">No theme opportunities available for this window.</td></tr>';
+  $("#ai-wealth-basket-rows").innerHTML = (payload.model_baskets || []).map((row) => `
+    <tr>
+      <td><strong>${escapeHtml(row.name || row.basket_id)}</strong><br><span class="muted">${escapeHtml(row.basket_id || "")}</span></td>
+      <td>${escapeHtml(row.role || "-")}</td>
+      <td>${escapeHtml(row.status || "-")}</td>
+      <td>${number(row.member_count)}</td>
+      <td>${escapeHtml(row.benchmark || "-")}</td>
+      <td>${escapeHtml(row.rebalance_frequency || "-")}</td>
+      <td>${escapeHtml(row.notes || "-")}</td>
+    </tr>`).join("") || '<tr><td colspan="7">No model baskets are registered yet.</td></tr>';
+  $("#ai-wealth-candidate-rows").innerHTML = (payload.ai_signal_candidates || []).map((row) => `
+    <tr class="clickable" data-ai-wealth-stock="${escapeHtml(row.ticker)}">
+      <td>${tickerLabel(row.ticker, row.wealthsimple)}</td>
+      <td>${escapeHtml(row.sector || "-")}</td>
+      <td>${number(row.score)}</td>
+      <td>${escapeHtml(row.signal || "-")}</td>
+      <td><span class="pill risk-${escapeHtml(row.risk_bucket)}">${escapeHtml(row.risk_bucket || "-")}</span></td>
+      <td>${escapeHtml(row.suggested_action || "-")}</td>
+      <td class="${toneOrEmpty(row.daily_change_pct)}">${pctOrDash(row.daily_change_pct)}</td>
+      <td class="${toneOrEmpty(row.five_day_change_pct)}">${pctOrDash(row.five_day_change_pct)}</td>
+      <td class="${toneOrEmpty(row.monthly_change_pct)}">${pctOrDash(row.monthly_change_pct)}</td>
+      <td>${escapeHtml((row.drivers || []).join(" | "))}</td>
+    </tr>`).join("") || '<tr><td colspan="10">No AI signal candidates available for this window.</td></tr>';
+  $("#ai-wealth-risk-controls").innerHTML = listHtml(payload.risk_controls || []);
+  $("#ai-wealth-next-steps").innerHTML = listHtml(payload.next_build_steps || []);
+  document.querySelectorAll("[data-ai-wealth-stock]").forEach((row) =>
+    row.addEventListener("click", () => openStock(row.dataset.aiWealthStock))
+  );
+  enableSorting();
 }
 
 function boolLabel(value) {
@@ -1359,20 +1491,24 @@ function portfolioDescription(row = {}) {
 
 function portfolioNameCell(row) {
   const description = portfolioDescription(row);
+  const priorityBadge = isLowPriorityPortfolio(row)
+    ? `<span class="priority-badge" title="${escapeHtml(row.portfolio_priority_reason || "Low-priority portfolio")}">Low priority</span>`
+    : "";
   return `
     <span class="portfolio-tip">
       <strong>${escapeHtml(row.investor)}</strong>
       <span class="info-dot" aria-label="Portfolio description">i</span>
       <span class="portfolio-tip-text">${escapeHtml(description)}</span>
     </span>
+    ${priorityBadge}
     <br><span class="muted">${escapeHtml(row.source || "")}</span>`;
 }
 
 function renderTraders() {
-  $("#trader-rows").innerHTML = state.overview.traders
+  $("#trader-rows").innerHTML = portfolioRows(state.overview.traders)
     .map(
       (row) => `
-      <tr class="clickable" data-trader="${escapeHtml(row.investor)}" title="${escapeHtml(portfolioDescription(row))}">
+      <tr class="clickable ${isLowPriorityPortfolio(row) ? "low-priority-row" : ""}" data-trader="${escapeHtml(row.investor)}" title="${escapeHtml(portfolioDescription(row))}">
         <td>${row.rank}</td>
         <td>${portfolioNameCell(row)}</td>
         <td>${row.position_count}</td>
@@ -1392,12 +1528,20 @@ function renderTraders() {
   enableSorting();
 }
 
+function renderPortfolioVisibilityViews() {
+  renderLowPriorityControls();
+  renderCards();
+  renderCommandCenter();
+  renderEod();
+  renderTraders();
+}
+
 function renderEod() {
   $("#eod-window-label").textContent = `${state.eod.from_date} to ${state.eod.to_date}`;
-  $("#eod-trader-rows").innerHTML = state.eod.traders
+  $("#eod-trader-rows").innerHTML = portfolioRows(state.eod.traders || [])
     .map(
       (row) => `
-      <tr class="clickable" data-eod-trader="${escapeHtml(row.investor)}" title="${escapeHtml(portfolioDescription(row))}">
+      <tr class="clickable ${isLowPriorityPortfolio(row) ? "low-priority-row" : ""}" data-eod-trader="${escapeHtml(row.investor)}" title="${escapeHtml(portfolioDescription(row))}">
         <td>${portfolioNameCell(row)}</td>
         <td class="${tone(row.return_pct)}">${pct(row.return_pct)}</td>
         <td class="${tone(row.gain_loss)}">${money(row.gain_loss)}</td>
@@ -2231,13 +2375,17 @@ async function loadOverview() {
     state.eod = await fetchJson(`/api/eod${wealthsimpleQuery()}`);
     updateLoading("Prior-close movers loaded. Loading universe registries...", 88);
     await refreshUniverse();
-    updateLoading("Universe registries loaded. Rendering dashboard tables...", 95);
+    updateLoading("Universe registries loaded. Building AI wealth intelligence...", 92);
+    state.wealthIntelligence = await fetchJson(`/api/wealth-intelligence?${query()}`);
+    updateLoading("AI wealth intelligence loaded. Rendering dashboard tables...", 96);
     renderCards();
     renderCommandCenter();
     renderDiagnostics();
+    renderWealthIntelligence();
     renderEod();
     renderSectors();
     renderTraders();
+    renderLowPriorityControls();
     renderRecommendations();
     renderStocks();
     $("#window-label").textContent =
@@ -2320,8 +2468,30 @@ async function init() {
   $("#export-traders").addEventListener("click", () => {
     downloadExcelTables("traders", "Portfolio Performance - Traders", [$("#trader-rows")?.closest("table")]);
   });
+  document.querySelectorAll("[data-show-low-priority]").forEach((input) => {
+    input.addEventListener("change", (event) => {
+      state.showLowPriorityPortfolios = Boolean(event.target.checked);
+      if (state.overview && state.eod) {
+        renderPortfolioVisibilityViews();
+      } else {
+        renderLowPriorityControls();
+      }
+    });
+  });
   $("#export-sectors").addEventListener("click", () => {
     downloadExcelTables("sector-breakdown", "Sector Breakdown", [$("#sector-rows")?.closest("table")]);
+  });
+  $("#export-ai-wealth").addEventListener("click", () => {
+    downloadExcelTables(
+      "ai-wealth-intelligence",
+      "AI Wealth Intelligence",
+      [
+        $("#ai-wealth-theme-rows")?.closest("table"),
+        $("#ai-wealth-market-rows")?.closest("table"),
+        $("#ai-wealth-basket-rows")?.closest("table"),
+        $("#ai-wealth-candidate-rows")?.closest("table"),
+      ]
+    );
   });
   $("#export-universe").addEventListener("click", () => {
     downloadExcelTables(

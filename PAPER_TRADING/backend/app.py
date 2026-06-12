@@ -53,6 +53,7 @@ from backend.allocation_service import (  # noqa: E402
     resolved_instrument_metadata,
     wealth_allocation_response,
 )
+from backend.automated_wealth_review_service import automated_wealth_review_response  # noqa: E402
 from backend.email_service import send_daily_instructions  # noqa: E402
 from backend.day_rotation_service import daily_rotation_portfolio_response  # noqa: E402
 from backend.external_portfolio_service import external_portfolio_response  # noqa: E402
@@ -638,6 +639,25 @@ def wealth_strategy_selector(
     payload = strategy_selector_response(start, resolved_end, candidates, apply_wealthsimple_fx_fees=wealthsimple_fx_fees)
     payload["warnings"] = sorted(set([*payload.get("warnings", []), *warnings]))
     return payload
+
+
+@app.get("/api/wealth/automated-review")
+def wealth_automated_review(
+    from_date: str | None = Query(default=None),
+    to_date: str | None = Query(default=None),
+    profile_id: str = Query(default="balanced-growth"),
+    wealthsimple_fx_fees: bool = Query(default=False),
+) -> dict[str, object]:
+    start, end = window(from_date, to_date)
+    resolved_end = end or latest_market_date()
+    overview_payload = cached_or_build_overview(start, resolved_end, wealthsimple_fx_fees)
+    allocation_payload = wealth_allocation_response(
+        start,
+        resolved_end,
+        overview_payload=overview_payload,
+        apply_wealthsimple_fx_fees=wealthsimple_fx_fees,
+    )
+    return automated_wealth_review_response(start, resolved_end, allocation_payload, profile_id=profile_id)
 
 
 @app.get("/api/wealth/risk")

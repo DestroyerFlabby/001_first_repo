@@ -26,6 +26,8 @@ const state = {
   wealthPerformanceRequestKey: null,
   strategySelector: null,
   strategySelectorRequestKey: null,
+  automatedReview: null,
+  automatedReviewRequestKey: null,
   rebalanceProfiles: null,
   rebalancePreview: null,
   showLowPriorityPortfolios: false,
@@ -357,6 +359,7 @@ function setActiveDashboardTab(tabName, updateHash = true) {
   }
   if (nextTab === "wealth-overview" && state.overview) {
     loadStrategySelector().catch(() => {});
+    loadAutomatedReview().catch(() => {});
   }
   if (nextTab === "risk" && state.overview) {
     loadRiskPortfolio().catch(() => {});
@@ -1055,6 +1058,43 @@ function renderStrategySelector() {
   $("#strategy-selector-content").classList.remove("hidden");
   $("#strategy-selector-status").textContent = `${payload.from_date} to ${payload.to_date}; ${payload.assumptions?.[0] || "Research-only strategy comparison."}`;
   enableSorting();
+}
+
+function renderAutomatedReview() {
+  const payload = state.automatedReview;
+  if (!payload) return;
+  const allocation = payload.allocation_health || {};
+  const rebalance = payload.rebalance_health || {};
+  $("#automated-review-summary").innerHTML = [
+    ["Status", String(payload.review_status || "-").replaceAll("_", " "), payload.next_review_action || ""],
+    ["Metadata", `${number(allocation.complete_metadata_pct)}%`, `Asset type ${number(allocation.asset_type_metadata_pct)}%`],
+    ["Top five", `${number(allocation.top_five_weight_pct)}%`, `Largest position ${number(allocation.top_position_weight_pct)}%`],
+    ["Draft rebalance", rebalance.draft_available ? "Available" : "Blocked", (rebalance.blockers || []).join("; ") || "No blockers"],
+  ].map(([label, value, note]) => `<article class="diagnostic-card"><p class="eyebrow">${escapeHtml(label)}</p><p class="value">${escapeHtml(value)}</p><p class="muted">${escapeHtml(note)}</p></article>`).join("");
+  $("#automated-review-warnings").innerHTML = `<h4>Warnings &amp; assumptions</h4><ul class="wealth-list">${(payload.warnings || []).map((warning) => `<li>${escapeHtml(warning)}</li>`).join("") || "<li>No warnings.</li>"}${(payload.assumptions || []).map((assumption) => `<li>${escapeHtml(assumption)}</li>`).join("")}</ul>`;
+  $("#automated-review-content").classList.remove("hidden");
+  $("#automated-review-status").textContent = `${payload.from_date} to ${payload.to_date}; ${payload.data_quality?.write_behavior || "read only"}.`;
+}
+
+async function loadAutomatedReview(force = false) {
+  if (!$("#from-date").value || !$("#to-date").value) return;
+  const requestKey = query();
+  if (!force && state.automatedReview && state.automatedReviewRequestKey === requestKey) {
+    renderAutomatedReview();
+    return;
+  }
+  const button = $("#reload-automated-review");
+  button.disabled = true;
+  $("#automated-review-status").textContent = "Running automated wealth review...";
+  try {
+    state.automatedReview = await fetchJson(`/api/wealth/automated-review?${requestKey}`);
+    state.automatedReviewRequestKey = requestKey;
+    renderAutomatedReview();
+  } catch (error) {
+    $("#automated-review-status").textContent = `Automated review failed: ${error.message}`;
+  } finally {
+    button.disabled = false;
+  }
 }
 
 async function loadStrategySelector(force = false) {
@@ -3204,6 +3244,8 @@ async function loadOverview() {
     state.wealthPerformanceRequestKey = null;
     state.strategySelector = null;
     state.strategySelectorRequestKey = null;
+    state.automatedReview = null;
+    state.automatedReviewRequestKey = null;
     updateLoading("Portfolio rankings and tracked instruments loaded. Refreshing paper-ledger portfolios...", 72);
     await refreshPaperLedgerPortfolios();
     updateLoading("Paper-ledger portfolios refreshed. Loading prior-close movers...", 75);
@@ -3251,6 +3293,7 @@ async function loadOverview() {
     }
     if (activeDashboardTab() === "wealth-overview") {
       loadStrategySelector().catch(() => {});
+      loadAutomatedReview().catch(() => {});
     }
     updateLoading("Dashboard ready.", 100);
     sendDailyInstructionsEmail().then((notification) => {
@@ -3363,6 +3406,7 @@ async function init() {
     );
   });
   $("#reload-strategy-selector").addEventListener("click", () => loadStrategySelector(true));
+  $("#reload-automated-review").addEventListener("click", () => loadAutomatedReview(true));
   $("#export-strategy-selector").addEventListener("click", () => {
     downloadExcelTables(
       "strategy-selector",

@@ -160,6 +160,18 @@
             </div>
             <div id="strategy-selector-blend"></div>
           </div>
+          <div class="section-heading wealth-subheading">
+            <div>
+              <p class="eyebrow">Automated review</p>
+              <h3>Allocation, Risk &amp; Rebalance Checklist</h3>
+            </div>
+            <button id="reload-automated-review" class="secondary" type="button">Run review</button>
+          </div>
+          <p id="automated-review-status" class="muted">Checks data quality, concentration, risk readiness, and whether draft rebalancing can be reviewed.</p>
+          <div id="automated-review-content" class="hidden">
+            <div id="automated-review-summary" class="model-summary-grid"></div>
+            <div id="automated-review-warnings"></div>
+          </div>
         </section>
 
         <section class="card dashboard-tab-panel" data-dashboard-tab="risk">
@@ -1067,6 +1079,6 @@
     </aside>
     <div id="backdrop" class="backdrop hidden"></div>
 
-    <script src="/static/app.js?v=20260612-16"></script>
+    <script src="/static/app.js?v=20260612-17"></script>
   </body>
 </html>

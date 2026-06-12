@@ -4,3 +4,7 @@
 "crypto-proxy","Crypto Proxy Index","active","equal_weight","monthly","BTC-USD","2026-06-04","Crypto miners, infrastructure, and related ETF/proxy exposure."
 "creator-watchlist","Creator Watchlist Index","research","equal_weight","none","SPY","2026-06-04","Creator and social-watchlist names."
 "mass-change-candidate","Mass-Change Candidate Index","research","equal_weight","none","SPY","2026-06-04","Discovery-stage sector/news-driven candidates."
+"ai-wealth-core","AI Wealth Core Model","active","custom_weight","monthly","SPY","2026-06-12","Diversified core model combining broad equity ETFs, Canada exposure, cash proxy, and gold hedge for AI wealth demos."
+"ai-wealth-growth","AI Wealth Growth Model","active","custom_weight","monthly","QQQ","2026-06-12","Growth-oriented model emphasizing AI platforms, semiconductors, cloud, cybersecurity, and digital infrastructure."
+"ai-wealth-defensive-income","AI Wealth Defensive Income Model","active","custom_weight","quarterly","VDY.TO","2026-06-12","Canada-heavy defensive income model using banks, utilities, telecom, infrastructure, dividend ETF, cash, and gold hedge."
+"ai-wealth-tactical-ai","AI Wealth Tactical AI Model","research","custom_weight","monthly","QQQ","2026-06-12","Research-stage tactical AI model using concentrated AI compute, networking, semiconductor, and security exposure."

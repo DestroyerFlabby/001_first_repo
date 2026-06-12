@@ -237,11 +237,19 @@ SUMMARY_KEYS = (
     "source",
 )
 MAIN_PRIORITY_PORTFOLIOS = {
+    "nisarg",
+    "amswann",
+    "bdinvesting",
+    "brandon",
+    "joyeeyang",
+    "russellckai",
     VARIABLE_STRATEGY_NAME,
     MASTER_STRATEGY_NAME,
     "watchlist-variable-news-optimized-experimental",
     HYBRID_NEWS_OPTIMIZED_STRATEGY_NAME,
     ANALYSIS_DRIVEN_STRATEGY_NAME,
+    "long-term-watchlist",
+    "short-term-watchlist",
 }
 LOW_PRIORITY_PORTFOLIOS = {
     MASS_CHANGE_STRATEGY_NAME,
@@ -1067,25 +1075,23 @@ def portfolio_priority(row: dict[str, object]) -> tuple[str, str | None]:
     position_count = int(row.get("position_count") or 0)
     if investor in MAIN_PRIORITY_PORTFOLIOS:
         return "main", None
-    if source in {"paper-ledger", "wealthsimple-import"}:
-        return "main", None
     if source.startswith("saved-strategy-registry"):
-        return "low", "Saved Strategy Lab experiments stay available but are hidden from the main dashboard by default."
+        return "low", "Saved Strategy Lab experiment retained in Research Watchlists."
     if investor in LOW_PRIORITY_PORTFOLIOS:
-        return "low", "Research or discovery strategy; useful for comparison but not a primary decision portfolio."
+        return "low", "Research or discovery strategy retained in Research Watchlists."
     if investor.startswith("analyst-"):
-        return "low", "Public analyst-pick basket; useful as reference data, not an actively managed strategy."
+        return "low", "Public analyst-pick reference basket retained in Research Watchlists."
     if investor.startswith("watchlist-variable-buy-only-"):
-        return "low", "Category-specific buy-only diagnostic variant."
+        return "low", "Category-specific buy-only diagnostic retained in Research Watchlists."
     if investor.startswith("watchlist-variable-more-signals-"):
-        return "low", "Category-specific technical-exit diagnostic variant."
+        return "low", "Category-specific technical-exit diagnostic retained in Research Watchlists."
     if investor in VARIABLE_TECHNICAL_STRATEGIES:
-        return "low", "Category-specific technical signal diagnostic variant."
+        return "low", "Category-specific technical signal diagnostic retained in Research Watchlists."
     if investor in NEWS_STRATEGIES and investor not in MAIN_PRIORITY_PORTFOLIOS:
-        return "low", "News-strategy variant kept for research comparison; main page focuses on optimized/news-analysis strategies."
+        return "low", "News-strategy variant retained in Research Watchlists for comparison."
     if source.startswith("derived") and position_count == 0:
-        return "low", "No active positions in the selected window."
-    return "main", None
+        return "low", "No active positions in the selected window; retained in Research Watchlists."
+    return "low", "Secondary trader, sector basket, or watchlist retained in Research Watchlists."
 
 
 def add_portfolio_priority(row: dict[str, object]) -> dict[str, object]:
@@ -1094,6 +1100,7 @@ def add_portfolio_priority(row: dict[str, object]) -> dict[str, object]:
         **row,
         "portfolio_priority": priority,
         "portfolio_priority_reason": reason,
+        "portfolio_group": "primary" if priority == "main" else "research-watchlists",
     }
 
 
@@ -2862,7 +2869,12 @@ def build_overview(
         traders.append(variable_news_strategy_summary(strategy_name, start, end, apply_wealthsimple_fx_fees))
     traders.append(hybrid_news_optimized_strategy_summary(start, end, apply_wealthsimple_fx_fees))
     traders.append(analysis_driven_strategy_summary(start, end, apply_wealthsimple_fx_fees))
-    traders.extend(saved_strategy_dashboard_summaries(start, end, apply_wealthsimple_fx_fees))
+    existing_investors = {str(row.get("investor") or "").casefold() for row in traders}
+    traders.extend(
+        row
+        for row in saved_strategy_dashboard_summaries(start, end, apply_wealthsimple_fx_fees)
+        if str(row.get("investor") or "").casefold() not in existing_investors
+    )
     traders.sort(key=lambda row: row["return_pct"], reverse=True)
     for rank, trader in enumerate(traders, start=1):
         trader["rank"] = rank

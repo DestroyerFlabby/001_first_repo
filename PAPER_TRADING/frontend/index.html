@@ -3,13 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#08111e" />
+    <meta name="theme-color" content="#f4f8ff" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Wealth Research" />
     <title>Wealth + Paper Trading Research</title>
     <link rel="manifest" href="/static/site.webmanifest?v=20260612-1" />
-    <link rel="stylesheet" href="/static/styles.css?v=20260612-9" />
+    <link rel="stylesheet" href="/static/styles.css?v=20260612-10" />
   </head>
   <body>
     <header class="topbar">
@@ -89,10 +89,14 @@
             <button class="tab-button" type="button" data-tab-target="rebalancing">Rebalance</button>
             <button class="tab-button" type="button" data-tab-target="ai-wealth">AI Ops</button>
             <button class="tab-button" type="button" data-tab-target="model-portfolio">Model</button>
+            <button class="tab-button" type="button" data-tab-target="model-portfolio-v2">Model 2.0</button>
+            <button class="tab-button" type="button" data-tab-target="model-portfolio-v3">Model 3.0</button>
+            <button class="tab-button" type="button" data-tab-target="model-portfolio-v4">Model 4.0</button>
             <button class="tab-button" type="button" data-tab-target="day-rotation">Rotation</button>
           </div>
           <div class="tab-group" data-workspace-tab="trading"><span class="tab-group-label">Trading</span>
             <button class="tab-button" type="button" data-tab-target="home">Home</button>
+            <button class="tab-button" type="button" data-tab-target="market-news">News</button>
             <button class="tab-button" type="button" data-tab-target="portfolios">Portfolios</button>
             <button class="tab-button" type="button" data-tab-target="stocks">Stocks</button>
             <button class="tab-button" type="button" data-tab-target="sectors">Sectors</button>
@@ -549,6 +553,168 @@
           </div>
         </section>
 
+        <section class="card dashboard-tab-panel" data-dashboard-tab="model-portfolio-v2">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Drawdown-adjusted systematic simulation</p>
+              <h2>Systematic Model Portfolio 2.0</h2>
+            </div>
+            <div class="section-actions">
+              <p id="model2-portfolio-window" class="muted">Starts 2026-01-31</p>
+              <button id="reload-model2-portfolio" class="secondary" type="button">Recalculate 2.0</button>
+              <button id="export-model2-portfolio" class="secondary" type="button">Download Excel</button>
+            </div>
+          </div>
+          <p id="model2-portfolio-status" class="muted">Open this tab after loading a dashboard date range.</p>
+          <div id="model2-portfolio-content" class="hidden">
+            <div id="model2-portfolio-summary" class="model-summary-grid"></div>
+            <p id="model2-methodology" class="portfolio-description"></p>
+            <div class="model-chart-grid">
+              <section><h3>Portfolio value</h3><div id="model2-portfolio-chart" class="chart"></div></section>
+              <section><h3>Drawdown</h3><div id="model2-drawdown-chart" class="chart"></div></section>
+            </div>
+            <h3>Drawdown Controls</h3>
+            <div class="table-wrap"><table id="model2-drawdown-table" data-sortable>
+              <thead><tr><th>Ticker</th><th>Current DD</th><th>Max DD</th><th>Avg daily DD</th><th>Sell point</th><th>Control reason</th></tr></thead>
+              <tbody id="model2-drawdown-rows"></tbody>
+            </table></div>
+            <h3>Next Available Close Orders</h3>
+            <div class="table-wrap"><table id="model2-pending-table" data-sortable>
+              <thead><tr><th>Action</th><th>Ticker</th><th>Signal</th><th>Score</th><th>Target</th><th>Amount</th><th>Observed</th><th>Reason</th></tr></thead>
+              <tbody id="model2-pending-rows"></tbody>
+            </table></div>
+            <h3>Current Holdings</h3>
+            <div class="table-wrap"><table id="model2-holdings-table" data-sortable>
+              <thead><tr><th>Ticker</th><th>Sector</th><th>Signal</th><th>Score</th><th>Weight</th><th>Value</th><th>Gain / loss</th><th>Return</th></tr></thead>
+              <tbody id="model2-holding-rows"></tbody>
+            </table></div>
+            <div class="model-table-grid">
+              <section><h3>Current Sector Exposure</h3><div class="table-wrap"><table id="model2-sector-table" data-sortable>
+                <thead><tr><th>Sector</th><th>Value</th><th>Weight</th></tr></thead><tbody id="model2-sector-rows"></tbody>
+              </table></div></section>
+              <section><h3>Methodology Warnings</h3><ul id="model2-warning-list" class="wealth-list"></ul></section>
+            </div>
+            <h3>Daily Rebalance History</h3>
+            <div class="table-wrap"><table id="model2-rebalance-table" data-sortable>
+              <thead><tr><th>Execution date</th><th>Observed date</th><th>Buys</th><th>Sells</th><th>Traded</th><th>Turnover</th><th>Positions</th><th>Cash</th></tr></thead>
+              <tbody id="model2-rebalance-rows"></tbody>
+            </table></div>
+            <h3>Full Simulated Trade Ledger</h3>
+            <div class="table-wrap"><table id="model2-trades-table" data-sortable>
+              <thead><tr><th>Execution date</th><th>Observed date</th><th>Action</th><th>Ticker</th><th>Signal</th><th>Score</th><th>Amount</th><th>Target</th><th>Realized P&amp;L</th><th>Reason</th></tr></thead>
+              <tbody id="model2-trade-rows"></tbody>
+            </table></div>
+          </div>
+        </section>
+
+        <section class="card dashboard-tab-panel" data-dashboard-tab="model-portfolio-v3">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Average daily drawdown EOD simulation</p>
+              <h2>Systematic Model Portfolio 3.0</h2>
+            </div>
+            <div class="section-actions">
+              <p id="model3-portfolio-window" class="muted">Starts 2026-01-31</p>
+              <button id="reload-model3-portfolio" class="secondary" type="button">Recalculate 3.0</button>
+              <button id="export-model3-portfolio" class="secondary" type="button">Download Excel</button>
+            </div>
+          </div>
+          <p id="model3-portfolio-status" class="muted">Open this tab after loading a dashboard date range.</p>
+          <div id="model3-portfolio-content" class="hidden">
+            <div id="model3-portfolio-summary" class="model-summary-grid"></div>
+            <p id="model3-methodology" class="portfolio-description"></p>
+            <div class="model-chart-grid">
+              <section><h3>Portfolio value</h3><div id="model3-portfolio-chart" class="chart"></div></section>
+              <section><h3>Drawdown</h3><div id="model3-drawdown-chart" class="chart"></div></section>
+            </div>
+            <h3>Average Drawdown Sell Points</h3>
+            <div class="table-wrap"><table id="model3-drawdown-table" data-sortable>
+              <thead><tr><th>Ticker</th><th>Current DD</th><th>Max DD</th><th>Avg daily DD</th><th>Sell point</th><th>Control reason</th></tr></thead>
+              <tbody id="model3-drawdown-rows"></tbody>
+            </table></div>
+            <h3>Next Available Close Orders</h3>
+            <div class="table-wrap"><table id="model3-pending-table" data-sortable>
+              <thead><tr><th>Action</th><th>Ticker</th><th>Signal</th><th>Score</th><th>Target</th><th>Amount</th><th>Observed</th><th>Reason</th></tr></thead>
+              <tbody id="model3-pending-rows"></tbody>
+            </table></div>
+            <h3>Current Holdings</h3>
+            <div class="table-wrap"><table id="model3-holdings-table" data-sortable>
+              <thead><tr><th>Ticker</th><th>Sector</th><th>Signal</th><th>Score</th><th>Weight</th><th>Value</th><th>Gain / loss</th><th>Return</th></tr></thead>
+              <tbody id="model3-holding-rows"></tbody>
+            </table></div>
+            <div class="model-table-grid">
+              <section><h3>Current Sector Exposure</h3><div class="table-wrap"><table id="model3-sector-table" data-sortable>
+                <thead><tr><th>Sector</th><th>Value</th><th>Weight</th></tr></thead><tbody id="model3-sector-rows"></tbody>
+              </table></div></section>
+              <section><h3>Methodology Warnings</h3><ul id="model3-warning-list" class="wealth-list"></ul></section>
+            </div>
+            <h3>Daily Rebalance History</h3>
+            <div class="table-wrap"><table id="model3-rebalance-table" data-sortable>
+              <thead><tr><th>Execution date</th><th>Observed date</th><th>Buys</th><th>Sells</th><th>Traded</th><th>Turnover</th><th>Positions</th><th>Cash</th></tr></thead>
+              <tbody id="model3-rebalance-rows"></tbody>
+            </table></div>
+            <h3>Full Simulated Trade Ledger</h3>
+            <div class="table-wrap"><table id="model3-trades-table" data-sortable>
+              <thead><tr><th>Execution date</th><th>Observed date</th><th>Action</th><th>Ticker</th><th>Signal</th><th>Score</th><th>Amount</th><th>Target</th><th>Realized P&amp;L</th><th>Reason</th></tr></thead>
+              <tbody id="model3-trade-rows"></tbody>
+            </table></div>
+          </div>
+        </section>
+
+        <section class="card dashboard-tab-panel" data-dashboard-tab="model-portfolio-v4">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Intraday stop proxy simulation</p>
+              <h2>Systematic Model Portfolio 4.0</h2>
+            </div>
+            <div class="section-actions">
+              <p id="model4-portfolio-window" class="muted">Starts 2026-01-31</p>
+              <button id="reload-model4-portfolio" class="secondary" type="button">Recalculate 4.0</button>
+              <button id="export-model4-portfolio" class="secondary" type="button">Download Excel</button>
+            </div>
+          </div>
+          <p id="model4-portfolio-status" class="muted">Open this tab after loading a dashboard date range.</p>
+          <div id="model4-portfolio-content" class="hidden">
+            <div id="model4-portfolio-summary" class="model-summary-grid"></div>
+            <p id="model4-methodology" class="portfolio-description"></p>
+            <div class="model-chart-grid">
+              <section><h3>Portfolio value</h3><div id="model4-portfolio-chart" class="chart"></div></section>
+              <section><h3>Drawdown</h3><div id="model4-drawdown-chart" class="chart"></div></section>
+            </div>
+            <h3>Intraday Proxy Sell Points</h3>
+            <div class="table-wrap"><table id="model4-drawdown-table" data-sortable>
+              <thead><tr><th>Ticker</th><th>Current DD</th><th>Max DD</th><th>Avg daily DD</th><th>Proxy sell point</th><th>Control reason</th></tr></thead>
+              <tbody id="model4-drawdown-rows"></tbody>
+            </table></div>
+            <h3>Next Available Close Orders</h3>
+            <div class="table-wrap"><table id="model4-pending-table" data-sortable>
+              <thead><tr><th>Action</th><th>Ticker</th><th>Signal</th><th>Score</th><th>Target</th><th>Amount</th><th>Observed</th><th>Reason</th></tr></thead>
+              <tbody id="model4-pending-rows"></tbody>
+            </table></div>
+            <h3>Current Holdings</h3>
+            <div class="table-wrap"><table id="model4-holdings-table" data-sortable>
+              <thead><tr><th>Ticker</th><th>Sector</th><th>Signal</th><th>Score</th><th>Weight</th><th>Value</th><th>Gain / loss</th><th>Return</th></tr></thead>
+              <tbody id="model4-holding-rows"></tbody>
+            </table></div>
+            <div class="model-table-grid">
+              <section><h3>Current Sector Exposure</h3><div class="table-wrap"><table id="model4-sector-table" data-sortable>
+                <thead><tr><th>Sector</th><th>Value</th><th>Weight</th></tr></thead><tbody id="model4-sector-rows"></tbody>
+              </table></div></section>
+              <section><h3>Methodology Warnings</h3><ul id="model4-warning-list" class="wealth-list"></ul></section>
+            </div>
+            <h3>Daily Rebalance History</h3>
+            <div class="table-wrap"><table id="model4-rebalance-table" data-sortable>
+              <thead><tr><th>Execution date</th><th>Observed date</th><th>Buys</th><th>Sells</th><th>Traded</th><th>Turnover</th><th>Positions</th><th>Cash</th></tr></thead>
+              <tbody id="model4-rebalance-rows"></tbody>
+            </table></div>
+            <h3>Full Simulated Trade Ledger</h3>
+            <div class="table-wrap"><table id="model4-trades-table" data-sortable>
+              <thead><tr><th>Execution date</th><th>Observed date</th><th>Action</th><th>Ticker</th><th>Signal</th><th>Score</th><th>Amount</th><th>Target</th><th>Realized P&amp;L</th><th>Reason</th></tr></thead>
+              <tbody id="model4-trade-rows"></tbody>
+            </table></div>
+          </div>
+        </section>
+
         <section class="card dashboard-tab-panel" data-dashboard-tab="day-rotation">
           <div class="section-heading">
             <div>
@@ -958,6 +1124,94 @@
           </div>
         </section>
 
+        <section class="card dashboard-tab-panel" data-dashboard-tab="market-news">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Free market intelligence</p>
+              <h2>News, Headlines, and Social Mentions</h2>
+              <p id="market-news-note" class="muted">Load a dashboard window, then refresh this tab for live free-source headlines.</p>
+            </div>
+            <div class="section-actions">
+              <p id="market-news-status" class="muted"></p>
+              <button id="reload-market-news" class="secondary" type="button">Refresh news</button>
+              <button id="export-market-news" class="secondary" type="button">Download Excel</button>
+            </div>
+          </div>
+          <div id="market-news-cards" class="summary-grid"></div>
+          <div class="eod-grid">
+            <div>
+              <h3>Hot Topics</h3>
+              <div class="table-wrap">
+                <table id="market-topic-table" data-sortable>
+                  <thead>
+                    <tr><th>Topic</th><th>Mentions</th><th>Tracked tickers</th><th>Example headline</th></tr>
+                  </thead>
+                  <tbody id="market-topic-rows"></tbody>
+                </table>
+              </div>
+            </div>
+            <div>
+              <h3>Hot Tracked Stocks</h3>
+              <div class="table-wrap">
+                <table id="market-hot-stock-table" data-sortable>
+                  <thead>
+                    <tr>
+                      <th>Ticker</th>
+                      <th>Score</th>
+                      <th>News mentions</th>
+                      <th>Social rank</th>
+                      <th>Daily</th>
+                      <th>5D</th>
+                      <th>Signal</th>
+                    </tr>
+                  </thead>
+                  <tbody id="market-hot-stock-rows"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div class="eod-grid">
+            <div>
+              <h3>Top Headlines</h3>
+              <div class="table-wrap">
+                <table id="market-headline-table" data-sortable>
+                  <thead>
+                    <tr><th>Headline</th><th>Source</th><th>Published</th></tr>
+                  </thead>
+                  <tbody id="market-headline-rows"></tbody>
+                </table>
+              </div>
+            </div>
+            <div>
+              <h3>Hot Stock Mentions from Social</h3>
+              <div class="table-wrap">
+                <table id="market-social-table" data-sortable>
+                  <thead>
+                    <tr>
+                      <th>Rank</th>
+                      <th>Ticker</th>
+                      <th>Name</th>
+                      <th>Tracked</th>
+                      <th>5D</th>
+                      <th>Owners</th>
+                    </tr>
+                  </thead>
+                  <tbody id="market-social-rows"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <h3>Source Status</h3>
+          <div class="table-wrap">
+            <table id="market-news-source-table" data-sortable>
+              <thead>
+                <tr><th>Source</th><th>Status</th><th>Count</th><th>Detail</th></tr>
+              </thead>
+              <tbody id="market-news-source-rows"></tbody>
+            </table>
+          </div>
+        </section>
+
         <section class="card dashboard-tab-panel" data-dashboard-tab="sectors">
           <div class="section-heading">
             <div>
@@ -1079,6 +1333,6 @@
     </aside>
     <div id="backdrop" class="backdrop hidden"></div>
 
-    <script src="/static/app.js?v=20260612-17"></script>
+    <script src="/static/app.js?v=20260612-18"></script>
   </body>
 </html>

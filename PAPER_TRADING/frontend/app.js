@@ -12,6 +12,12 @@ const state = {
   externalPortfolios: null,
   modelPortfolio: null,
   modelPortfolioToDate: null,
+  modelPortfolioV2: null,
+  modelPortfolioV2ToDate: null,
+  modelPortfolioV3: null,
+  modelPortfolioV3ToDate: null,
+  modelPortfolioV4: null,
+  modelPortfolioV4ToDate: null,
   dayRotationPortfolio: null,
   dayRotationToDate: null,
   riskPortfolio: null,
@@ -28,6 +34,8 @@ const state = {
   strategySelectorRequestKey: null,
   automatedReview: null,
   automatedReviewRequestKey: null,
+  marketNews: null,
+  marketNewsRequestKey: null,
   rebalanceProfiles: null,
   rebalancePreview: null,
   showLowPriorityPortfolios: false,
@@ -43,8 +51,12 @@ const tabWorkspace = {
   rebalancing: "wealth",
   "ai-wealth": "wealth",
   "model-portfolio": "wealth",
+  "model-portfolio-v2": "wealth",
+  "model-portfolio-v3": "wealth",
+  "model-portfolio-v4": "wealth",
   "day-rotation": "wealth",
   home: "trading",
+  "market-news": "trading",
   portfolios: "trading",
   stocks: "trading",
   sectors: "trading",
@@ -354,6 +366,15 @@ function setActiveDashboardTab(tabName, updateHash = true) {
   if (nextTab === "model-portfolio" && state.overview) {
     loadModelPortfolio().catch(() => {});
   }
+  if (nextTab === "model-portfolio-v2" && state.overview) {
+    loadModelPortfolioV2().catch(() => {});
+  }
+  if (nextTab === "model-portfolio-v3" && state.overview) {
+    loadModelPortfolioV3().catch(() => {});
+  }
+  if (nextTab === "model-portfolio-v4" && state.overview) {
+    loadModelPortfolioV4().catch(() => {});
+  }
   if (nextTab === "day-rotation" && state.overview) {
     loadDayRotationPortfolio().catch(() => {});
   }
@@ -372,6 +393,9 @@ function setActiveDashboardTab(tabName, updateHash = true) {
   }
   if (nextTab === "rebalancing") {
     loadRebalanceProfiles().catch(() => {});
+  }
+  if (nextTab === "market-news" && state.overview) {
+    loadMarketNews().catch(() => {});
   }
 }
 
@@ -1448,15 +1472,17 @@ function renderExternalPortfolios() {
   enableSorting();
 }
 
-function renderModelPortfolio() {
-  const payload = state.modelPortfolio;
+function renderSystematicPortfolio(payload, prefix, options = {}) {
   if (!payload) return;
   const stats = payload.statistics || {};
   const benchmark = payload.benchmark_comparison || {};
   const methodology = payload.methodology || {};
+  const macro = payload.macro_context || {};
   const latestSectors = payload.sector_exposure?.at(-1)?.sectors || [];
-  $("#model-portfolio-window").textContent = `${payload.from_date} to ${payload.to_date}`;
-  $("#model-portfolio-summary").innerHTML = [
+  const controlRows = (payload.positions || [])
+    .filter((row) => row.drawdown_control_reason || Number(row.current_drawdown_pct || 0) <= -8 || Number(row.max_position_drawdown_pct || 0) <= -12);
+  $(`#${prefix}-portfolio-window`).textContent = `${payload.from_date} to ${payload.to_date}`;
+  $(`#${prefix}-portfolio-summary`).innerHTML = [
     ["Return", pct(payload.return_pct), tone(payload.return_pct), `${money(payload.gain_loss)} gain / loss`],
     ["Daily", pctOrDash(payload.daily_change_pct), toneOrEmpty(payload.daily_change_pct), "Ending close vs prior close"],
     ["5D", pctOrDash(payload.five_day_change_pct), toneOrEmpty(payload.five_day_change_pct), "Ending close vs five sessions prior"],
@@ -1468,48 +1494,83 @@ function renderModelPortfolio() {
     ["Turnover", `${number(stats.total_turnover_pct)}%`, "", `${number(stats.total_trades)} trades`],
     ["Closed win rate", pct(stats.closed_win_rate_pct), tone(stats.closed_win_rate_pct - 50), `Median ${pct(stats.median_closed_return_pct)}`],
     ["Concentration", `${number(stats.top_five_weight_pct)}%`, "", `Top five; largest sector ${number(stats.largest_sector_weight_pct)}%`],
+    ["BoC macro", escapeHtml(macro.classification || "neutral"), toneOrEmpty((Number(macro.score || 0))), `${escapeHtml(macro.rate_bias || "neutral")} bias; ${number(macro.equity_exposure_multiplier || 1)}x pending-order guide`],
+    ...(options.showDrawdownControls ? [
+      ["DD controls", number(stats.drawdown_control_actions), "", `${number(stats.open_positions_under_8pct_drawdown)} open names below -8% from peak`],
+    ] : []),
   ].map(([label, value, className, note]) => `
     <article class="diagnostic-card">
       <p class="eyebrow">${escapeHtml(label)}</p>
       <p class="value ${className}">${value}</p>
       <p class="muted">${note}</p>
     </article>`).join("");
-  $("#model-methodology").innerHTML = `
+  $(`#${prefix}-methodology`).innerHTML = `
     <strong>Rules:</strong> ${escapeHtml(methodology.weighting || "-")}
     <br>${number(methodology.maximum_positions)} positions maximum; ${number(methodology.maximum_name_weight_pct)}% name cap; ${number(methodology.maximum_sector_weight_pct)}% sector cap; ${number(methodology.rebalance_band_pct)}% rebalance band; ${number(methodology.exit_buffer_sessions)}-session exit buffer.
+    ${methodology.drawdown_overlay ? `<br><strong>Drawdown overlay:</strong> ${escapeHtml(methodology.drawdown_overlay.rule || "-")}` : ""}
+    <br><strong>Bank of Canada macro:</strong> ${escapeHtml(methodology.macro_overlay || "-")}
+    ${macro.latest_statement ? `<br><strong>Latest BoC item:</strong> ${escapeHtml(macro.latest_statement.title || "-")} (${escapeHtml(macro.latest_statement.published_date || "-")})` : ""}
     <br><strong>Timing:</strong> ${escapeHtml(methodology.execution_convention || "-")}
     <br><strong>Universe:</strong> ${escapeHtml(methodology.universe_convention || "-")}`;
-  $("#model-portfolio-chart").innerHTML = polyline(payload.series || [], "value");
-  $("#model-drawdown-chart").innerHTML = drawdownPolyline(payload.series || []);
-  $("#model-holding-rows").innerHTML = (payload.positions || []).map((row) => `
+  $(`#${prefix}-portfolio-chart`).innerHTML = polyline(payload.series || [], "value");
+  $(`#${prefix}-drawdown-chart`).innerHTML = drawdownPolyline(payload.series || []);
+  const drawdownBody = $(`#${prefix}-drawdown-rows`);
+  if (drawdownBody) {
+    drawdownBody.innerHTML = controlRows.map((row) => `
+      <tr>
+        <td><strong>${escapeHtml(row.ticker)}</strong></td>
+        <td class="${toneOrEmpty(row.current_drawdown_pct)}">${pctOrDash(row.current_drawdown_pct)}</td>
+        <td class="${toneOrEmpty(row.max_position_drawdown_pct)}">${pctOrDash(row.max_position_drawdown_pct)}</td>
+        <td class="${toneOrEmpty(row.average_daily_drawdown_pct)}">${pctOrDash(row.average_daily_drawdown_pct)}</td>
+        <td class="${toneOrEmpty(row.average_drawdown_sell_point_pct)}">${pctOrDash(row.average_drawdown_sell_point_pct)}</td>
+        <td>${escapeHtml(row.drawdown_control_reason || "Monitoring drawdown")}</td>
+      </tr>`).join("") || '<tr><td colspan="6">No current holdings are triggering drawdown controls.</td></tr>';
+  }
+  $(`#${prefix}-holding-rows`).innerHTML = (payload.positions || []).map((row) => `
     <tr>
       <td><strong>${escapeHtml(row.ticker)}</strong></td><td>${escapeHtml(row.sector || "-")}</td>
       <td>${escapeHtml(row.entry_signal || "-")}</td><td>${number(row.model_score)}</td>
       <td>${number(row.portfolio_weight_pct)}%</td><td>${money(row.current_value)}</td>
       <td class="${tone(row.gain_loss)}">${money(row.gain_loss)}</td><td class="${tone(row.return_pct)}">${pct(row.return_pct)}</td>
     </tr>`).join("") || '<tr><td colspan="8">No current holdings.</td></tr>';
-  $("#model-pending-rows").innerHTML = (payload.pending_next_close_orders || []).map((row) => `
+  $(`#${prefix}-pending-rows`).innerHTML = (payload.pending_next_close_orders || []).map((row) => `
     <tr><td>${escapeHtml(row.action)}</td><td><strong>${escapeHtml(row.ticker)}</strong></td>
       <td>${escapeHtml(row.entry_signal || "-")}</td><td>${number(row.model_score)}</td>
-      <td>${number(row.target_weight_pct)}%</td><td>${money(row.usd_amount)}</td>
+      <td>${number(row.target_weight_pct)}%</td><td>${money(row.usd_amount)}<br><span class="muted">BoC guide ${money(row.macro_adjusted_usd_amount ?? row.usd_amount)}</span></td>
       <td>${escapeHtml(row.signal_observed_date)}</td><td>${escapeHtml(row.reason || "-")}</td></tr>`).join("") || '<tr><td colspan="8">No next-close orders.</td></tr>';
-  $("#model-sector-rows").innerHTML = latestSectors.map((row) => `
+  $(`#${prefix}-sector-rows`).innerHTML = latestSectors.map((row) => `
     <tr><td>${escapeHtml(row.sector)}</td><td>${money(row.value)}</td><td>${number(row.weight_pct)}%</td></tr>`).join("") || '<tr><td colspan="3">No sector exposure.</td></tr>';
-  $("#model-rebalance-rows").innerHTML = [...(payload.daily_rebalances || [])].reverse().map((row) => `
+  $(`#${prefix}-rebalance-rows`).innerHTML = [...(payload.daily_rebalances || [])].reverse().map((row) => `
     <tr><td>${escapeHtml(row.date)}</td><td>${escapeHtml(row.signal_observed_date)}</td>
       <td>${number(row.buys)}</td><td>${number(row.sells)}</td><td>${money(row.traded_value)}</td>
       <td>${number(row.turnover_pct)}%</td><td>${number(row.position_count)}</td><td>${number(row.cash_pct)}%</td></tr>`).join("");
-  $("#model-trade-rows").innerHTML = [...(payload.trade_ledger || [])].reverse().map((row) => `
+  $(`#${prefix}-trade-rows`).innerHTML = [...(payload.trade_ledger || [])].reverse().map((row) => `
     <tr><td>${escapeHtml(row.date)}</td><td>${escapeHtml(row.signal_observed_date)}</td>
       <td>${escapeHtml(row.action)}</td><td><strong>${escapeHtml(row.ticker)}</strong></td>
       <td>${escapeHtml(row.entry_signal || "-")}</td><td>${number(row.model_score)}</td>
       <td>${money(row.usd_amount)}</td><td>${number(row.target_weight_pct)}%</td>
       <td class="${toneOrEmpty(row.realized_gain_loss)}">${row.realized_gain_loss === null || row.realized_gain_loss === undefined ? "-" : money(row.realized_gain_loss)}</td>
       <td>${escapeHtml(row.reason || "-")}</td></tr>`).join("");
-  $("#model-warning-list").innerHTML = (payload.warnings || []).map((warning) => `<li>${escapeHtml(warning)}</li>`).join("");
-  $("#model-portfolio-content").classList.remove("hidden");
-  $("#model-portfolio-status").textContent = `Loaded ${number(stats.available_universe_count)} point-in-time eligible stock histories.`;
+  $(`#${prefix}-warning-list`).innerHTML = (payload.warnings || []).map((warning) => `<li>${escapeHtml(warning)}</li>`).join("");
+  $(`#${prefix}-portfolio-content`).classList.remove("hidden");
+  $(`#${prefix}-portfolio-status`).textContent = `Loaded ${number(stats.available_universe_count)} point-in-time eligible stock histories.`;
   enableSorting();
+}
+
+function renderModelPortfolio() {
+  renderSystematicPortfolio(state.modelPortfolio, "model");
+}
+
+function renderModelPortfolioV2() {
+  renderSystematicPortfolio(state.modelPortfolioV2, "model2", { showDrawdownControls: true });
+}
+
+function renderModelPortfolioV3() {
+  renderSystematicPortfolio(state.modelPortfolioV3, "model3", { showDrawdownControls: true });
+}
+
+function renderModelPortfolioV4() {
+  renderSystematicPortfolio(state.modelPortfolioV4, "model4", { showDrawdownControls: true });
 }
 
 async function loadModelPortfolio(force = false) {
@@ -1528,6 +1589,69 @@ async function loadModelPortfolio(force = false) {
     renderModelPortfolio();
   } catch (error) {
     $("#model-portfolio-status").textContent = `Model portfolio failed: ${error.message}`;
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function loadModelPortfolioV2(force = false) {
+  const toDate = $("#to-date").value;
+  if (!toDate) return;
+  if (!force && state.modelPortfolioV2 && state.modelPortfolioV2ToDate === toDate) {
+    renderModelPortfolioV2();
+    return;
+  }
+  const button = $("#reload-model2-portfolio");
+  button.disabled = true;
+  $("#model2-portfolio-status").textContent = "Replaying drawdown-adjusted daily decisions from 2026-01-31...";
+  try {
+    state.modelPortfolioV2 = await fetchJson(`/api/model-portfolio-v2?to_date=${encodeURIComponent(toDate)}`);
+    state.modelPortfolioV2ToDate = toDate;
+    renderModelPortfolioV2();
+  } catch (error) {
+    $("#model2-portfolio-status").textContent = `Model 2.0 failed: ${error.message}`;
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function loadModelPortfolioV3(force = false) {
+  const toDate = $("#to-date").value;
+  if (!toDate) return;
+  if (!force && state.modelPortfolioV3 && state.modelPortfolioV3ToDate === toDate) {
+    renderModelPortfolioV3();
+    return;
+  }
+  const button = $("#reload-model3-portfolio");
+  button.disabled = true;
+  $("#model3-portfolio-status").textContent = "Replaying average-drawdown EOD decisions from 2026-01-31...";
+  try {
+    state.modelPortfolioV3 = await fetchJson(`/api/model-portfolio-v3?to_date=${encodeURIComponent(toDate)}`);
+    state.modelPortfolioV3ToDate = toDate;
+    renderModelPortfolioV3();
+  } catch (error) {
+    $("#model3-portfolio-status").textContent = `Model 3.0 failed: ${error.message}`;
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function loadModelPortfolioV4(force = false) {
+  const toDate = $("#to-date").value;
+  if (!toDate) return;
+  if (!force && state.modelPortfolioV4 && state.modelPortfolioV4ToDate === toDate) {
+    renderModelPortfolioV4();
+    return;
+  }
+  const button = $("#reload-model4-portfolio");
+  button.disabled = true;
+  $("#model4-portfolio-status").textContent = "Replaying intraday-proxy drawdown decisions from 2026-01-31...";
+  try {
+    state.modelPortfolioV4 = await fetchJson(`/api/model-portfolio-v4?to_date=${encodeURIComponent(toDate)}`);
+    state.modelPortfolioV4ToDate = toDate;
+    renderModelPortfolioV4();
+  } catch (error) {
+    $("#model4-portfolio-status").textContent = `Model 4.0 failed: ${error.message}`;
   } finally {
     button.disabled = false;
   }
@@ -1620,6 +1744,9 @@ function populateRiskPortfolioOptions() {
     .map((row) => ({ value: row.investor, label: row.investor }));
   const options = [
     { value: "systematic-model-portfolio", label: "Systematic Model Portfolio" },
+    { value: "systematic-model-portfolio-2", label: "Systematic Model Portfolio 2.0" },
+    { value: "systematic-model-portfolio-3", label: "Systematic Model Portfolio 3.0" },
+    { value: "systematic-model-portfolio-4", label: "Systematic Model Portfolio 4.0" },
     { value: "daily-eod-rotation-portfolio", label: "Daily EOD Rotation Portfolio" },
     ...primary,
   ];
@@ -2428,6 +2555,135 @@ function renderEod() {
   enableSorting();
 }
 
+function shortDateTime(value) {
+  if (!value) return "-";
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime())
+    ? escapeHtml(value)
+    : parsed.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
+function renderMarketNews() {
+  const payload = state.marketNews;
+  if (!payload) {
+    $("#market-news-status").textContent = state.overview ? "News has not been loaded yet." : "Load the dashboard first.";
+    $("#market-news-cards").innerHTML = "";
+    $("#market-topic-rows").innerHTML = "";
+    $("#market-hot-stock-rows").innerHTML = "";
+    $("#market-headline-rows").innerHTML = "";
+    $("#market-social-rows").innerHTML = "";
+    $("#market-news-source-rows").innerHTML = "";
+    return;
+  }
+  const sources = payload.sources || [];
+  const workingSources = sources.filter((row) => row.status === "ok").length;
+  $("#market-news-status").textContent = `Fetched ${shortDateTime(payload.fetched_at)} from ${workingSources}/${sources.length} working free sources.`;
+  $("#market-news-note").textContent = payload.note || "";
+  $("#market-news-cards").innerHTML = [
+    {
+      label: "Headlines",
+      value: number(payload.headline_count || (payload.headlines || []).length),
+      note: "Latest broad-market rows from free sources",
+      toneValue: payload.headline_count || 0,
+    },
+    {
+      label: "Hot topics",
+      value: number((payload.hot_topics || []).length),
+      note: "Theme matches in current headlines",
+      toneValue: (payload.hot_topics || []).length,
+    },
+    {
+      label: "Hot tracked stocks",
+      value: number((payload.hot_stocks || []).length),
+      note: "Tracked names with news/social attention",
+      toneValue: (payload.hot_stocks || []).length,
+    },
+    {
+      label: "Social mentions",
+      value: number((payload.social_mentions || []).length),
+      note: "Public Stocktwits trending symbols when available",
+      toneValue: (payload.social_mentions || []).length,
+    },
+  ].map((card) => `
+    <article class="summary-card">
+      <p class="eyebrow">${escapeHtml(card.label)}</p>
+      <p class="value ${tone(card.toneValue)}">${escapeHtml(card.value)}</p>
+      <p class="muted">${escapeHtml(card.note)}</p>
+    </article>`).join("");
+
+  $("#market-topic-rows").innerHTML = (payload.hot_topics || []).map((row) => `
+    <tr>
+      <td><strong>${escapeHtml(row.topic)}</strong></td>
+      <td>${number(row.mentions)}</td>
+      <td>${escapeHtml((row.tracked_tickers || []).join(", ") || "-")}</td>
+      <td>${escapeHtml(row.example_headline || "-")}</td>
+    </tr>`).join("");
+
+  $("#market-hot-stock-rows").innerHTML = (payload.hot_stocks || []).map((row) => `
+    <tr class="clickable" data-market-stock="${escapeHtml(row.ticker)}" title="${escapeHtml(row.example_headline || "")}">
+      <td>${tickerLabel(row.ticker)}</td>
+      <td>${number(row.score)}</td>
+      <td>${number(row.mentions)}</td>
+      <td>${row.social_rank || "-"}</td>
+      <td class="${toneOrEmpty(row.daily_change_pct)}">${pctOrDash(row.daily_change_pct)}</td>
+      <td class="${toneOrEmpty(row.five_day_change_pct)}">${pctOrDash(row.five_day_change_pct)}</td>
+      <td>${escapeHtml(row.signal || "none")}</td>
+    </tr>`).join("");
+
+  $("#market-headline-rows").innerHTML = (payload.headlines || []).map((row) => `
+    <tr>
+      <td><a href="${safeUrl(row.url)}" target="_blank" rel="noreferrer">${escapeHtml(row.headline)}</a></td>
+      <td>${escapeHtml(row.domain || row.source || "-")}</td>
+      <td>${shortDateTime(row.created_at)}</td>
+    </tr>`).join("");
+
+  $("#market-social-rows").innerHTML = (payload.social_mentions || []).map((row) => `
+    <tr class="${row.tracked ? "clickable" : ""}" ${row.tracked ? `data-market-stock="${escapeHtml(row.ticker)}"` : ""}>
+      <td>${row.rank || "-"}</td>
+      <td>${row.tracked ? tickerLabel(row.ticker) : `<strong>${escapeHtml(row.ticker || "-")}</strong>`}</td>
+      <td>${escapeHtml(row.title || "-")}</td>
+      <td>${row.tracked ? "Yes" : "No"}</td>
+      <td class="${toneOrEmpty(row.five_day_change_pct)}">${pctOrDash(row.five_day_change_pct)}</td>
+      <td>${escapeHtml((row.owners || []).join(", ") || "-")}</td>
+    </tr>`).join("");
+
+  $("#market-news-source-rows").innerHTML = sources.map((row) => `
+    <tr>
+      <td>${escapeHtml(row.source || "-")}</td>
+      <td>${escapeHtml(row.status || "-")}</td>
+      <td>${number(row.articles ?? row.symbols ?? row.videos ?? 0)}</td>
+      <td>${escapeHtml(row.detail || "")}</td>
+    </tr>`).join("");
+
+  document.querySelectorAll("[data-market-stock]").forEach((row) =>
+    row.addEventListener("click", () => openStock(row.dataset.marketStock))
+  );
+  enableSorting();
+}
+
+async function loadMarketNews(force = false) {
+  if (!state.overview) {
+    renderMarketNews();
+    return;
+  }
+  const requestKey = `${query()}`;
+  if (!force && state.marketNews && state.marketNewsRequestKey === requestKey) {
+    renderMarketNews();
+    return;
+  }
+  $("#market-news-status").textContent = "Loading free news and social mentions...";
+  $("#reload-market-news").disabled = true;
+  try {
+    state.marketNews = await fetchJson(`/api/market-news?${query()}`);
+    state.marketNewsRequestKey = requestKey;
+    renderMarketNews();
+  } catch (error) {
+    $("#market-news-status").textContent = error.message;
+  } finally {
+    $("#reload-market-news").disabled = false;
+  }
+}
+
 function renderSectors() {
   $("#sector-rows").innerHTML = (state.overview.sector_breakdowns || [])
     .map((row) => {
@@ -3230,6 +3486,12 @@ async function loadOverview() {
     state.overview = await fetchOverviewWithJob();
     state.modelPortfolio = null;
     state.modelPortfolioToDate = null;
+    state.modelPortfolioV2 = null;
+    state.modelPortfolioV2ToDate = null;
+    state.modelPortfolioV3 = null;
+    state.modelPortfolioV3ToDate = null;
+    state.modelPortfolioV4 = null;
+    state.modelPortfolioV4ToDate = null;
     state.dayRotationPortfolio = null;
     state.dayRotationToDate = null;
     state.riskPortfolio = null;
@@ -3246,6 +3508,8 @@ async function loadOverview() {
     state.strategySelectorRequestKey = null;
     state.automatedReview = null;
     state.automatedReviewRequestKey = null;
+    state.marketNews = null;
+    state.marketNewsRequestKey = null;
     updateLoading("Portfolio rankings and tracked instruments loaded. Refreshing paper-ledger portfolios...", 72);
     await refreshPaperLedgerPortfolios();
     updateLoading("Paper-ledger portfolios refreshed. Loading prior-close movers...", 75);
@@ -3279,6 +3543,15 @@ async function loadOverview() {
     if (activeDashboardTab() === "model-portfolio") {
       loadModelPortfolio().catch(() => {});
     }
+    if (activeDashboardTab() === "model-portfolio-v2") {
+      loadModelPortfolioV2().catch(() => {});
+    }
+    if (activeDashboardTab() === "model-portfolio-v3") {
+      loadModelPortfolioV3().catch(() => {});
+    }
+    if (activeDashboardTab() === "model-portfolio-v4") {
+      loadModelPortfolioV4().catch(() => {});
+    }
     if (activeDashboardTab() === "day-rotation") {
       loadDayRotationPortfolio().catch(() => {});
     }
@@ -3290,6 +3563,9 @@ async function loadOverview() {
     }
     if (activeDashboardTab() === "performance") {
       loadWealthPerformance().catch(() => {});
+    }
+    if (activeDashboardTab() === "market-news") {
+      loadMarketNews().catch(() => {});
     }
     if (activeDashboardTab() === "wealth-overview") {
       loadStrategySelector().catch(() => {});
@@ -3369,6 +3645,20 @@ async function init() {
       "daily-eod-movers",
       "Daily EOD Movers",
       [$("#eod-trader-rows")?.closest("table"), $("#eod-stock-rows")?.closest("table")]
+    );
+  });
+  $("#reload-market-news").addEventListener("click", () => loadMarketNews(true));
+  $("#export-market-news").addEventListener("click", () => {
+    downloadExcelTables(
+      "market-news-headlines",
+      "News Headlines and Social Mentions",
+      [
+        $("#market-topic-table"),
+        $("#market-hot-stock-table"),
+        $("#market-headline-table"),
+        $("#market-social-table"),
+        $("#market-news-source-table"),
+      ]
     );
   });
   $("#export-traders").addEventListener("click", () => {
@@ -3464,6 +3754,51 @@ async function init() {
         $("#model-sector-table"),
         $("#model-rebalance-table"),
         $("#model-trades-table"),
+      ]
+    );
+  });
+  $("#reload-model2-portfolio").addEventListener("click", () => loadModelPortfolioV2(true));
+  $("#export-model2-portfolio").addEventListener("click", () => {
+    downloadExcelTables(
+      "systematic-model-portfolio-2",
+      "Systematic Model Portfolio 2.0",
+      [
+        $("#model2-drawdown-table"),
+        $("#model2-pending-table"),
+        $("#model2-holdings-table"),
+        $("#model2-sector-table"),
+        $("#model2-rebalance-table"),
+        $("#model2-trades-table"),
+      ]
+    );
+  });
+  $("#reload-model3-portfolio").addEventListener("click", () => loadModelPortfolioV3(true));
+  $("#export-model3-portfolio").addEventListener("click", () => {
+    downloadExcelTables(
+      "systematic-model-portfolio-3",
+      "Systematic Model Portfolio 3.0",
+      [
+        $("#model3-drawdown-table"),
+        $("#model3-pending-table"),
+        $("#model3-holdings-table"),
+        $("#model3-sector-table"),
+        $("#model3-rebalance-table"),
+        $("#model3-trades-table"),
+      ]
+    );
+  });
+  $("#reload-model4-portfolio").addEventListener("click", () => loadModelPortfolioV4(true));
+  $("#export-model4-portfolio").addEventListener("click", () => {
+    downloadExcelTables(
+      "systematic-model-portfolio-4",
+      "Systematic Model Portfolio 4.0",
+      [
+        $("#model4-drawdown-table"),
+        $("#model4-pending-table"),
+        $("#model4-holdings-table"),
+        $("#model4-sector-table"),
+        $("#model4-rebalance-table"),
+        $("#model4-trades-table"),
       ]
     );
   });

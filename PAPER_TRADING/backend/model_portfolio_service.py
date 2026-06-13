@@ -324,23 +324,27 @@ def _average_drawdown_adjusted_weights(
     return adjusted
 
 
-def systematic_model_portfolio_response(end: date | None = None) -> dict[str, object]:
-    return _systematic_model_portfolio_response(end, risk_mode="base")
+def systematic_model_portfolio_response(end: date | None = None, start: date | None = None) -> dict[str, object]:
+    return _systematic_model_portfolio_response(end, risk_mode="base", selected_start=start)
 
 
-def systematic_model_portfolio_v2_response(end: date | None = None) -> dict[str, object]:
-    return _systematic_model_portfolio_response(end, risk_mode="v2")
+def systematic_model_portfolio_v2_response(end: date | None = None, start: date | None = None) -> dict[str, object]:
+    return _systematic_model_portfolio_response(end, risk_mode="v2", selected_start=start)
 
 
-def systematic_model_portfolio_v3_response(end: date | None = None) -> dict[str, object]:
-    return _systematic_model_portfolio_response(end, risk_mode="v3")
+def systematic_model_portfolio_v3_response(end: date | None = None, start: date | None = None) -> dict[str, object]:
+    return _systematic_model_portfolio_response(end, risk_mode="v3", selected_start=start)
 
 
-def systematic_model_portfolio_v4_response(end: date | None = None) -> dict[str, object]:
-    return _systematic_model_portfolio_response(end, risk_mode="v4")
+def systematic_model_portfolio_v4_response(end: date | None = None, start: date | None = None) -> dict[str, object]:
+    return _systematic_model_portfolio_response(end, risk_mode="v4", selected_start=start)
 
 
-def _systematic_model_portfolio_response(end: date | None = None, risk_mode: str = "base") -> dict[str, object]:
+def _systematic_model_portfolio_response(
+    end: date | None = None,
+    risk_mode: str = "base",
+    selected_start: date | None = None,
+) -> dict[str, object]:
     portfolio_name = {
         "base": MODEL_PORTFOLIO_NAME,
         "v2": MODEL_PORTFOLIO_V2_NAME,
@@ -356,6 +360,8 @@ def _systematic_model_portfolio_response(end: date | None = None, risk_mode: str
     sessions = [bar.day for bar in market_bars if VARIABLE_STRATEGY_START <= bar.day <= latest_market.day]
     if not sessions:
         raise ValueError("missing model portfolio market sessions")
+    if selected_start and selected_start > latest_market.day:
+        raise ValueError("model portfolio selected start must be on or before ending market date")
 
     latest_eligible = [row for row in universe if _asset_ever_available(row, latest_market.day)]
     charts: dict[str, tuple[object, ...]] = {}
@@ -833,14 +839,31 @@ def _systematic_model_portfolio_response(end: date | None = None, risk_mode: str
     closed_returns = [Decimal(str(row["return_pct"])) for row in realized_positions]
     top_five_weight = sum((Decimal(str(row["portfolio_weight_pct"])) for row in positions[:5]), Decimal("0"))
     latest_sectors = sector_exposure[-1]["sectors"] if sector_exposure else []
+    selected_start_day = selected_start or VARIABLE_STRATEGY_START
+    selected_start_row = next(
+        (
+            row
+            for row in series
+            if date.fromisoformat(str(row["date"])) >= selected_start_day
+        ),
+        series[0],
+    )
+    selected_start_value = Decimal(str(selected_start_row["value"]))
+    selected_return = pct_change(final_equity, selected_start_value)
     return {
         "portfolio_name": portfolio_name,
-        "from_date": VARIABLE_STRATEGY_START.isoformat(),
+        "from_date": selected_start_row["date"],
+        "inception_from_date": VARIABLE_STRATEGY_START.isoformat(),
         "to_date": latest_market.day.isoformat(),
         "initial_value": as_float(MODEL_INITIAL_CAPITAL),
+        "selected_start_value": as_float(selected_start_value),
+        "selected_gain_loss": as_float(final_equity - selected_start_value),
+        "selected_return_pct": as_float(selected_return),
         "current_value": as_float(final_equity),
         "gain_loss": as_float(final_equity - MODEL_INITIAL_CAPITAL),
-        "return_pct": as_float(pct_change(final_equity, MODEL_INITIAL_CAPITAL)),
+        "return_pct": as_float(selected_return),
+        "inception_gain_loss": as_float(final_equity - MODEL_INITIAL_CAPITAL),
+        "inception_return_pct": as_float(pct_change(final_equity, MODEL_INITIAL_CAPITAL)),
         **fixed_changes_from_series(series),
         "cash": as_float(cash),
         "cash_pct": as_float(cash / final_equity * 100) if final_equity else 0,

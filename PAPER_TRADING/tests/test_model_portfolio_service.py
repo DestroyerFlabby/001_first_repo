@@ -19,6 +19,7 @@ from backend.model_portfolio_service import (
     _drawdown_adjusted_weights,
     _select_candidates,
     _target_weights,
+    systematic_model_portfolio_response,
 )
 
 
@@ -156,3 +157,14 @@ def test_average_drawdown_overlay_exits_at_eod_sell_point() -> None:
 
     assert adjusted["AAA"] == Decimal("0")
     assert "average daily drawdown sell point" in holdings["AAA"]["drawdown_control_reason"]
+
+
+def test_model_response_reports_selected_window_return_separately() -> None:
+    inception = systematic_model_portfolio_response(date(2026, 6, 12), date(2026, 1, 31))
+    selected = systematic_model_portfolio_response(date(2026, 6, 12), date(2026, 5, 20))
+
+    assert inception["from_date"] == "2026-02-02"
+    assert selected["from_date"] == "2026-05-20"
+    assert selected["return_pct"] != selected["inception_return_pct"]
+    assert selected["inception_return_pct"] == inception["inception_return_pct"]
+    assert selected["selected_start_value"] != selected["initial_value"]

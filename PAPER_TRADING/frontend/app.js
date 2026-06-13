@@ -1478,12 +1478,16 @@ function renderSystematicPortfolio(payload, prefix, options = {}) {
   const benchmark = payload.benchmark_comparison || {};
   const methodology = payload.methodology || {};
   const macro = payload.macro_context || null;
+  const selectedLabel = payload.inception_from_date && payload.inception_from_date !== payload.from_date ? "Selected window" : "Return";
   const latestSectors = payload.sector_exposure?.at(-1)?.sectors || [];
   const controlRows = (payload.positions || [])
     .filter((row) => row.drawdown_control_reason || Number(row.current_drawdown_pct || 0) <= -8 || Number(row.max_position_drawdown_pct || 0) <= -12);
   $(`#${prefix}-portfolio-window`).textContent = `${payload.from_date} to ${payload.to_date}`;
   $(`#${prefix}-portfolio-summary`).innerHTML = [
-    ["Return", pct(payload.return_pct), tone(payload.return_pct), `${money(payload.gain_loss)} gain / loss`],
+    [selectedLabel, pct(payload.return_pct), tone(payload.return_pct), `${money(payload.selected_gain_loss ?? payload.gain_loss)} selected gain / loss`],
+    ...(payload.inception_return_pct === undefined ? [] : [
+      ["Since inception", pct(payload.inception_return_pct), tone(payload.inception_return_pct), `${money(payload.inception_gain_loss)} since ${escapeHtml(payload.inception_from_date)}`],
+    ]),
     ["Daily", pctOrDash(payload.daily_change_pct), toneOrEmpty(payload.daily_change_pct), "Ending close vs prior close"],
     ["5D", pctOrDash(payload.five_day_change_pct), toneOrEmpty(payload.five_day_change_pct), "Ending close vs five sessions prior"],
     ["Monthly", pctOrDash(payload.monthly_change_pct), toneOrEmpty(payload.monthly_change_pct), "Ending close vs monthly reference"],
@@ -1576,9 +1580,11 @@ function renderModelPortfolioV4() {
 }
 
 async function loadModelPortfolio(force = false) {
+  const fromDate = $("#from-date").value;
   const toDate = $("#to-date").value;
   if (!toDate) return;
-  if (!force && state.modelPortfolio && state.modelPortfolioToDate === toDate) {
+  const requestKey = `${fromDate || ""}|${toDate}`;
+  if (!force && state.modelPortfolio && state.modelPortfolioToDate === requestKey) {
     renderModelPortfolio();
     return;
   }
@@ -1586,8 +1592,8 @@ async function loadModelPortfolio(force = false) {
   button.disabled = true;
   $("#model-portfolio-status").textContent = "Replaying daily point-in-time decisions from 2026-01-31...";
   try {
-    state.modelPortfolio = await fetchJson(`/api/model-portfolio?to_date=${encodeURIComponent(toDate)}`);
-    state.modelPortfolioToDate = toDate;
+    state.modelPortfolio = await fetchJson(`/api/model-portfolio?from_date=${encodeURIComponent(fromDate)}&to_date=${encodeURIComponent(toDate)}`);
+    state.modelPortfolioToDate = requestKey;
     renderModelPortfolio();
   } catch (error) {
     $("#model-portfolio-status").textContent = `Model portfolio failed: ${error.message}`;
@@ -1597,9 +1603,11 @@ async function loadModelPortfolio(force = false) {
 }
 
 async function loadModelPortfolioV2(force = false) {
+  const fromDate = $("#from-date").value;
   const toDate = $("#to-date").value;
   if (!toDate) return;
-  if (!force && state.modelPortfolioV2 && state.modelPortfolioV2ToDate === toDate) {
+  const requestKey = `${fromDate || ""}|${toDate}`;
+  if (!force && state.modelPortfolioV2 && state.modelPortfolioV2ToDate === requestKey) {
     renderModelPortfolioV2();
     return;
   }
@@ -1607,8 +1615,8 @@ async function loadModelPortfolioV2(force = false) {
   button.disabled = true;
   $("#model2-portfolio-status").textContent = "Replaying drawdown-adjusted daily decisions from 2026-01-31...";
   try {
-    state.modelPortfolioV2 = await fetchJson(`/api/model-portfolio-v2?to_date=${encodeURIComponent(toDate)}`);
-    state.modelPortfolioV2ToDate = toDate;
+    state.modelPortfolioV2 = await fetchJson(`/api/model-portfolio-v2?from_date=${encodeURIComponent(fromDate)}&to_date=${encodeURIComponent(toDate)}`);
+    state.modelPortfolioV2ToDate = requestKey;
     renderModelPortfolioV2();
   } catch (error) {
     $("#model2-portfolio-status").textContent = `Model 2.0 failed: ${error.message}`;
@@ -1618,9 +1626,11 @@ async function loadModelPortfolioV2(force = false) {
 }
 
 async function loadModelPortfolioV3(force = false) {
+  const fromDate = $("#from-date").value;
   const toDate = $("#to-date").value;
   if (!toDate) return;
-  if (!force && state.modelPortfolioV3 && state.modelPortfolioV3ToDate === toDate) {
+  const requestKey = `${fromDate || ""}|${toDate}`;
+  if (!force && state.modelPortfolioV3 && state.modelPortfolioV3ToDate === requestKey) {
     renderModelPortfolioV3();
     return;
   }
@@ -1628,8 +1638,8 @@ async function loadModelPortfolioV3(force = false) {
   button.disabled = true;
   $("#model3-portfolio-status").textContent = "Replaying average-drawdown EOD decisions from 2026-01-31...";
   try {
-    state.modelPortfolioV3 = await fetchJson(`/api/model-portfolio-v3?to_date=${encodeURIComponent(toDate)}`);
-    state.modelPortfolioV3ToDate = toDate;
+    state.modelPortfolioV3 = await fetchJson(`/api/model-portfolio-v3?from_date=${encodeURIComponent(fromDate)}&to_date=${encodeURIComponent(toDate)}`);
+    state.modelPortfolioV3ToDate = requestKey;
     renderModelPortfolioV3();
   } catch (error) {
     $("#model3-portfolio-status").textContent = `Model 3.0 failed: ${error.message}`;
@@ -1639,9 +1649,11 @@ async function loadModelPortfolioV3(force = false) {
 }
 
 async function loadModelPortfolioV4(force = false) {
+  const fromDate = $("#from-date").value;
   const toDate = $("#to-date").value;
   if (!toDate) return;
-  if (!force && state.modelPortfolioV4 && state.modelPortfolioV4ToDate === toDate) {
+  const requestKey = `${fromDate || ""}|${toDate}`;
+  if (!force && state.modelPortfolioV4 && state.modelPortfolioV4ToDate === requestKey) {
     renderModelPortfolioV4();
     return;
   }
@@ -1649,8 +1661,8 @@ async function loadModelPortfolioV4(force = false) {
   button.disabled = true;
   $("#model4-portfolio-status").textContent = "Replaying intraday-proxy drawdown decisions from 2026-01-31...";
   try {
-    state.modelPortfolioV4 = await fetchJson(`/api/model-portfolio-v4?to_date=${encodeURIComponent(toDate)}`);
-    state.modelPortfolioV4ToDate = toDate;
+    state.modelPortfolioV4 = await fetchJson(`/api/model-portfolio-v4?from_date=${encodeURIComponent(fromDate)}&to_date=${encodeURIComponent(toDate)}`);
+    state.modelPortfolioV4ToDate = requestKey;
     renderModelPortfolioV4();
   } catch (error) {
     $("#model4-portfolio-status").textContent = `Model 4.0 failed: ${error.message}`;

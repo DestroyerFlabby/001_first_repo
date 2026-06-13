@@ -593,44 +593,52 @@ def bank_of_canada_macro(
 
 @app.get("/api/model-portfolio")
 def model_portfolio(
+    from_date: str | None = Query(default=None),
     to_date: str | None = Query(default=None),
 ) -> dict[str, object]:
     try:
+        start = parse_date(from_date) if from_date else None
         end = parse_date(to_date) if to_date else latest_market_date()
-        return systematic_model_portfolio_response(end)
+        return systematic_model_portfolio_response(end, start)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.get("/api/model-portfolio-v2")
 def model_portfolio_v2(
+    from_date: str | None = Query(default=None),
     to_date: str | None = Query(default=None),
 ) -> dict[str, object]:
     try:
+        start = parse_date(from_date) if from_date else None
         end = parse_date(to_date) if to_date else latest_market_date()
-        return systematic_model_portfolio_v2_response(end)
+        return systematic_model_portfolio_v2_response(end, start)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.get("/api/model-portfolio-v3")
 def model_portfolio_v3(
+    from_date: str | None = Query(default=None),
     to_date: str | None = Query(default=None),
 ) -> dict[str, object]:
     try:
+        start = parse_date(from_date) if from_date else None
         end = parse_date(to_date) if to_date else latest_market_date()
-        return systematic_model_portfolio_v3_response(end)
+        return systematic_model_portfolio_v3_response(end, start)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.get("/api/model-portfolio-v4")
 def model_portfolio_v4(
+    from_date: str | None = Query(default=None),
     to_date: str | None = Query(default=None),
 ) -> dict[str, object]:
     try:
+        start = parse_date(from_date) if from_date else None
         end = parse_date(to_date) if to_date else latest_market_date()
-        return systematic_model_portfolio_v4_response(end)
+        return systematic_model_portfolio_v4_response(end, start)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

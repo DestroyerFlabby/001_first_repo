@@ -795,8 +795,8 @@ def _systematic_model_portfolio_response(end: date | None = None, risk_mode: str
 
     latest_selected, latest_weights = portfolio_targets(latest_market.day, holdings, update_streaks=False)
     latest_by_ticker = {str(row["ticker"]): row for row in latest_selected}
-    macro_context = bank_of_canada_macro_context(latest_market.day)
-    macro_multiplier = Decimal(str(macro_context.get("equity_exposure_multiplier") or 1))
+    macro_context = bank_of_canada_macro_context(latest_market.day) if risk_mode != "base" else None
+    macro_multiplier = Decimal(str(macro_context.get("equity_exposure_multiplier") or 1)) if macro_context else Decimal("1")
     pending_orders: list[dict[str, object]] = []
     for ticker in sorted(set(holdings) | set(latest_weights)):
         price_bar = on_or_before(charts[ticker], latest_market.day)
@@ -854,14 +854,20 @@ def _systematic_model_portfolio_response(end: date | None = None, risk_mode: str
         "sector_exposure": sector_exposure,
         "signal_mix": signal_mix,
         "benchmark_comparison": benchmark,
-        "macro_context": {
-            **macro_context,
-            "portfolio_use": (
-                "Shown as a current macro overlay for all model portfolios. Historical trades stay "
-                "point-in-time; pending next-close orders include a suggested macro-adjusted dollar amount, "
-                "while base portfolio return statistics remain pre-overlay."
-            ),
-        },
+        **(
+            {
+                "macro_context": {
+                    **macro_context,
+                    "portfolio_use": (
+                        "Shown as a current macro overlay for Model 2.0+ portfolios. Historical trades stay "
+                        "point-in-time; pending next-close orders include a suggested macro-adjusted dollar amount, "
+                        "while base portfolio return statistics remain pre-overlay."
+                    ),
+                }
+            }
+            if macro_context
+            else {}
+        ),
         "statistics": {
             "total_trades": len(trade_ledger),
             "total_turnover_pct": as_float(total_traded / MODEL_INITIAL_CAPITAL * 100),
@@ -903,11 +909,17 @@ def _systematic_model_portfolio_response(end: date | None = None, risk_mode: str
             "exit_buffer_sessions": MODEL_EXIT_BUFFER_SESSIONS,
             "execution_convention": "Observe only information available through one market close; execute generated dollar orders at the next available close.",
             "universe_convention": "Stocks become eligible no earlier than asset_universe.added_at and require strategy_eligible=true.",
-            "macro_overlay": (
-                "Official Bank of Canada RSS feeds are scored for easing, tightening, risk, and growth language. "
-                "The latest dated context is included in each model response. Pending orders show a suggested "
-                "macro-adjusted dollar amount, but historical returns remain base-model returns unless a future "
-                "model explicitly applies the dated macro overlay during replay."
+            **(
+                {
+                    "macro_overlay": (
+                        "Official Bank of Canada RSS feeds are scored for easing, tightening, risk, and growth language. "
+                        "The latest dated context is included in Model 2.0+ responses. Pending orders show a suggested "
+                        "macro-adjusted dollar amount, but historical returns remain base-model returns unless a future "
+                        "model explicitly applies the dated macro overlay during replay."
+                    )
+                }
+                if risk_mode != "base"
+                else {}
             ),
             "weighting": {
                 "base": "Diversified score tilt: signal strength, relative strength, volume, trend confirmation, news activity, and volatility control.",

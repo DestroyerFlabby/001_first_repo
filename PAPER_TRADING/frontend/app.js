@@ -1477,7 +1477,7 @@ function renderSystematicPortfolio(payload, prefix, options = {}) {
   const stats = payload.statistics || {};
   const benchmark = payload.benchmark_comparison || {};
   const methodology = payload.methodology || {};
-  const macro = payload.macro_context || {};
+  const macro = payload.macro_context || null;
   const latestSectors = payload.sector_exposure?.at(-1)?.sectors || [];
   const controlRows = (payload.positions || [])
     .filter((row) => row.drawdown_control_reason || Number(row.current_drawdown_pct || 0) <= -8 || Number(row.max_position_drawdown_pct || 0) <= -12);
@@ -1494,7 +1494,9 @@ function renderSystematicPortfolio(payload, prefix, options = {}) {
     ["Turnover", `${number(stats.total_turnover_pct)}%`, "", `${number(stats.total_trades)} trades`],
     ["Closed win rate", pct(stats.closed_win_rate_pct), tone(stats.closed_win_rate_pct - 50), `Median ${pct(stats.median_closed_return_pct)}`],
     ["Concentration", `${number(stats.top_five_weight_pct)}%`, "", `Top five; largest sector ${number(stats.largest_sector_weight_pct)}%`],
-    ["BoC macro", escapeHtml(macro.classification || "neutral"), toneOrEmpty((Number(macro.score || 0))), `${escapeHtml(macro.rate_bias || "neutral")} bias; ${number(macro.equity_exposure_multiplier || 1)}x pending-order guide`],
+    ...(macro ? [
+      ["BoC macro", escapeHtml(macro.classification || "neutral"), toneOrEmpty((Number(macro.score || 0))), `${escapeHtml(macro.rate_bias || "neutral")} bias; ${number(macro.equity_exposure_multiplier || 1)}x pending-order guide`],
+    ] : []),
     ...(options.showDrawdownControls ? [
       ["DD controls", number(stats.drawdown_control_actions), "", `${number(stats.open_positions_under_8pct_drawdown)} open names below -8% from peak`],
     ] : []),
@@ -1508,8 +1510,8 @@ function renderSystematicPortfolio(payload, prefix, options = {}) {
     <strong>Rules:</strong> ${escapeHtml(methodology.weighting || "-")}
     <br>${number(methodology.maximum_positions)} positions maximum; ${number(methodology.maximum_name_weight_pct)}% name cap; ${number(methodology.maximum_sector_weight_pct)}% sector cap; ${number(methodology.rebalance_band_pct)}% rebalance band; ${number(methodology.exit_buffer_sessions)}-session exit buffer.
     ${methodology.drawdown_overlay ? `<br><strong>Drawdown overlay:</strong> ${escapeHtml(methodology.drawdown_overlay.rule || "-")}` : ""}
-    <br><strong>Bank of Canada macro:</strong> ${escapeHtml(methodology.macro_overlay || "-")}
-    ${macro.latest_statement ? `<br><strong>Latest BoC item:</strong> ${escapeHtml(macro.latest_statement.title || "-")} (${escapeHtml(macro.latest_statement.published_date || "-")})` : ""}
+    ${macro ? `<br><strong>Bank of Canada macro:</strong> ${escapeHtml(methodology.macro_overlay || "-")}` : ""}
+    ${macro?.latest_statement ? `<br><strong>Latest BoC item:</strong> ${escapeHtml(macro.latest_statement.title || "-")} (${escapeHtml(macro.latest_statement.published_date || "-")})` : ""}
     <br><strong>Timing:</strong> ${escapeHtml(methodology.execution_convention || "-")}
     <br><strong>Universe:</strong> ${escapeHtml(methodology.universe_convention || "-")}`;
   $(`#${prefix}-portfolio-chart`).innerHTML = polyline(payload.series || [], "value");
@@ -1536,7 +1538,7 @@ function renderSystematicPortfolio(payload, prefix, options = {}) {
   $(`#${prefix}-pending-rows`).innerHTML = (payload.pending_next_close_orders || []).map((row) => `
     <tr><td>${escapeHtml(row.action)}</td><td><strong>${escapeHtml(row.ticker)}</strong></td>
       <td>${escapeHtml(row.entry_signal || "-")}</td><td>${number(row.model_score)}</td>
-      <td>${number(row.target_weight_pct)}%</td><td>${money(row.usd_amount)}<br><span class="muted">BoC guide ${money(row.macro_adjusted_usd_amount ?? row.usd_amount)}</span></td>
+      <td>${number(row.target_weight_pct)}%</td><td>${money(row.usd_amount)}${row.macro_adjusted_usd_amount === undefined ? "" : `<br><span class="muted">BoC guide ${money(row.macro_adjusted_usd_amount)}</span>`}</td>
       <td>${escapeHtml(row.signal_observed_date)}</td><td>${escapeHtml(row.reason || "-")}</td></tr>`).join("") || '<tr><td colspan="8">No next-close orders.</td></tr>';
   $(`#${prefix}-sector-rows`).innerHTML = latestSectors.map((row) => `
     <tr><td>${escapeHtml(row.sector)}</td><td>${money(row.value)}</td><td>${number(row.weight_pct)}%</td></tr>`).join("") || '<tr><td colspan="3">No sector exposure.</td></tr>';

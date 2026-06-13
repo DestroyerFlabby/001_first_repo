@@ -24,6 +24,7 @@
 "ANET","stock","","","","","trades.csv","active","true","true","false","unknown","2026-01-01","","Seeded from existing paper-trading ledger"
 "AAPL","stock","","","","","trades.csv","active","true","true","false","unknown","2026-01-01","","Seeded from existing paper-trading ledger"
 "INTC","stock","","","","","trades.csv","active","true","true","false","unknown","2026-05-20","","Seeded from existing paper-trading ledger"
+"GAP","stock","","","Consumer Discretionary","retail turnaround","trades.csv","active","true","true","false","unknown","2026-05-20","","Added by user as GPS request; Gap Inc. changed ticker from GPS to GAP in 2024"
 "MCHI","etf","","","","","trades.csv","active","true","true","false","unknown","2026-01-01","","Seeded from existing paper-trading ledger"
 "UMAC","stock","","","","","trades.csv","active","true","true","false","unknown","2026-05-29","","Seeded from existing paper-trading ledger"
 "ACLS","stock","","","","","trades.csv","active","true","true","false","unknown","2026-05-20","","Seeded from existing paper-trading ledger"

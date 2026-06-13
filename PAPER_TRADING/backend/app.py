@@ -57,8 +57,14 @@ from backend.automated_wealth_review_service import automated_wealth_review_resp
 from backend.email_service import send_daily_instructions  # noqa: E402
 from backend.day_rotation_service import daily_rotation_portfolio_response  # noqa: E402
 from backend.external_portfolio_service import external_portfolio_response  # noqa: E402
-from backend.model_portfolio_service import systematic_model_portfolio_response  # noqa: E402
-from backend.news_service import news_summary  # noqa: E402
+from backend.macro_statement_service import bank_of_canada_macro_context  # noqa: E402
+from backend.model_portfolio_service import (  # noqa: E402
+    systematic_model_portfolio_response,
+    systematic_model_portfolio_v2_response,
+    systematic_model_portfolio_v3_response,
+    systematic_model_portfolio_v4_response,
+)
+from backend.news_service import market_news_dashboard, news_summary  # noqa: E402
 from backend.performance_service import portfolio_performance_response  # noqa: E402
 from backend.research_service import research_index_response, research_note_response  # noqa: E402
 from backend.rebalance_service import rebalance_preview, rebalance_profiles_response  # noqa: E402
@@ -574,6 +580,17 @@ def external_portfolios() -> dict[str, object]:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
+@app.get("/api/macro/bank-of-canada")
+def bank_of_canada_macro(
+    as_of: str | None = Query(default=None),
+) -> dict[str, object]:
+    try:
+        resolved_as_of = parse_date(as_of) if as_of else latest_market_date()
+        return bank_of_canada_macro_context(resolved_as_of)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
 @app.get("/api/model-portfolio")
 def model_portfolio(
     to_date: str | None = Query(default=None),
@@ -581,6 +598,39 @@ def model_portfolio(
     try:
         end = parse_date(to_date) if to_date else latest_market_date()
         return systematic_model_portfolio_response(end)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/api/model-portfolio-v2")
+def model_portfolio_v2(
+    to_date: str | None = Query(default=None),
+) -> dict[str, object]:
+    try:
+        end = parse_date(to_date) if to_date else latest_market_date()
+        return systematic_model_portfolio_v2_response(end)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/api/model-portfolio-v3")
+def model_portfolio_v3(
+    to_date: str | None = Query(default=None),
+) -> dict[str, object]:
+    try:
+        end = parse_date(to_date) if to_date else latest_market_date()
+        return systematic_model_portfolio_v3_response(end)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/api/model-portfolio-v4")
+def model_portfolio_v4(
+    to_date: str | None = Query(default=None),
+) -> dict[str, object]:
+    try:
+        end = parse_date(to_date) if to_date else latest_market_date()
+        return systematic_model_portfolio_v4_response(end)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -601,6 +651,9 @@ def strategy_selector_candidates(start: date, end: date, wealthsimple_fx_fees: b
     warnings: list[str] = []
     for strategy_id, builder in [
         ("systematic-model-portfolio", lambda: systematic_model_portfolio_response(end)),
+        ("systematic-model-portfolio-2", lambda: systematic_model_portfolio_v2_response(end)),
+        ("systematic-model-portfolio-3", lambda: systematic_model_portfolio_v3_response(end)),
+        ("systematic-model-portfolio-4", lambda: systematic_model_portfolio_v4_response(end)),
         ("daily-eod-rotation-portfolio", lambda: daily_rotation_portfolio_response(end)),
     ]:
         try:
@@ -686,6 +739,12 @@ def wealth_portfolio_detail(
 ) -> dict[str, object]:
     if portfolio == "systematic-model-portfolio":
         return systematic_model_portfolio_response(end)
+    if portfolio == "systematic-model-portfolio-2":
+        return systematic_model_portfolio_v2_response(end)
+    if portfolio == "systematic-model-portfolio-3":
+        return systematic_model_portfolio_v3_response(end)
+    if portfolio == "systematic-model-portfolio-4":
+        return systematic_model_portfolio_v4_response(end)
     if portfolio == "daily-eod-rotation-portfolio":
         return daily_rotation_portfolio_response(end)
     return trader_detail(portfolio, start, end, wealthsimple_fx_fees)
@@ -923,6 +982,18 @@ def get_stock(
 @app.get("/api/stocks/{ticker}/news")
 def get_stock_news(ticker: str) -> dict[str, object]:
     return news_summary(ticker)
+
+
+@app.get("/api/market-news")
+def market_news(
+    from_date: str | None = Query(default=None),
+    to_date: str | None = Query(default=None),
+    wealthsimple_fx_fees: bool = Query(default=False),
+) -> dict[str, object]:
+    start, end = window(from_date, to_date)
+    resolved_end = end or latest_market_date()
+    overview_payload = cached_or_build_overview(start, resolved_end, wealthsimple_fx_fees)
+    return market_news_dashboard(overview_payload)
 
 
 @app.get("/")

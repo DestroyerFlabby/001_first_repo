@@ -22,11 +22,15 @@ from backend.dashboard_service import (
     sector_for_asset,
     yahoo_symbol,
 )
+from backend.macro_statement_service import bank_of_canada_macro_context
 from backend.news_strategy import load_daily_news_counts, news_metrics
 from backend.universe_service import read_asset_universe
 
 
 MODEL_PORTFOLIO_NAME = "systematic-model-portfolio"
+MODEL_PORTFOLIO_V2_NAME = "systematic-model-portfolio-2"
+MODEL_PORTFOLIO_V3_NAME = "systematic-model-portfolio-3"
+MODEL_PORTFOLIO_V4_NAME = "systematic-model-portfolio-4"
 MODEL_INITIAL_CAPITAL = Decimal("100000")
 MODEL_INVESTED_TARGET = Decimal("0.95")
 MODEL_MAX_POSITIONS = 25
@@ -37,6 +41,14 @@ MODEL_REBALANCE_BAND = Decimal("0.03")
 MODEL_MIN_SCORE = Decimal("50")
 MODEL_NEAR_MIN_SCORE = Decimal("75")
 MODEL_EXIT_BUFFER_SESSIONS = 10
+MODEL_V2_SOFT_DRAWDOWN = Decimal("-8")
+MODEL_V2_MEDIUM_DRAWDOWN = Decimal("-12")
+MODEL_V2_HARD_DRAWDOWN = Decimal("-18")
+MODEL_V2_HIGH_VOLATILITY = Decimal("80")
+MODEL_V3_MIN_SELL_DRAWDOWN = Decimal("-7")
+MODEL_V3_MAX_SELL_DRAWDOWN = Decimal("-20")
+MODEL_V3_DRAWDOWN_MULTIPLIER = Decimal("2.50")
+MODEL_V4_INTRADAY_PROXY_MULTIPLIER = Decimal("0.75")
 
 
 def _asset_available(row: dict[str, object], observed_day: date) -> bool:
@@ -111,6 +123,15 @@ def _candidate_score(
     }
 
 
+def _horizon_value(signal: dict[str, object], horizon: str, key: str, default: str = "0") -> Decimal:
+    horizons = signal.get("horizons", {}) if isinstance(signal.get("horizons"), dict) else {}
+    row = horizons.get(horizon, {}) if isinstance(horizons.get(horizon), dict) else {}
+    try:
+        return Decimal(str(row.get(key, default)))
+    except Exception:
+        return Decimal(default)
+
+
 def _select_candidates(rows: list[dict[str, object]]) -> list[dict[str, object]]:
     ranked = sorted(rows, key=lambda row: (Decimal(str(row["model_score"])), str(row["ticker"])), reverse=True)
     selected: list[dict[str, object]] = []
@@ -169,7 +190,163 @@ def _target_weights(rows: list[dict[str, object]]) -> dict[str, Decimal]:
     return weights
 
 
+def _position_drawdown_pct(
+    ticker: str,
+    holding: dict[str, object],
+    observed_day: date,
+    charts: dict[str, tuple[object, ...]],
+) -> Decimal:
+    price_bar = on_or_before(charts[ticker], observed_day)
+    if not price_bar:
+        return Decimal("0")
+    peak_price = Decimal(str(holding.get("peak_price") or price_bar.close))
+    if peak_price <= 0:
+        return Decimal("0")
+    return pct_change(price_bar.close, peak_price)
+
+
+def _drawdown_adjusted_weights(
+    observed_day: date,
+    selected: list[dict[str, object]],
+    weights: dict[str, Decimal],
+    current_holdings: dict[str, dict[str, object]],
+    charts: dict[str, tuple[object, ...]],
+) -> dict[str, Decimal]:
+    selected_by_ticker = {str(row["ticker"]): row for row in selected}
+    adjusted = dict(weights)
+    for ticker, holding in current_holdings.items():
+        if ticker not in adjusted:
+            continue
+        row = selected_by_ticker.get(ticker, {})
+        drawdown_pct = _position_drawdown_pct(ticker, holding, observed_day, charts)
+        volume_ratio = Decimal(str(row.get("five_day_volume_ratio", 1)))
+        one_month_relative = Decimal(str(row.get("one_month_relative_strength_pct", 0)))
+        signal = str(row.get("entry_signal") or holding.get("entry_signal") or "")
+        news_active = bool(row.get("news_active"))
+        news_accelerating = bool(row.get("news_accelerating"))
+        strong_support = (
+            signal in {"fresh", "strict"}
+            and volume_ratio >= Decimal("1.15")
+            and one_month_relative >= Decimal("0")
+            and (news_active or news_accelerating)
+        )
+        weak_confirmation = volume_ratio < Decimal("1") or one_month_relative < Decimal("-3")
+        reason = ""
+        if drawdown_pct <= MODEL_V2_HARD_DRAWDOWN and not strong_support:
+            adjusted[ticker] = Decimal("0")
+            reason = "hard drawdown exit: position drawdown lacks fresh/strict signal, volume, momentum, and news support"
+        elif drawdown_pct <= MODEL_V2_MEDIUM_DRAWDOWN and (weak_confirmation or not news_active):
+            adjusted[ticker] *= Decimal("0.50")
+            reason = "medium drawdown trim: confirmation weakened"
+        elif drawdown_pct <= MODEL_V2_SOFT_DRAWDOWN and weak_confirmation:
+            adjusted[ticker] *= Decimal("0.75")
+            reason = "soft drawdown trim: weak volume or one-month relative strength"
+        if reason:
+            holding["drawdown_control_reason"] = reason
+            holding["drawdown_control_observed_date"] = observed_day.isoformat()
+            holding["drawdown_control_drawdown_pct"] = as_float(drawdown_pct)
+            holding["drawdown_control_target_weight_pct"] = as_float(adjusted[ticker] * 100)
+
+    for row in selected:
+        ticker = str(row["ticker"])
+        if ticker in current_holdings or ticker not in adjusted:
+            continue
+        volatility = Decimal(str(row.get("score_components", {}).get("annualized_volatility_pct", 0)))
+        if volatility >= MODEL_V2_HIGH_VOLATILITY and str(row.get("entry_signal")) == "near":
+            adjusted[ticker] *= Decimal("0.50")
+    return adjusted
+
+
+def _average_daily_drawdown_pct(holding: dict[str, object]) -> Decimal:
+    values = [
+        Decimal(str(value))
+        for value in holding.get("daily_adverse_moves_pct", [])
+        if Decimal(str(value)) < 0
+    ]
+    if not values:
+        return Decimal("-3")
+    return sum(values, Decimal("0")) / Decimal(len(values))
+
+
+def _average_drawdown_sell_point_pct(holding: dict[str, object], intraday_proxy: bool = False) -> Decimal:
+    average_adverse = _average_daily_drawdown_pct(holding)
+    threshold = average_adverse * MODEL_V3_DRAWDOWN_MULTIPLIER
+    threshold = max(MODEL_V3_MAX_SELL_DRAWDOWN, min(MODEL_V3_MIN_SELL_DRAWDOWN, threshold))
+    if intraday_proxy:
+        threshold *= MODEL_V4_INTRADAY_PROXY_MULTIPLIER
+    return threshold
+
+
+def _average_drawdown_adjusted_weights(
+    observed_day: date,
+    selected: list[dict[str, object]],
+    weights: dict[str, Decimal],
+    current_holdings: dict[str, dict[str, object]],
+    charts: dict[str, tuple[object, ...]],
+    intraday_proxy: bool = False,
+) -> dict[str, Decimal]:
+    adjusted = _drawdown_adjusted_weights(observed_day, selected, weights, current_holdings, charts)
+    selected_by_ticker = {str(row["ticker"]): row for row in selected}
+    for ticker, holding in current_holdings.items():
+        if ticker not in adjusted:
+            continue
+        row = selected_by_ticker.get(ticker, {})
+        drawdown_pct = _position_drawdown_pct(ticker, holding, observed_day, charts)
+        sell_point = _average_drawdown_sell_point_pct(holding, intraday_proxy=intraday_proxy)
+        volume_ratio = Decimal(str(row.get("five_day_volume_ratio", 1)))
+        one_month_relative = Decimal(str(row.get("one_month_relative_strength_pct", 0)))
+        news_active = bool(row.get("news_active"))
+        signal = str(row.get("entry_signal") or holding.get("entry_signal") or "")
+        weak_confirmation = volume_ratio < Decimal("1.05") or one_month_relative < Decimal("0") or signal == "near"
+        reason = ""
+        if drawdown_pct <= sell_point and (weak_confirmation or not news_active):
+            adjusted[ticker] = Decimal("0")
+            reason = (
+                "average daily drawdown sell point"
+                if not intraday_proxy
+                else "intraday proxy drawdown sell point"
+            )
+        elif drawdown_pct <= sell_point * Decimal("0.80") and weak_confirmation:
+            adjusted[ticker] *= Decimal("0.50")
+            reason = (
+                "average daily drawdown trim point"
+                if not intraday_proxy
+                else "intraday proxy drawdown trim point"
+            )
+        if reason:
+            holding["drawdown_control_reason"] = (
+                f"{reason}: current {as_float(drawdown_pct)}% vs sell point {as_float(sell_point)}%"
+            )
+            holding["drawdown_control_observed_date"] = observed_day.isoformat()
+            holding["drawdown_control_drawdown_pct"] = as_float(drawdown_pct)
+            holding["drawdown_control_sell_point_pct"] = as_float(sell_point)
+            holding["drawdown_control_target_weight_pct"] = as_float(adjusted[ticker] * 100)
+    return adjusted
+
+
 def systematic_model_portfolio_response(end: date | None = None) -> dict[str, object]:
+    return _systematic_model_portfolio_response(end, risk_mode="base")
+
+
+def systematic_model_portfolio_v2_response(end: date | None = None) -> dict[str, object]:
+    return _systematic_model_portfolio_response(end, risk_mode="v2")
+
+
+def systematic_model_portfolio_v3_response(end: date | None = None) -> dict[str, object]:
+    return _systematic_model_portfolio_response(end, risk_mode="v3")
+
+
+def systematic_model_portfolio_v4_response(end: date | None = None) -> dict[str, object]:
+    return _systematic_model_portfolio_response(end, risk_mode="v4")
+
+
+def _systematic_model_portfolio_response(end: date | None = None, risk_mode: str = "base") -> dict[str, object]:
+    portfolio_name = {
+        "base": MODEL_PORTFOLIO_NAME,
+        "v2": MODEL_PORTFOLIO_V2_NAME,
+        "v3": MODEL_PORTFOLIO_V3_NAME,
+        "v4": MODEL_PORTFOLIO_V4_NAME,
+    }.get(risk_mode, MODEL_PORTFOLIO_NAME)
     universe = read_asset_universe()
     owners = owners_by_asset()
     _, market_bars = fetch_chart("SPY")
@@ -238,6 +415,11 @@ def systematic_model_portfolio_response(end: date | None = None) -> dict[str, ob
                     "signal_score": signal.get("overall_score", 0),
                     "news_articles_7d": int(news["articles_7d"]),
                     "news_articles_prior_7d": int(news["articles_prior_7d"]),
+                    "news_active": int(news["articles_7d"]) > 0,
+                    "news_accelerating": int(news["articles_7d"]) > int(news["articles_prior_7d"]),
+                    "five_day_volume_ratio": as_float(_horizon_value(signal, "5d", "volume_ratio", "1")),
+                    "five_day_relative_strength_pct": as_float(_horizon_value(signal, "5d", "relative_strength_pct")),
+                    "one_month_relative_strength_pct": as_float(_horizon_value(signal, "1m", "relative_strength_pct")),
                     "score_components": score_components,
                 }
             )
@@ -278,6 +460,11 @@ def systematic_model_portfolio_response(end: date | None = None) -> dict[str, ob
                     "signal_score": holding.get("signal_score", 0),
                     "news_articles_7d": holding.get("news_articles_7d", 0),
                     "news_articles_prior_7d": 0,
+                    "news_active": False,
+                    "news_accelerating": False,
+                    "five_day_volume_ratio": 1,
+                    "five_day_relative_strength_pct": 0,
+                    "one_month_relative_strength_pct": 0,
                     "score_components": {},
                     "retained_buffer": True,
                 }
@@ -287,7 +474,18 @@ def systematic_model_portfolio_response(end: date | None = None) -> dict[str, ob
         slots = max(MODEL_MAX_POSITIONS - len(retained), 0)
         new_rows = [row for row in ranked if str(row["ticker"]) not in retained_tickers][:slots]
         selected = retained + new_rows
-        return selected, _target_weights(selected)
+        weights = _target_weights(selected)
+        if risk_mode == "v2":
+            weights = _drawdown_adjusted_weights(observed_day, selected, weights, current_holdings, charts)
+        elif risk_mode == "v3":
+            weights = _average_drawdown_adjusted_weights(
+                observed_day, selected, weights, current_holdings, charts, intraday_proxy=False
+            )
+        elif risk_mode == "v4":
+            weights = _average_drawdown_adjusted_weights(
+                observed_day, selected, weights, current_holdings, charts, intraday_proxy=True
+            )
+        return selected, weights
 
     cash = MODEL_INITIAL_CAPITAL
     holdings: dict[str, dict[str, object]] = {}
@@ -393,7 +591,8 @@ def systematic_model_portfolio_response(end: date | None = None) -> dict[str, ob
                         "usd_amount": as_float(sale_value),
                         "realized_gain_loss": as_float(realized_pnl),
                         "target_weight_pct": as_float(Decimal(str(order["target_weight"])) * 100),
-                        "reason": "removed from model" if not order["target_weight"] else "rebalance band",
+                        "reason": holding.get("drawdown_control_reason")
+                        or ("removed from model" if not order["target_weight"] else "rebalance band"),
                     }
                 )
                 if Decimal(str(holding["shares"])) <= Decimal("0.00000001"):
@@ -442,6 +641,10 @@ def systematic_model_portfolio_response(end: date | None = None) -> dict[str, ob
                         "entry_date": price_bar.day.isoformat(),
                         "entry_signal": candidate.get("entry_signal", "unknown"),
                         "sector": candidate.get("sector", sectors.get(ticker, "Unclassified")),
+                        "peak_price": price_bar.close,
+                        "max_position_drawdown_pct": Decimal("0"),
+                        "last_close": price_bar.close,
+                        "daily_adverse_moves_pct": [],
                     }
                 holding = holdings[ticker]
                 holding.update(
@@ -483,6 +686,20 @@ def systematic_model_portfolio_response(end: date | None = None) -> dict[str, ob
             price_bar = on_or_before(charts[ticker], session)
             if not price_bar:
                 continue
+            peak_price = max(Decimal(str(holding.get("peak_price") or price_bar.close)), price_bar.close)
+            last_close = Decimal(str(holding.get("last_close") or price_bar.close))
+            daily_move = pct_change(price_bar.close, last_close) if last_close else Decimal("0")
+            if daily_move < 0:
+                adverse_moves = list(holding.get("daily_adverse_moves_pct", []))
+                adverse_moves.append(as_float(daily_move))
+                holding["daily_adverse_moves_pct"] = adverse_moves[-20:]
+            holding["last_close"] = price_bar.close
+            holding["peak_price"] = peak_price
+            position_drawdown = pct_change(price_bar.close, peak_price)
+            holding["max_position_drawdown_pct"] = min(
+                Decimal(str(holding.get("max_position_drawdown_pct", 0))),
+                position_drawdown,
+            )
             value = Decimal(str(holding["shares"])) * price_bar.close
             equity += value
             sector_values[str(holding.get("sector") or "Unclassified")] += value
@@ -560,6 +777,17 @@ def systematic_model_portfolio_response(end: date | None = None) -> dict[str, ob
                 "model_score": holding.get("model_score", 0),
                 "signal_score": holding.get("signal_score", 0),
                 "news_articles_7d": holding.get("news_articles_7d", 0),
+                "peak_price": as_float(Decimal(str(holding.get("peak_price", price_bar.close)))),
+                "current_drawdown_pct": as_float(
+                    pct_change(price_bar.close, Decimal(str(holding.get("peak_price", price_bar.close))))
+                ),
+                "max_position_drawdown_pct": as_float(Decimal(str(holding.get("max_position_drawdown_pct", 0)))),
+                "drawdown_control_reason": holding.get("drawdown_control_reason"),
+                "drawdown_control_observed_date": holding.get("drawdown_control_observed_date"),
+                "average_daily_drawdown_pct": as_float(_average_daily_drawdown_pct(holding)),
+                "average_drawdown_sell_point_pct": as_float(
+                    _average_drawdown_sell_point_pct(holding, intraday_proxy=risk_mode == "v4")
+                ),
                 "status": "open",
             }
         )
@@ -567,6 +795,8 @@ def systematic_model_portfolio_response(end: date | None = None) -> dict[str, ob
 
     latest_selected, latest_weights = portfolio_targets(latest_market.day, holdings, update_streaks=False)
     latest_by_ticker = {str(row["ticker"]): row for row in latest_selected}
+    macro_context = bank_of_canada_macro_context(latest_market.day)
+    macro_multiplier = Decimal(str(macro_context.get("equity_exposure_multiplier") or 1))
     pending_orders: list[dict[str, object]] = []
     for ticker in sorted(set(holdings) | set(latest_weights)):
         price_bar = on_or_before(charts[ticker], latest_market.day)
@@ -588,10 +818,13 @@ def systematic_model_portfolio_response(end: date | None = None) -> dict[str, ob
                 "action": "buy" if delta > 0 else "sell",
                 "ticker": ticker,
                 "usd_amount": as_float(abs(delta)),
+                "macro_adjusted_usd_amount": as_float(abs(delta) * macro_multiplier),
+                "macro_exposure_multiplier": as_float(macro_multiplier),
                 "target_weight_pct": as_float(target_weight * 100),
                 "entry_signal": candidate.get("entry_signal") or holdings.get(ticker, {}).get("entry_signal"),
                 "model_score": as_float(Decimal(str(candidate.get("model_score", 0)))) if candidate else None,
-                "reason": "new model position" if ticker not in holdings else "removed from model" if not target_weight else "rebalance band",
+                "reason": holdings.get(ticker, {}).get("drawdown_control_reason")
+                or ("new model position" if ticker not in holdings else "removed from model" if not target_weight else "rebalance band"),
                 "status": "pending",
             }
         )
@@ -601,7 +834,7 @@ def systematic_model_portfolio_response(end: date | None = None) -> dict[str, ob
     top_five_weight = sum((Decimal(str(row["portfolio_weight_pct"])) for row in positions[:5]), Decimal("0"))
     latest_sectors = sector_exposure[-1]["sectors"] if sector_exposure else []
     return {
-        "portfolio_name": MODEL_PORTFOLIO_NAME,
+        "portfolio_name": portfolio_name,
         "from_date": VARIABLE_STRATEGY_START.isoformat(),
         "to_date": latest_market.day.isoformat(),
         "initial_value": as_float(MODEL_INITIAL_CAPITAL),
@@ -621,6 +854,14 @@ def systematic_model_portfolio_response(end: date | None = None) -> dict[str, ob
         "sector_exposure": sector_exposure,
         "signal_mix": signal_mix,
         "benchmark_comparison": benchmark,
+        "macro_context": {
+            **macro_context,
+            "portfolio_use": (
+                "Shown as a current macro overlay for all model portfolios. Historical trades stay "
+                "point-in-time; pending next-close orders include a suggested macro-adjusted dollar amount, "
+                "while base portfolio return statistics remain pre-overlay."
+            ),
+        },
         "statistics": {
             "total_trades": len(trade_ledger),
             "total_turnover_pct": as_float(total_traded / MODEL_INITIAL_CAPITAL * 100),
@@ -633,6 +874,21 @@ def systematic_model_portfolio_response(end: date | None = None) -> dict[str, ob
             "sector_count": len(latest_sectors),
             "largest_sector_weight_pct": max((row["weight_pct"] for row in latest_sectors), default=0),
             "available_universe_count": len(charts),
+            "drawdown_control_actions": sum(
+                1
+                for row in trade_ledger
+                if "drawdown" in str(row.get("reason") or "").casefold()
+            ),
+            "open_positions_under_8pct_drawdown": sum(
+                1
+                for row in positions
+                if Decimal(str(row.get("current_drawdown_pct", 0))) <= MODEL_V2_SOFT_DRAWDOWN
+            ),
+            "average_drawdown_sell_point_count": sum(
+                1
+                for row in trade_ledger
+                if "sell point" in str(row.get("reason") or "").casefold()
+            ),
         },
         "methodology": {
             "initial_capital": as_float(MODEL_INITIAL_CAPITAL),
@@ -647,11 +903,51 @@ def systematic_model_portfolio_response(end: date | None = None) -> dict[str, ob
             "exit_buffer_sessions": MODEL_EXIT_BUFFER_SESSIONS,
             "execution_convention": "Observe only information available through one market close; execute generated dollar orders at the next available close.",
             "universe_convention": "Stocks become eligible no earlier than asset_universe.added_at and require strategy_eligible=true.",
-            "weighting": "Diversified score tilt: signal strength, relative strength, volume, trend confirmation, news activity, and volatility control.",
+            "macro_overlay": (
+                "Official Bank of Canada RSS feeds are scored for easing, tightening, risk, and growth language. "
+                "The latest dated context is included in each model response. Pending orders show a suggested "
+                "macro-adjusted dollar amount, but historical returns remain base-model returns unless a future "
+                "model explicitly applies the dated macro overlay during replay."
+            ),
+            "weighting": {
+                "base": "Diversified score tilt: signal strength, relative strength, volume, trend confirmation, news activity, and volatility control.",
+                "v2": "Model 2.0 starts with the same diversified score tilt, then reduces or exits holdings when position-level drawdown is not confirmed by fresh/strict signal, volume, one-month relative strength, and active or accelerating news.",
+                "v3": "Model 3.0 starts with Model 2.0, then estimates each holding's sell point from its own trailing average negative daily moves and sells or trims at the next close when current drawdown breaches that point without confirmation.",
+                "v4": "Model 4.0 starts with Model 3.0, then tightens sell points to approximate intraday stops using daily close data. This is a proxy until true intraday OHLC bars are available.",
+            }.get(risk_mode, ""),
+            "drawdown_overlay": None if risk_mode == "base" else {
+                "soft_drawdown_pct": as_float(MODEL_V2_SOFT_DRAWDOWN),
+                "medium_drawdown_pct": as_float(MODEL_V2_MEDIUM_DRAWDOWN),
+                "hard_drawdown_pct": as_float(MODEL_V2_HARD_DRAWDOWN),
+                "high_volatility_pct": as_float(MODEL_V2_HIGH_VOLATILITY),
+                "average_daily_drawdown_multiplier": as_float(MODEL_V3_DRAWDOWN_MULTIPLIER),
+                "minimum_average_drawdown_sell_point_pct": as_float(MODEL_V3_MIN_SELL_DRAWDOWN),
+                "maximum_average_drawdown_sell_point_pct": as_float(MODEL_V3_MAX_SELL_DRAWDOWN),
+                "intraday_proxy_multiplier": as_float(MODEL_V4_INTRADAY_PROXY_MULTIPLIER),
+                "rule": {
+                    "v2": "Soft drawdowns trim weak-volume/weak-relative-strength names; medium drawdowns cut exposure when confirmation weakens or news is inactive; hard drawdowns exit unless fresh/strict signals, volume, one-month relative strength, and news support remain intact.",
+                    "v3": "Estimate a sell point from trailing average negative daily returns. If current drawdown breaches the sell point and confirmation is weak or news is inactive, sell at next close; if approaching the sell point, trim.",
+                    "v4": "Use the same average-drawdown sell point but tighten it as an intraday-stop proxy. Daily close data means this is not true intraday execution.",
+                }.get(risk_mode, ""),
+            },
         },
         "news_counts_to_date": daily_news.get("to_date"),
         "warnings": [
             "The historical universe is reconstructed from asset_universe.added_at. It may still contain survivorship or data-entry bias if those dates do not reflect when an idea was actually known.",
             "No transaction costs, taxes, bid/ask spreads, or market-impact slippage are included.",
+            *(
+                [
+                    "Model 2.0 drawdown controls are risk-management rules, not proof that drawdowns are predictable. They may reduce losses but can also sell before recoveries."
+                ]
+                if risk_mode in {"v2", "v3", "v4"}
+                else []
+            ),
+            *(
+                [
+                    "Model 4.0 is an intraday proxy using daily close data. It does not yet use real intraday high/low bars, so stop timing is approximate."
+                ]
+                if risk_mode == "v4"
+                else []
+            ),
         ],
     }

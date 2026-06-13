@@ -214,6 +214,21 @@ ccdee7f0904d,2026-05-20T16:00:00-04:00,leading-edge-logic-foundry,INTC,stock,buy
 e934a2f31b47,2026-05-20T16:00:00-04:00,memory,KXIAY,stock,buy,1000,reported,33.34000015258789,reported-fill,Kioxia Holdings USD-quoted ADR; NAND flash exposure and Sandisk joint venture
 411d9915ccbe,2026-05-20T16:00:00-04:00,memory,SNDK,stock,buy,1000,reported,1392.56005859375,reported-fill,Sandisk; independent NAND flash exposure after Western Digital spinoff; Kioxia JV exposure
 269438879998,2026-05-20T16:00:00-04:00,chip_design,NVDA,stock,buy,1000,reported,223.47000122070312,reported-fill,NVIDIA; H100 H200 B200 AI accelerator exposure
+1500f21b9127,2026-05-20T16:00:00-04:00,long-term-watchlist,TSLA,stock,buy,1000,reported,417.260009765625,reported-fill,Added by user to forward watchlist; Tesla; baseline uses 2026-05-20 Yahoo EOD close
+c436ca864061,2026-05-20T16:00:00-04:00,long-term-watchlist,PL,stock,buy,1000,reported,42.65999984741211,reported-fill,Added by user to forward watchlist; Planet Labs; baseline uses 2026-05-20 Yahoo EOD close
+427d01854461,2026-05-20T16:00:00-04:00,long-term-watchlist,FRSH,stock,buy,1000,reported,9.199999809265137,reported-fill,Added by user to forward watchlist; Freshworks; baseline uses 2026-05-20 Yahoo EOD close
+cee5a68faf16,2026-05-20T16:00:00-04:00,long-term-watchlist,QQC,etf,buy,2000,reported,47.84000015258789,reported-fill,Added by user to forward watchlist; Invesco NASDAQ 100 Index ETF; baseline uses 2026-05-20 Yahoo EOD close
+b6f4797f8447,2026-05-20T16:00:00-04:00,long-term-watchlist,XEQT,etf,buy,2000,reported,43.529998779296875,reported-fill,Added by user to forward watchlist; iShares Core Equity ETF Portfolio; baseline uses 2026-05-20 Yahoo EOD close
+ccefae3ff2fb,2026-05-20T16:00:00-04:00,long-term-watchlist,XIC,etf,buy,2000,reported,54.63999938964844,reported-fill,Added by user to forward watchlist; iShares Core S&P/TSX Capped Composite ETF; baseline uses 2026-05-20 Yahoo EOD close
+8c12446cccbd,2026-05-20T16:00:00-04:00,long-term-watchlist,HIVE,stock,buy,1000,reported,3.869999885559082,reported-fill,Added by user to forward watchlist; HIVE Digital Technologies; baseline uses 2026-05-20 Yahoo EOD close
+6b7ced6b58f2,2026-05-20T16:00:00-04:00,long-term-watchlist,KEEL,stock,buy,1000,reported,4.230000019073486,reported-fill,Added by user to forward watchlist; Keel Infrastructure; baseline uses 2026-05-20 Yahoo EOD close
+63f1ba13303d,2026-05-20T16:00:00-04:00,long-term-watchlist,TE,stock,buy,1000,reported,8.699999809265137,reported-fill,Added by user to forward watchlist; T1 Energy; baseline uses 2026-05-20 Yahoo EOD close
+232fbc24e750,2026-05-20T16:00:00-04:00,long-term-watchlist,RIOT,stock,buy,1000,reported,23.670000076293945,reported-fill,Added by user to forward watchlist; Riot Platforms; baseline uses 2026-05-20 Yahoo EOD close
+d0339ee1df9f,2026-05-20T16:00:00-04:00,long-term-watchlist,CLS,stock,buy,1000,reported,346.4800109863281,reported-fill,Added by user to forward watchlist; Celestica; baseline uses 2026-05-20 Yahoo EOD close
+d10f236a6d5f,2026-05-20T16:00:00-04:00,long-term-watchlist,QUBT,stock,buy,1000,reported,9.5600004196167,reported-fill,Added by user to forward watchlist; Quantum Computing Inc.; baseline uses 2026-05-20 Yahoo EOD close
+d00c61243b58,2026-05-20T16:00:00-04:00,long-term-watchlist,RGTI,stock,buy,1000,reported,16.8799991607666,reported-fill,Added by user to forward watchlist; Rigetti Computing; baseline uses 2026-05-20 Yahoo EOD close
+baacdcb7f081,2026-05-20T16:00:00-04:00,long-term-watchlist,QTUM,etf,buy,2000,reported,145.44000244140625,reported-fill,Added by user to forward watchlist; Defiance Quantum ETF; baseline uses 2026-05-20 Yahoo EOD close
+7639a0cae560,2026-05-20T16:00:00-04:00,long-term-watchlist,INFQ,stock,buy,1000,reported,11.180000305175781,reported-fill,Added by user to forward watchlist; Infleqtion; baseline uses 2026-05-20 Yahoo EOD close
 f81a19a5017e,2026-05-20T16:00:00-04:00,chip_design,AMD,stock,buy,1000,reported,447.5799865722656,reported-fill,AMD; MI300 and AI accelerator exposure
 88e17a2d7fef,2026-05-20T16:00:00-04:00,chip_design,AVGO,stock,buy,1000,reported,417.760009765625,reported-fill,Broadcom; custom AI ASIC and networking silicon exposure
 c58ba5bcca67,2026-05-20T16:00:00-04:00,chip_design,MRVL,stock,buy,1000,reported,186.8000030517578,reported-fill,Marvell; custom AI and networking silicon exposure
